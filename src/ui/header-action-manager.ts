@@ -17,7 +17,6 @@ interface HeaderEntry {
 export interface HeaderActionDependencies {
 	workspace: Workspace;
 	controller: ActivityMapController;
-	openView: () => Promise<void>;
 	openFile: (filePath: string) => Promise<void>;
 	isFileView(view: WorkspaceLeaf['view']): view is FileView;
 	createMiniDonut?: (element: HTMLElement) => HeaderMiniDonutPort;
@@ -101,7 +100,6 @@ export class HeaderActionManager {
 		popover = new SummaryPopover(
 			action,
 			this.dependencies.controller,
-			this.dependencies.openView,
 			this.dependencies.openFile,
 		);
 		const ownerWindow = action.ownerDocument.defaultView;

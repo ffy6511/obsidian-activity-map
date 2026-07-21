@@ -6,6 +6,7 @@ import type { MetricKey } from '../../query/path-projection';
 export interface RangeTrailingAction {
 	icon: string;
 	label: string;
+	id: string;
 	onActivate(): void;
 }
 
@@ -59,7 +60,12 @@ export function renderRangeControls(args: {
 		date.addEventListener('change', () => {
 			if (date.value) args.onRange({ mode: 'day', localDate: date.value });
 		});
-		iconButton(dayNavigation, 'calendar-days', `Choose date, ${args.range.localDate}`, 'calendar-day', () => {
+		const dateButton = dayNavigation.createEl('button', {
+			text: args.range.localDate,
+			cls: 'clickable-icon activity-map-date-button',
+			attr: { 'aria-label': `Choose date, ${args.range.localDate}`, 'data-activity-map-id': 'calendar-day' },
+		});
+		dateButton.addEventListener('click', () => {
 			try {
 				date.showPicker();
 			} catch {
@@ -77,7 +83,7 @@ export function renderRangeControls(args: {
 			controls,
 			args.trailingAction.icon,
 			args.trailingAction.label,
-			'expand-view',
+			args.trailingAction.id,
 			() => args.trailingAction?.onActivate(),
 			'activity-map-control-trailing',
 		);

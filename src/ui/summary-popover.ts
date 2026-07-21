@@ -18,11 +18,11 @@ export class SummaryPopover {
 	private pinned = false;
 	private expandedOther: string[] | null = null;
 	private lastRenderKey = '';
+	private distributionView: { update(distribution: import('../query/distribution-query').DistributionResult): boolean } | null = null;
 
 	constructor(
 		private readonly trigger: HTMLElement,
 		private readonly controller: ActivityMapController,
-		private readonly openView: () => Promise<void>,
 		private readonly openFile: (filePath: string) => Promise<void>,
 	) {}
 
@@ -64,7 +64,7 @@ export class SummaryPopover {
 		this.unsubscribe = this.controller.subscribe((model) => this.renderIfChanged(model));
 		this.liveTimer = doc.defaultView?.setInterval(() => {
 			const model = this.controller.getViewModel();
-			if (isLiveTodayQuery(model)) this.renderIfChanged(model, true);
+			if (isLiveTodayQuery(model)) this.updateLiveDistribution(model);
 		}, 1_000) ?? null;
 		this.position();
 	}
@@ -110,6 +110,7 @@ export class SummaryPopover {
 		this.pinned = false;
 		this.expandedOther = null;
 		this.lastRenderKey = '';
+		this.distributionView = null;
 		this.trigger.removeClass('is-pinned');
 		this.trigger.setAttr('aria-expanded', 'false');
 		this.trigger.setAttr('aria-pressed', 'false');
@@ -135,11 +136,12 @@ export class SummaryPopover {
 	}
 
 	private renderIfChanged(model: ActivityMapViewModel, force = false): void {
-		const trackingKey = model.tracking
-			? `${model.tracking.state}:${model.tracking.sampledAt}:${model.tracking.lastTrustedActivityAt ?? ''}`
-			: 'none';
-		const key = `${String(model.queryGeneration)}:${model.loadState}:${trackingKey}:${this.expandedOther?.join(',') ?? ''}`;
-		if (!force && key === this.lastRenderKey) return;
+		const paused = model.tracking?.state === 'paused';
+		const key = `${String(model.queryGeneration)}:${model.loadState}:${String(paused)}:${this.expandedOther?.join(',') ?? ''}`;
+		if (!force && key === this.lastRenderKey) {
+			this.updateLiveDistribution(model);
+			return;
+		}
 		this.lastRenderKey = key;
 		this.render(model);
 	}
@@ -149,6 +151,8 @@ export class SummaryPopover {
 		if (!popover) return;
 		const focusedId = (popover.ownerDocument.activeElement as HTMLElement | null)?.dataset.activityMapId;
 		popover.empty();
+		this.distributionView = null;
+		const paused = model.tracking?.state === 'paused';
 
 		renderRangeControls({
 			container: popover,
@@ -157,9 +161,10 @@ export class SummaryPopover {
 			onMetric: (metric) => { this.expandedOther = null; void this.controller.dispatch({ kind: 'set-metric', metric }); },
 			onRange: (range) => { this.expandedOther = null; void this.controller.dispatch({ kind: 'set-range', range }); },
 			trailingAction: {
-				icon: 'expand',
-				label: 'Open full activity map view',
-				onActivate: () => { this.close(false); void this.openView(); },
+				icon: paused ? 'play' : 'pause',
+				label: paused ? 'Resume activity tracking' : 'Pause activity tracking',
+				id: 'tracking-toggle',
+				onActivate: () => { void this.controller.dispatch({ kind: paused ? 'resume' : 'pause' }); },
 			},
 		});
 
@@ -214,6 +219,23 @@ export class SummaryPopover {
 			onActivate: (item) => this.activateItem(item),
 			onHighlight: (item) => chartHandle.highlight(item?.id ?? null),
 		});
+		this.distributionView = {
+			update: (nextDistribution) => {
+				const nextItems = this.expandedOther
+					? nextDistribution.detailItems.filter((item) => item.memberIds.some((id) => this.expandedOther?.includes(id)))
+					: nextDistribution.detailItems;
+				return chartHandle.update(nextDistribution) && legendHandle.update(nextDistribution, nextItems);
+			},
+		};
+	}
+
+	private updateLiveDistribution(model: ActivityMapViewModel): void {
+		if (!model.distribution || !this.distributionView) return;
+		const distribution = withLiveActivity(model.distribution, model.tracking, {
+			nowMs: Date.now(),
+			idleThresholdMs: model.settings.idleThresholdMs,
+		});
+		if (!this.distributionView.update(distribution)) this.renderIfChanged(model, true);
 	}
 
 	private renderCurrentPath(popover: HTMLElement, model: ActivityMapViewModel): void {
@@ -221,7 +243,7 @@ export class SummaryPopover {
 		renderBreadcrumbs(path, model.query.path, model.query.view, (nextPath) => {
 			this.expandedOther = null;
 			void this.controller.dispatch({ kind: 'set-path', path: nextPath });
-		});
+		}, true);
 	}
 
 	private activateItem(item: DistributionItem | ChartItem): void {

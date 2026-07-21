@@ -153,11 +153,11 @@ Use the public `FileView.addAction()` API for each eligible file view and retain
 - Remove only plugin-owned elements when a view becomes ineligible or the plugin unloads.
 - The action installs one stable miniature SVG donut. Its arc is `current file activeMs / vault activeMs` for today; unavailable or zero data renders the same empty ring.
 - Runtime state updates accessible name, tooltip, CSS state, and a restrained semantic marker without replacing the donut DOM. Repeated snapshots with the same ratio do not rewrite geometry.
-- Hover and keyboard focus open the chart popover on desktop-capable pointer environments. Click toggles pinned/unpinned state; opening the full view is a separate expand action.
+- Hover and keyboard focus open the chart popover on desktop-capable pointer environments. Click toggles pinned/unpinned state; a trailing control pauses or resumes tracking, while Ribbon and command open the full view.
 - The popover is plugin-owned DOM attached to the action's owner document, remains open while pointer/focus is within trigger or popover, closes on `Escape` or outside interaction, and restores focus to the trigger.
 - The popover is non-modal and does not trap focus. It defaults to today's vault-root distribution and reuses the full view's range controls, breadcrumbs, native donut, synchronized legend, tooltip, and slice activation rules.
 - Directory activation drills down in-place; local-files, other, deleted, and file activation match the ItemView. Expanding the ItemView preserves the popover's current query.
-- Tracking state, pending include/exclude, pause/resume, and recent automatic-exclusion undo remain available as a compact auxiliary section without displacing the chart.
+- Pending include/exclude and recent automatic-exclusion undo remain in the full view; the Popover exposes only the compact pause/resume control without displacing the chart.
 - A recent automatic exclusion exposes its bounded undo action; undo returns the interval to pending review and never includes time immediately.
 - If public header integration fails, record a warning and keep Ribbon and command access fully functional.
 - Mobile registers no hover behavior and uses Ribbon, command, and the full view.
@@ -387,7 +387,7 @@ Replace the rejected text-first hover card and icon swapping with the approved s
 - [x] Render one persistent miniature SVG donut in each eligible file header; update its current-file/vault-today ratio without replacing the owned SVG nodes.
 - [x] Keep tracking status in accessible text and restrained CSS state so active/idle/pending/paused/degraded changes cannot flash or swap the main icon.
 - [x] Replace the text-first summary card with a vault-root chart popover that reuses range controls, breadcrumbs, `ChartModel`, donut interaction, and synchronized legend values.
-- [x] Implement hover/focus open, click-to-pin/unpin, pointer/focus retention, outside/Escape close, and a separate expand-to-ItemView action that preserves the current query.
+- [x] Implement hover/focus open, click-to-pin/unpin, pointer/focus retention, outside/Escape close, and a compact trailing controller action.
 - [x] Share directory, local-files, other, deleted, and file activation rules between the popover and ItemView; preserve keyboard and touch/click fallbacks.
 - [x] Add focused DOM/lifecycle fixtures, rerun the integrated journey, and synchronize Constitution, PRD, Architecture, Roadmap, README, release notes, and Spec evidence.
 
@@ -412,7 +412,7 @@ Replace the rejected text-first hover card and icon swapping with the approved s
 
 - [x] Repeated tracking snapshots keep the same header SVG nodes and do not trigger icon replacement; equal data ratios do not rewrite arc geometry.
 - [x] Real today data controls the mini donut, while missing/zero/error states retain one stable empty ring without fabricated activity.
-- [x] Hover/focus reveals a donut-first vault-root popover; trigger click pins/unpins it, and expand opens the ItemView with the same query.
+- [x] Hover/focus reveals a donut-first vault-root popover; trigger click pins/unpins it, and Ribbon/command open the ItemView.
 - [x] Hover/focus on every rendered slice shows its name, percentage, and exact value and synchronizes the matching legend row.
 - [x] Directory and virtual-group clicks drill or expand in-place; file clicks open the file; breadcrumbs and range changes preserve coherent state.
 - [x] Keyboard, focus restoration, outside/Escape close, reduced motion, theme tokens, and mobile no-hover fallbacks pass focused tests.
@@ -427,7 +427,7 @@ Apply the owner-approved tldraw layout without transient rows and make the persi
 ### Tasks
 
 - [x] Remove the popover title, duplicate metric/total/vault-share summary, transient chart tooltip row, and ordinary tracking-status footer.
-- [x] Keep one compact control row; render previous-day, calendar, next-day, and expand as equal icon buttons, with expand visually separated from the date group and the metric icon derived from the selected metric.
+- [x] Keep one compact control row; render previous-day, calendar, next-day, and the trailing pause/resume action as equal icon buttons, with the trailing action visually separated from the date group and the metric icon derived from the selected metric.
 - [x] Move the current breadcrumb path below the donut, default it to the vault root, and constrain the legend to a fixed-height scroll region.
 - [x] Add a dedicated today/vault-root distribution read for the Header action and reconcile stable miniature slice nodes using the shared color model, including the current in-flight activity in its owning root slice.
 - [x] Preserve pin/focus/keyboard/activation behavior and add focused tests for the fixed layout, equal controls, scroll boundary, multi-slice geometry, empty state, and stable SVG ownership.
@@ -453,7 +453,7 @@ Apply the owner-approved tldraw layout without transient rows and make the persi
 - [x] The header distribution includes the current unclosed active interval in the correct root directory or file slice without waiting for persistence.
 - [x] Popover source and DOM fixtures contain no title bar, duplicate summary, transient chart tooltip, or ordinary tracking footer.
 - [x] The current path follows the chart, defaults to `Vault`, updates after drill-down, and the legend scrolls within a bounded region without moving surrounding controls or chart.
-- [x] Previous, calendar, next, and expand controls have one compact size; expand has a group gap and an accessible icon label; metric changes update the metric icon.
+- [x] Previous, calendar, next, and pause/resume controls have one compact size; the trailing action has a group gap and an accessible icon label; metric changes update the metric icon.
 - [x] Slice pointer/focus changes only highlight the existing chart and legend nodes; pin/unpin, outside/Escape close, focus restoration, drill-down, file activation, and full-view expansion remain available.
 - [x] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, strict specs validation, repository Markdown links, and `git diff --check` pass.
 
@@ -468,7 +468,11 @@ Remove the summary/heartbeat lag from the open chart while preserving trusted-ti
 - [x] Extract one immutable live-distribution projection shared by the Header miniature and Popover, limited to today's `activeMs` query and the selected path/view.
 - [x] Tick an open Popover once per second without issuing a query or persistence write; clear the owner-window timer on close and clip growth at the trusted idle boundary.
 - [x] Render the current path as centered muted context without a card background; increase legend-row left padding and promote only the hovered/focused item name.
-- [x] Align metric/range selects, date navigation, and expand action to a shared control height with centered icons.
+- [x] Align metric/range selects, date navigation, and the trailing action to a shared control height with centered icons.
+- [x] Preserve chart and legend DOM identity during live ticks; update geometry and values in place so pointer/focus highlight remains stable.
+- [x] Normalize the three date-button gaps, tighten chart-to-path spacing, increase path-to-list spacing, and replace Expand with pause/resume tracking.
+- [x] Remove default legend fills, keep all row text muted until synchronized highlight, align exact values before rightmost percentages, and center the donut total on both axes.
+- [x] Replace the selected-day calendar icon with a clickable ISO date between equal arrow buttons; add underline/color and pointer-cursor affordances to every interactive Popover element.
 - [x] Add deterministic projection and source/style tests and synchronize Constitution, PRD, Architecture, Roadmap, README, and Spec evidence.
 
 ### Files
@@ -488,8 +492,11 @@ Remove the summary/heartbeat lag from the open chart while preserving trusted-ti
 - [x] The open Popover's total and owning slice increase between persisted query refreshes while active, then stop at the last trusted interaction plus `idleThresholdMs`.
 - [x] Historical days, non-`activeMs` metrics, out-of-scope paths, and nested files excluded by `local-files` view do not receive an invalid scope increment.
 - [x] Header miniature and Popover consume the same projection and do not mutate the controller's persisted `DistributionResult`.
-- [x] Closing the Popover clears its live timer; tracking snapshots update the render key without waiting for query generation changes.
-- [x] Path, legend padding/highlight colors, and all control heights/alignment match the fixed owner-approved layout without adding transient rows.
+- [x] Closing the Popover clears its live timer; ordinary live ticks do not rebuild chart or legend DOM, while item-identity changes fall back to a structural render.
+- [x] Path, legend padding/highlight colors, date-button gaps, and all control heights/alignment match the fixed owner-approved layout without adding transient rows.
+- [x] Legend rows are transparent at rest; fixed exact-value and rightmost percentage columns remain aligned for seconds, minutes, hours, and count metrics.
+- [x] The donut total is centered vertically and horizontally; current Popover breadcrumbs remain operable and every pointer-capable interactive element exposes a hand cursor.
+- [x] The trailing control dispatches shared pause/resume intents; Ribbon and command remain the full-view entrypoints.
 - [x] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, strict specs validation, repository Markdown links, and `git diff --check` pass.
 
 ## Risks and Mitigations
@@ -578,3 +585,10 @@ Remove the summary/heartbeat lag from the open chart while preserving trusted-ti
 - Evidence: deterministic fixtures cover live growth, idle clipping, historical and non-time exclusion, path scope, local-files scope, immutable input, timer ownership, and required CSS/source boundaries. The full automated suite passes 230 tests.
 - Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (230 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); repository Markdown links; `git diff --check`.
 - Lifecycle: Phase 7 is technically complete and this Spec remains in `review`. No fourth Critic round is created; real desktop/mobile Post-Critic Acceptance stays open for the owner's final validation.
+
+### Owner-directed Phase 7 micro-adjustment
+
+- Scope: the owner requested no new Phase and no automatic commit. The live Popover must preserve hover/focus emphasis across ticks; legend rows must be transparent and column-aligned; chart totals must be centered; selected-day navigation must expose its ISO date; paths and all controls must visibly advertise clickability; and the ineffective Expand affordance must become pause/resume tracking.
+- Executor changes: donut and legend renderers expose identity-checked in-place update handles; the Popover uses them for timer and tracking updates and rebuilds only on structural changes. Fixed time/percentage columns, center-baseline SVG text, an ISO-date picker trigger, current-path activation, uniform cursor/underline affordances, compact spacing, and the shared pause/resume intent complete the Phase 7 refinement.
+- Validation: `npm run check`; `npm run lint`; `npm test -- --run` (230 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); repository Markdown links; `git diff --check`.
+- Lifecycle: this remains Phase 7 owner-directed work. Spec 03 stays in `review`; no Critic round, stage, or commit is created.

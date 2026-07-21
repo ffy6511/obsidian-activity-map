@@ -3,6 +3,7 @@ export function renderBreadcrumbs(
 	path: string,
 	view: 'children' | 'local-files',
 	onNavigate: (path: string) => void,
+	allowCurrentActivation = false,
 ): void {
 	const nav = container.createEl('nav', { cls: 'activity-map-breadcrumbs', attr: { 'aria-label': 'Activity path' } });
 	const parts = path.split('/').filter(Boolean);
@@ -16,7 +17,7 @@ export function renderBreadcrumbs(
 	for (const [index, entry] of entries.entries()) {
 		if (index > 0) nav.createSpan({ text: '/', cls: 'activity-map-breadcrumb-separator' });
 		const button = nav.createEl('button', { text: entry.label, cls: 'clickable-icon activity-map-breadcrumb', attr: { 'data-activity-map-id': `breadcrumb-${entry.path || 'vault'}` } });
-		button.disabled = entry.path === (view === 'local-files' ? `${path}#local-files` : path);
+		button.disabled = !allowCurrentActivation && entry.path === (view === 'local-files' ? `${path}#local-files` : path);
 		button.addEventListener('click', () => onNavigate(entry.path.replace(/#local-files$/, '')));
 	}
 }

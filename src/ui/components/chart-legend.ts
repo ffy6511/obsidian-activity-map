@@ -4,6 +4,8 @@ import { stableColor } from './donut-chart';
 
 export interface ChartLegendHandle {
 	highlight(itemId: string | null): void;
+	/** Updates row values in place. Returns false when row identity changed. */
+	update(distribution: DistributionResult, items?: DistributionItem[]): boolean;
 }
 
 /** Compact Webtime-style legend used by the header chart popover. */
@@ -18,30 +20,54 @@ export function renderChartLegend(args: {
 		cls: 'activity-map-chart-legend',
 		attr: { role: 'list', 'aria-label': 'Activity chart legend' },
 	});
-	const rows = new Map<string, HTMLButtonElement>();
-	for (const item of args.items ?? args.distribution.detailItems) {
+	let distribution = args.distribution;
+	let currentItems = args.items ?? distribution.detailItems;
+	let itemsById = new Map(currentItems.map((item) => [item.id, item]));
+	const rows = new Map<string, {
+		row: HTMLButtonElement;
+		swatch: HTMLSpanElement;
+		label: HTMLSpanElement;
+		percent: HTMLSpanElement;
+		value: HTMLSpanElement;
+	}>();
+	for (const item of currentItems) {
 		const row = list.createEl('button', {
 			cls: 'activity-map-chart-legend-row',
 			attr: { role: 'listitem', 'data-activity-map-id': `legend-${item.id}` },
 		});
-		rows.set(item.id, row);
 		const swatch = row.createSpan({ cls: 'activity-map-detail-swatch' });
 		swatch.style.setProperty('--activity-map-item-color', stableColor(item.id));
-		row.createSpan({ text: item.label, cls: 'activity-map-chart-legend-label' });
-		row.createSpan({ text: formatPercent(item.percentOfScope), cls: 'activity-map-chart-legend-percent' });
-		row.createSpan({
+		const label = row.createSpan({ text: item.label, cls: 'activity-map-chart-legend-label' });
+		const value = row.createSpan({
 			text: formatMetric(item.value, args.distribution.query.metric, args.distribution.denominatorDays),
 			cls: 'activity-map-chart-legend-value',
 		});
-		row.addEventListener('pointerenter', () => args.onHighlight?.(item));
+		const percent = row.createSpan({ text: formatPercent(item.percentOfScope), cls: 'activity-map-chart-legend-percent' });
+		rows.set(item.id, { row, swatch, label, percent, value });
+		row.addEventListener('pointerenter', () => args.onHighlight?.(itemsById.get(item.id) ?? null));
 		row.addEventListener('pointerleave', () => args.onHighlight?.(null));
-		row.addEventListener('focus', () => args.onHighlight?.(item));
+		row.addEventListener('focus', () => args.onHighlight?.(itemsById.get(item.id) ?? null));
 		row.addEventListener('blur', () => args.onHighlight?.(null));
-		row.addEventListener('click', () => args.onActivate(item));
+		row.addEventListener('click', () => { const current = itemsById.get(item.id); if (current) args.onActivate(current); });
 	}
 	return {
 		highlight(itemId) {
-			for (const [id, row] of rows) row.toggleClass('is-highlighted', id === itemId);
+			for (const [id, entry] of rows) entry.row.toggleClass('is-highlighted', id === itemId);
+		},
+		update(nextDistribution, nextItems = nextDistribution.detailItems) {
+			if (nextItems.length !== rows.size || nextItems.some((item) => !rows.has(item.id))) return false;
+			distribution = nextDistribution;
+			currentItems = nextItems;
+			itemsById = new Map(currentItems.map((item) => [item.id, item]));
+			for (const item of currentItems) {
+				const entry = rows.get(item.id);
+				if (!entry) continue;
+				entry.swatch.style.setProperty('--activity-map-item-color', stableColor(item.id));
+				entry.label.textContent = item.label;
+				entry.percent.textContent = formatPercent(item.percentOfScope);
+				entry.value.textContent = formatMetric(item.value, distribution.query.metric, distribution.denominatorDays);
+			}
+			return true;
 		},
 	};
 }

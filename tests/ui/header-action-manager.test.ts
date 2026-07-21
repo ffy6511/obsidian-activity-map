@@ -134,7 +134,6 @@ describe('header action manager', () => {
 		const manager = new HeaderActionManager({
 			workspace: workspace as never,
 			controller: controller as never,
-			openView: async () => {},
 			openFile: async () => {},
 			isFileView: (candidate): candidate is FileView => Boolean(candidate),
 			createMiniDonut: () => { donutCount += 1; return { update: (slices) => updates.push([...slices]) }; },
@@ -163,7 +162,6 @@ describe('header action manager', () => {
 				iterateAllLeaves: () => { throw new Error('unsupported'); },
 			} as never,
 			controller: { subscribe: () => () => {}, getViewModel: () => ({ tracking: null, queryGeneration: 0, settings: { idleThresholdMs: 180_000 } }), getHeaderDistribution: async () => { throw new Error('unavailable'); } } as never,
-			openView: async () => {},
 			openFile: async () => {},
 			isFileView: (candidate): candidate is FileView => Boolean(candidate),
 			createMiniDonut: () => ({ update: () => {} }),

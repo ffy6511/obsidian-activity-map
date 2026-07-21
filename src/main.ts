@@ -131,7 +131,6 @@ export default class ActivityMapPlugin extends Plugin {
 		const headerActions = new HeaderActionManager({
 			workspace: this.app.workspace,
 			controller,
-			openView: () => this.activateView(),
 			openFile: (filePath) => this.app.workspace.openLinkText(filePath, '', false),
 			isFileView: (view): view is FileView => view instanceof FileView,
 			reportWarning: (message) => controller.reportWarning(message),

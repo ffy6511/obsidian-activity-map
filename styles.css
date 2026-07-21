@@ -350,7 +350,7 @@
 
 .activity-map-popover .activity-map-controls {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) auto auto;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) max-content max-content;
 	align-items: center;
 	column-gap: var(--size-4-2);
 	margin-bottom: 0;
@@ -363,11 +363,64 @@
 	height: var(--input-height);
 }
 
+.activity-map-popover .activity-map-day-navigation {
+	display: grid;
+	grid-template-columns: var(--input-height) calc(10ch + var(--size-4-3)) var(--input-height);
+	grid-template-rows: var(--input-height);
+	justify-self: start;
+	gap: var(--size-2-2);
+}
+
+.activity-map-popover .activity-map-metric-control,
+.activity-map-popover .activity-map-metric-control select,
+.activity-map-popover .activity-map-range-mode {
+	width: 100%;
+	min-width: 0;
+}
+
+.activity-map-popover .activity-map-day-navigation > [data-activity-map-id='previous-day'] {
+	grid-column: 1;
+	grid-row: 1;
+	margin: 0;
+}
+
+.activity-map-popover .activity-map-day-navigation > [data-activity-map-id='calendar-day'] {
+	grid-column: 2;
+	grid-row: 1;
+	margin: 0;
+}
+
+.activity-map-popover .activity-map-day-navigation > [data-activity-map-id='next-day'] {
+	grid-column: 3;
+	grid-row: 1;
+	margin: 0;
+}
+
+.activity-map-popover .activity-map-hidden-date {
+	grid-column: 2;
+	grid-row: 1;
+}
+
+.activity-map-date-button {
+	box-sizing: border-box;
+	width: calc(10ch + var(--size-4-3));
+	height: var(--input-height);
+	padding: 0 var(--size-2-2);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.activity-map-popover .activity-map-control-trailing {
+	margin-inline-start: 0;
+}
+
 .activity-map-popover-chart .activity-map-donut {
 	width: min(100%, 20rem);
+	margin-bottom: calc(-1 * var(--size-4-5));
 }
 
 .activity-map-popover-path {
+	margin-bottom: var(--size-2-2);
 	padding: 0;
 	overflow: hidden;
 	color: var(--text-muted);
@@ -386,6 +439,13 @@
 	color: var(--text-muted);
 }
 
+.activity-map-popover-path .activity-map-breadcrumb:hover,
+.activity-map-popover-path .activity-map-breadcrumb:focus-visible {
+	color: var(--text-normal);
+	text-decoration: underline;
+	text-underline-offset: 0.18em;
+}
+
 .activity-map-popover-legend {
 	min-height: 0;
 	max-height: 11rem;
@@ -401,13 +461,14 @@
 
 .activity-map-chart-legend-row {
 	display: grid;
-	grid-template-columns: 0.75rem minmax(0, 1fr) auto auto;
+	grid-template-columns: 0.75rem minmax(0, 1fr) 7ch 4ch;
 	gap: var(--size-4-2);
 	align-items: center;
 	width: 100%;
 	padding: var(--size-2-1) var(--size-4-3);
 	border: 0;
-	background: transparent;
+	background: transparent !important;
+	box-shadow: none;
 	color: var(--text-muted);
 	font-variant-numeric: tabular-nums;
 	text-align: left;
@@ -417,7 +478,7 @@
 .activity-map-chart-legend-row:focus-visible,
 .activity-map-chart-legend-row.is-highlighted,
 .activity-map-detail-row.is-highlighted {
-	background: var(--background-modifier-hover);
+	background: var(--background-modifier-hover) !important;
 }
 
 .activity-map-chart-legend-row:hover,
@@ -426,15 +487,34 @@
 	color: var(--text-muted);
 }
 
+.activity-map-chart-legend-label,
+.activity-map-chart-legend-percent,
+.activity-map-chart-legend-value {
+	color: var(--text-muted);
+}
+
 .activity-map-chart-legend-row:hover .activity-map-chart-legend-label,
+.activity-map-chart-legend-row:hover .activity-map-chart-legend-percent,
+.activity-map-chart-legend-row:hover .activity-map-chart-legend-value,
 .activity-map-chart-legend-row:focus-visible .activity-map-chart-legend-label,
-.activity-map-chart-legend-row.is-highlighted .activity-map-chart-legend-label {
+.activity-map-chart-legend-row:focus-visible .activity-map-chart-legend-percent,
+.activity-map-chart-legend-row:focus-visible .activity-map-chart-legend-value,
+.activity-map-chart-legend-row.is-highlighted .activity-map-chart-legend-label,
+.activity-map-chart-legend-row.is-highlighted .activity-map-chart-legend-percent,
+.activity-map-chart-legend-row.is-highlighted .activity-map-chart-legend-value {
 	color: var(--text-normal);
 }
 
 .activity-map-chart-legend-percent,
 .activity-map-chart-legend-value {
 	white-space: nowrap;
+	text-align: right;
+}
+
+.activity-map-popover button:not(:disabled),
+.activity-map-popover select,
+.activity-map-popover .activity-map-donut path {
+	cursor: pointer;
 }
 
 .activity-map-popover h3,
