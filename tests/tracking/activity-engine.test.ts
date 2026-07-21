@@ -174,10 +174,12 @@ describe('activity engine automatic exclusion', () => {
 		expect(decision).toBeDefined();
 		const undone = h.engine.undoAutomaticExclusion(
 			`${decision?.candidateId ?? ''}`,
-			130_000,
+			sample(130_000),
 		);
 		expect(undone).toBeTrue();
 		expect(h.engine.pendingRecovery()).toHaveLength(1);
+		expect(h.snapshots.at(-1)?.reason).toBe('pending-recovery');
+		expect(h.snapshots.at(-1)?.pendingRecovery).toHaveLength(1);
 		// No include decision was emitted by undo.
 		expect(h.decisions.filter((d) => d.kind === 'include')).toHaveLength(0);
 	});
@@ -192,7 +194,7 @@ describe('activity engine automatic exclusion', () => {
 		// 20s later exceeds the 10s undo window.
 		const undone = h.engine.undoAutomaticExclusion(
 			`${decision?.candidateId ?? ''}`,
-			145_000,
+			sample(145_000),
 		);
 		expect(undone).toBeFalse();
 	});

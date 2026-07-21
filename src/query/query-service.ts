@@ -33,4 +33,21 @@ export class LocalQueryService {
 			maxChartItems: this.getSettings().maxChartItems,
 		});
 	}
+
+	async getStatusSummary(filePath: string, today: string): Promise<{ fileActiveMs: number; vaultActiveMs: number }> {
+		const available = await this.inventory.listDailySummaries();
+		const fileId = this.registry.snapshot().pathIndex[filePath] ?? null;
+		let fileActiveMs = 0;
+		let vaultActiveMs = 0;
+		for (const item of available) {
+			if (item.localDate !== today) continue;
+			const summary = await this.summaries.load(item);
+			if (!summary) continue;
+			for (const [id, metrics] of Object.entries(summary.metricsByFileId)) {
+				vaultActiveMs += metrics.activeMs;
+				if (fileId !== null && id === fileId) fileActiveMs += metrics.activeMs;
+			}
+		}
+		return { fileActiveMs, vaultActiveMs };
+	}
 }

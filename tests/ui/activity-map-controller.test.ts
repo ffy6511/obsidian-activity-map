@@ -18,15 +18,17 @@ function result(query: DistributionQuery, value: number): DistributionResult {
 	};
 }
 
-function tracking(): TrackingControl & { updates: number; pauses: number; resumes: number } {
+function tracking(): TrackingControl & { updates: number; pauses: number; resumes: number; undos: number } {
 	return {
 		updates: 0,
 		pauses: 0,
 		resumes: 0,
+		undos: 0,
 		pause() { this.pauses += 1; },
 		resume() { this.resumes += 1; },
 		updateSettings() { this.updates += 1; },
 		async resolveRecovery() { return null; },
+		undoAutomaticExclusion() { this.undos += 1; return true; },
 	};
 }
 
@@ -73,5 +75,20 @@ describe('activity map controller', () => {
 		await controller.dispatch({ kind: 'resume' });
 		expect(runtime.pauses).toBe(1);
 		expect(runtime.resumes).toBe(1);
+	});
+
+	it('queries a file-specific status summary and routes automatic-exclusion undo', async () => {
+		const settings = normalizeSettings({ deviceId: 'd1' });
+		const runtime = tracking();
+		let requestedPath = '';
+		const controller = new ActivityMapController(settings, {
+			run: async (query) => result(query, 0),
+			getStatusSummary: async (path) => { requestedPath = path; return { fileActiveMs: 10, vaultActiveMs: 20 }; },
+		}, { update: async () => settings }, runtime, '2026-07-21');
+		const summary = await controller.getStatusSummary('notes/a.md');
+		await controller.dispatch({ kind: 'undo-automatic-exclusion', candidateId: 'candidate-1' });
+		expect(requestedPath).toBe('notes/a.md');
+		expect(summary).toEqual({ fileActiveMs: 10, vaultActiveMs: 20 });
+		expect(runtime.undos).toBe(1);
 	});
 });

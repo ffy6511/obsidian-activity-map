@@ -5,9 +5,11 @@ import type { DistributionQuery, DistributionResult } from '../query/distributio
 import type { MetricKey } from '../query/path-projection';
 import type { RangeMode } from '../query/date-range';
 import { initialViewModel, type ActivityMapViewModel } from './view-model';
+import { localDateFor } from '../platform/clock';
 
 export interface QueryService {
 	run(query: DistributionQuery): Promise<DistributionResult>;
+	getStatusSummary?(filePath: string, today: string): Promise<{ fileActiveMs: number; vaultActiveMs: number }>;
 }
 
 export interface SettingsService {
@@ -19,6 +21,7 @@ export interface TrackingControl {
 	resume(): void;
 	updateSettings(settings: ActivityMapSettings): void;
 	resolveRecovery(args: { candidateId: string; kind: 'include' | 'exclude' }): Promise<unknown>;
+	undoAutomaticExclusion(candidateId: string): boolean;
 }
 
 export type ActivityMapIntent =
@@ -29,6 +32,7 @@ export type ActivityMapIntent =
 	| { kind: 'pause' }
 	| { kind: 'resume' }
 	| { kind: 'resolve-recovery'; candidateId: string; decision: 'include' | 'exclude' }
+	| { kind: 'undo-automatic-exclusion'; candidateId: string }
 	| { kind: 'update-settings'; patch: Partial<ActivityMapSettings> };
 
 /** Serializes UI intent effects and rejects stale query generations. */
@@ -37,6 +41,7 @@ export class ActivityMapController implements TrackingObserver {
 	private readonly listeners = new Set<(model: ActivityMapViewModel) => void>();
 	private generation = 0;
 	private stopped = false;
+	private today: string;
 
 	constructor(
 		settings: ActivityMapSettings,
@@ -46,6 +51,7 @@ export class ActivityMapController implements TrackingObserver {
 		today: string,
 	) {
 		this.model = initialViewModel(settings, today);
+		this.today = today;
 	}
 
 	getViewModel(): ActivityMapViewModel {
@@ -61,7 +67,18 @@ export class ActivityMapController implements TrackingObserver {
 
 	onSnapshot(snapshot: TrackingSnapshot): void {
 		if (this.stopped) return;
+		this.today = localDateFor(Date.parse(snapshot.sampledAt), Intl.DateTimeFormat().resolvedOptions().timeZone);
 		this.publish({ ...this.model, tracking: snapshot });
+	}
+
+	async getStatusSummary(filePath: string): Promise<{ fileActiveMs: number; vaultActiveMs: number }> {
+		if (!this.queryService.getStatusSummary) return { fileActiveMs: 0, vaultActiveMs: 0 };
+		return this.queryService.getStatusSummary(filePath, this.today);
+	}
+
+	reportWarning(message: string): void {
+		if (this.stopped || this.model.warnings.includes(message)) return;
+		this.publish({ ...this.model, warnings: [...this.model.warnings, message] });
 	}
 
 	async dispatch(intent: ActivityMapIntent): Promise<void> {
@@ -75,6 +92,9 @@ export class ActivityMapController implements TrackingObserver {
 				return;
 			case 'resolve-recovery':
 				await this.tracking.resolveRecovery({ candidateId: intent.candidateId, kind: intent.decision });
+				return;
+			case 'undo-automatic-exclusion':
+				this.tracking.undoAutomaticExclusion(intent.candidateId);
 				return;
 			case 'update-settings': {
 				// Persistence is the commit point. Runtime behavior changes only after

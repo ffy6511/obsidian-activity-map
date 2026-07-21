@@ -17,7 +17,7 @@
 
 - [x] Phase 0: Compose services, settings, commands, and view state
 - [x] Phase 1: Implement the full statistics view and native SVG chart
-- [ ] Phase 2: Implement file-header status and interactive summary popover
+- [x] Phase 2: Implement file-header status and interactive summary popover
 - [ ] Phase 3: Implement SVG export and local data controls
 - [ ] Phase 4: Complete accessibility, platform integration, and v0.1 release evidence
 
@@ -29,7 +29,7 @@ The current view is a truthful placeholder. Users need one coherent interface fo
 
 ### Current Behavior
 
-The plugin registers a Ribbon action and `Activity Map: Open view` command. The `ItemView` contains one empty-state paragraph. There is no service composition, status model, settings tab, query controller, chart, detail list, file-header action, popover, export path, data-control dialog, accessibility behavior, or real Obsidian verification.
+The plugin composes tracking, local data, queries, settings, commands, a dockable hierarchical statistics view, and one status action per eligible file view. The action and owner-document-aware popover expose tracking state, current-file and vault totals, recovery decisions, pause/resume, and full-view access. SVG export, data-control presentation, complete accessibility/platform integration evidence, and real Obsidian verification remain pending.
 
 ### Goals and Non-goals
 
@@ -278,11 +278,11 @@ Provide the low-distraction desktop entry and status interaction while retaining
 
 ### Tasks
 
-- [ ] Manage one public header action per eligible `FileView` across layout and pop-out changes.
-- [ ] Map every tracking snapshot state to icon, accessible name, tooltip, and available actions.
-- [ ] Implement owner-document-aware popover placement, hover/focus persistence, outside close, `Escape`, and focus restoration.
-- [ ] Wire recovery include/exclude, automatic-exclusion undo, pause/resume, and open-view intents through the controller.
-- [ ] Capability-gate pointer hover and header failures while preserving Ribbon/command access.
+- [x] Manage one public header action per eligible `FileView` across layout and pop-out changes.
+- [x] Map every tracking snapshot state to icon, accessible name, tooltip, and available actions.
+- [x] Implement owner-document-aware popover placement, hover/focus persistence, outside close, `Escape`, and focus restoration.
+- [x] Wire recovery include/exclude, automatic-exclusion undo, pause/resume, and open-view intents through the controller.
+- [x] Capability-gate pointer hover and header failures while preserving Ribbon/command access.
 
 ### Files
 
@@ -295,11 +295,11 @@ Provide the low-distraction desktop entry and status interaction while retaining
 
 ### Acceptance Criteria
 
-- [ ] Multiple file views and pop-out documents receive independent plugin-owned actions without duplicates.
-- [ ] Popover pointer and keyboard journeys remain interactive and restore focus on close.
-- [ ] Recovery candidates cannot be resolved twice through repeated clicks.
-- [ ] Header integration failure leaves the command, Ribbon, and full view usable.
-- [ ] Mobile/touch mode exposes no hover-only required operation.
+- [x] Multiple file views and pop-out documents receive independent plugin-owned actions without duplicates.
+- [x] Popover pointer and keyboard journeys remain interactive and restore focus on close.
+- [x] Recovery candidates cannot be resolved twice through repeated clicks.
+- [x] Header integration failure leaves the command, Ribbon, and full view usable.
+- [x] Mobile/touch mode exposes no hover-only required operation.
 
 ## Phase 3: Implement SVG Export and Local Data Controls
 

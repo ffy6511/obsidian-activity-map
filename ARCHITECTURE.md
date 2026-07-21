@@ -15,7 +15,7 @@ Authority links:
 
 ## Current Implementation
 
-The tracking, persistence, maintenance, query, controller, and complete statistics view are implemented, covered by deterministic fixtures, and composed by the plugin entrypoint. The installable bundle collects activity, maintains queryable daily summaries, and renders range controls, hierarchical navigation, a native SVG donut, and the complete detail list:
+The tracking, persistence, maintenance, query, controller, complete statistics view, and file-header status surface are implemented, covered by deterministic fixtures, and composed by the plugin entrypoint. The installable bundle collects activity, maintains queryable daily summaries, renders hierarchical native-SVG distributions, and adds one owner-document-aware status action and summary popover to each eligible file view:
 
 ```text
 src/
@@ -32,7 +32,7 @@ manifest.json               # Plugin ID activity-map; cross-platform manifest fl
 main.js                     # Generated build artifact; ignored and never edited directly.
 ```
 
-SVG export, header/popover, data-control UI, and real Obsidian journeys remain the `v0.1` target and are subject to the evidence checkboxes in Spec 03.
+SVG export, data-control UI, and real Obsidian journeys remain the `v0.1` target and are subject to the evidence checkboxes in Spec 03.
 
 ## System Overview
 
@@ -317,6 +317,8 @@ DistributionResult
 ```
 
 UI code sends intents to the controller. It cannot append records, rewrite summaries, or delete files directly. Destructive actions execute only the immutable plan returned by the data layer and abort when that plan becomes stale.
+
+The header-action manager listens to public workspace lifecycle events, owns one `FileView.addAction()` element per live file view through a weak registry, and removes only those elements on view removal or unload. Status icons and text come from tracking snapshots. Each popover is attached to its trigger's owner document so pop-out windows keep independent focus, pointer, and close behavior. Hover listeners are capability-gated; keyboard focus, Ribbon, commands, and the full view remain usable without hover or when header integration reports a warning.
 
 ## Failure and Privacy Boundaries
 

@@ -199,7 +199,7 @@ export class TrackingCoordinator {
 
 	/** Undo an automatic exclusion (UI intent). */
 	undoAutomaticExclusion(candidateId: string): boolean {
-		return this.engine.undoAutomaticExclusion(candidateId, this.opts.clock.now().wallMs);
+		return this.engine.undoAutomaticExclusion(candidateId, this.opts.clock.now());
 	}
 
 	/** Called by the host's idle timer; confirms elapsed inactivity. */

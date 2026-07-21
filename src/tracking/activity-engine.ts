@@ -490,8 +490,14 @@ export class ActivityEngine {
 	}
 
 	/** Undo an automatic exclusion before its deadline. */
-	undoAutomaticExclusion(candidateId: string, nowMs: number): boolean {
-		return this.recovery.undoAutomaticExclusion({ candidateId, nowMs });
+	undoAutomaticExclusion(candidateId: string, sample: ClockSample): boolean {
+		const undone = this.recovery.undoAutomaticExclusion({ candidateId, nowMs: sample.wallMs });
+		if (undone) {
+			this.stateReason = 'pending-recovery';
+			this.flushCheckpoint(sample);
+			this.publishSnapshot(sample);
+		}
+		return undone;
 	}
 
 	// --- snapshots and checkpoint -------------------------------------

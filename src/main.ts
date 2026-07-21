@@ -1,6 +1,7 @@
 import {
 	FileView,
 	Plugin,
+	setIcon,
 	TFolder,
 	type EventRef,
 	type TAbstractFile,
@@ -25,10 +26,12 @@ import { ActivityMapController } from './ui/activity-map-controller';
 import { ActivityMapSettingsTab } from './ui/settings-tab';
 import { registerActivityMapCommands } from './ui/commands';
 import { ACTIVITY_MAP_VIEW_TYPE, ActivityMapView } from './ui/activity-map-view';
+import { HeaderActionManager } from './ui/header-action-manager';
 
 export default class ActivityMapPlugin extends Plugin {
 	private controller: ActivityMapController | null = null;
 	private coordinator: TrackingCoordinator | null = null;
+	private headerActions: HeaderActionManager | null = null;
 	private readonly windowById = new Map<string, Window>();
 	private readonly leafIds = new WeakMap<WorkspaceLeaf, string>();
 	private nextLeafId = 1;
@@ -103,6 +106,16 @@ export default class ActivityMapPlugin extends Plugin {
 		this.addSettingTab(new ActivityMapSettingsTab(this.app, this, controller));
 		this.registerVaultIdentityEvents(registry);
 		this.registerPopoutEvents(coordinator);
+		const headerActions = new HeaderActionManager({
+			workspace: this.app.workspace,
+			controller,
+			openView: () => this.activateView(),
+			isFileView: (view): view is FileView => view instanceof FileView,
+			setIcon,
+			reportWarning: (message) => controller.reportWarning(message),
+		});
+		this.headerActions = headerActions;
+		this.app.workspace.onLayoutReady(() => headerActions.start());
 
 		const heartbeatMs = 30_000;
 		this.registerInterval(window.setInterval(() => coordinator.onHeartbeat(heartbeatMs), heartbeatMs));
@@ -111,6 +124,7 @@ export default class ActivityMapPlugin extends Plugin {
 	}
 
 	onunload(): void {
+		this.headerActions?.stop();
 		this.controller?.stop();
 		void this.coordinator?.stop();
 		this.windowById.clear();
