@@ -68,8 +68,39 @@ export function beforeEach(fn: () => void | Promise<void>): void {
 /** Assertion helper. Small surface; add matchers only when a test needs one. */
 export const expect = <T>(actual: T): Expectation<T> => new Expectation(actual);
 
+/** Negation helper: `expect(x).not.toBeNull()` asserts x is not null. */
+export const expectNot = {
+	toBeNull: (actual: unknown): void => {
+		assert.notEqual(actual, null);
+	},
+	toBeUndefined: (actual: unknown): void => {
+		assert.notEqual(actual, undefined);
+	},
+};
+
+/** Negation surface returned by {@link Expectation.not}. */
+export interface NotExpectation<T> {
+	toBeNull(): void;
+	toBeUndefined(): void;
+	toBeDefined(): void;
+	toBe(expected: T): void;
+	toEqual(expected: unknown): void;
+}
+
 class Expectation<T> {
 	constructor(private readonly actual: T) {}
+
+	/** Negated assertions. */
+	get not(): NotExpectation<T> {
+		const actual = this.actual;
+		return {
+			toBeNull: () => assert.notEqual(actual, null),
+			toBeUndefined: () => assert.notEqual(actual, undefined),
+			toBeDefined: () => assert.equal(actual, undefined),
+			toBe: (expected: T) => assert.notEqual(actual, expected),
+			toEqual: (expected: unknown) => assert.notDeepEqual(actual, expected),
+		};
+	}
 
 	toBe(expected: T): void {
 		assert.equal(this.actual, expected);
@@ -89,6 +120,10 @@ class Expectation<T> {
 
 	toBeUndefined(): void {
 		assert.equal(this.actual, undefined);
+	}
+
+	toBeDefined(): void {
+		assert.notEqual(this.actual, undefined);
 	}
 
 	toBeTrue(): void {
@@ -132,6 +167,13 @@ class Expectation<T> {
 		assert.ok(
 			(this.actual as unknown as number) < n,
 			`expected ${JSON.stringify(this.actual)} < ${n}`,
+		);
+	}
+
+	toBeLessThanOrEqual(n: number): void {
+		assert.ok(
+			(this.actual as unknown as number) <= n,
+			`expected ${JSON.stringify(this.actual)} <= ${n}`,
 		);
 	}
 }

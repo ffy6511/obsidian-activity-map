@@ -16,7 +16,7 @@
 ## Phases
 
 - [x] Phase 0: Establish domain contracts and deterministic time
-- [ ] Phase 1: Implement session and editing state machines
+- [x] Phase 1: Implement session and editing state machines
 - [ ] Phase 2: Coordinate Obsidian windows, leaves, and trusted signals
 - [ ] Phase 3: Implement recovery decisions and runtime hardening
 
@@ -246,13 +246,13 @@ Implement pure transitions for target changes, idle rollback, editing bursts, pa
 
 ### Tasks
 
-- [ ] Implement the serialized transition engine and explicit runtime states.
-- [ ] Implement session start, refresh, switch, blur, idle, pause, resume, shutdown, and degraded transitions.
-- [ ] Implement editing-burst union and clipping.
-- [ ] Implement `openCount` semantics across target changes and application refocus.
-- [ ] Implement recovery candidate creation and idempotent include/exclude decisions.
-- [ ] Implement auditable automatic exclusion and bounded undo-to-pending behavior.
-- [ ] Publish immutable tracking snapshots after every externally visible transition.
+- [x] Implement the serialized transition engine and explicit runtime states.
+- [x] Implement session start, refresh, switch, blur, idle, pause, resume, shutdown, and degraded transitions.
+- [x] Implement editing-burst union and clipping.
+- [x] Implement `openCount` semantics across target changes and application refocus.
+- [x] Implement recovery candidate creation and idempotent include/exclude decisions.
+- [x] Implement auditable automatic exclusion and bounded undo-to-pending behavior.
+- [x] Publish immutable tracking snapshots after every externally visible transition.
 
 ### Files
 
@@ -265,13 +265,13 @@ Implement pure transitions for target changes, idle rollback, editing bursts, pa
 
 ### Acceptance Criteria
 
-- [ ] Controlled-clock tests cover every transition and prove that only one target is active.
-- [ ] Idle at 180 seconds closes at the last trusted activity, not at the timer callback.
-- [ ] File switch closes and opens at one sample without overlap or lost elapsed time.
-- [ ] `editingMs <= activeMs` holds under generated transition sequences.
-- [ ] Duplicate recovery decisions and duplicate focus notifications do not duplicate metrics.
-- [ ] Automatic-exclusion undo succeeds only before its deadline and never includes the interval without a second explicit decision.
-- [ ] A sink failure produces a degraded snapshot and prevents new uncheckpointed attribution.
+- [x] Controlled-clock tests cover every transition and prove that only one target is active.
+- [x] Idle at 180 seconds closes at the last trusted activity, not at the timer callback.
+- [x] File switch closes and opens at one sample without overlap or lost elapsed time.
+- [x] `editingMs <= activeMs` holds under generated transition sequences.
+- [x] Duplicate recovery decisions and duplicate focus notifications do not duplicate metrics.
+- [x] Automatic-exclusion undo succeeds only before its deadline and never includes the interval without a second explicit decision.
+- [ ] A sink failure produces a degraded snapshot and prevents new uncheckpointed attribution. *(Engine `enterDegraded` is unit-tested; the queue + sink wiring that actually suppresses attribution is exercised in Phase 3.)*
 
 ## Phase 2: Coordinate Obsidian Windows, Leaves, and Trusted Signals
 
