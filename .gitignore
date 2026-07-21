@@ -1,0 +1,17 @@
+# Editors
+.vscode/
+.idea/
+*.iml
+
+# Dependencies and generated bundles
+node_modules/
+main.js
+*.map
+
+# Obsidian runtime data when developing inside a plugin directory
+data.json
+/data/
+
+# Logs and operating-system state
+npm-debug.log*
+.DS_Store

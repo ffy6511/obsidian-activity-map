@@ -1,0 +1,24 @@
+.activity-map-view {
+	padding: var(--size-4-4);
+}
+
+.activity-map-empty-state {
+	display: flex;
+	min-height: 12rem;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var(--size-4-2);
+	color: var(--text-muted);
+	text-align: center;
+}
+
+.activity-map-empty-state h2,
+.activity-map-empty-state p {
+	margin: 0;
+}
+
+.activity-map-empty-state p {
+	max-width: 28rem;
+	line-height: var(--line-height-normal);
+}

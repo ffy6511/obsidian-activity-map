@@ -1,0 +1,10 @@
+{
+	"id": "activity-map",
+	"name": "Activity Map",
+	"version": "0.1.0",
+	"minAppVersion": "1.7.2",
+	"description": "Track trustworthy file activity and explore it by folder.",
+	"author": "ffy6511",
+	"authorUrl": "https://github.com/ffy6511",
+	"isDesktopOnly": false
+}
