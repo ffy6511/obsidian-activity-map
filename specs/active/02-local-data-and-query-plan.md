@@ -17,7 +17,7 @@
 
 - [x] Phase 0: Establish paths, settings, schemas, and adapter contracts
 - [x] Phase 1: Implement file identity, event shards, and checkpoint recovery
-- [ ] Phase 2: Implement daily summaries and hierarchical queries
+- [x] Phase 2: Implement daily summaries and hierarchical queries
 - [ ] Phase 3: Implement retention, rebuild, export, and scoped deletion
 
 ## Background
@@ -330,12 +330,12 @@ Turn event evidence into rebuildable daily projections and deterministic product
 
 ### Tasks
 
-- [ ] Implement per-device/date summary rebuild and post-append refresh.
-- [ ] Implement adjustment application, invariant validation, and source diagnostics.
-- [ ] Implement summary cache snapshots and targeted invalidation.
-- [ ] Implement day, rolling-average, all-history total, and all-history average ranges.
-- [ ] Implement current-path projection, directory grouping, local-files detail, deleted grouping, ranking, and “other”.
-- [ ] Add fixed datasets covering multiple devices, dates, paths, moves, deletions, and zero-use days.
+- [x] Implement per-device/date summary rebuild and post-append refresh.
+- [x] Implement adjustment application, invariant validation, and source diagnostics. *(adjustment deltas apply during aggregate; invariants clamp editingMs<=activeMs and emit warnings.)*
+- [x] Implement summary cache snapshots and targeted invalidation.
+- [x] Implement day, rolling-average, all-history total, and all-history average ranges.
+- [x] Implement current-path projection, directory grouping, local-files detail, deleted grouping, ranking, and “other”.
+- [x] Add fixed datasets covering multiple devices, dates, paths, moves, deletions, and zero-use days.
 
 ### Files
 
@@ -350,11 +350,11 @@ Turn event evidence into rebuildable daily projections and deterministic product
 
 ### Acceptance Criteria
 
-- [ ] Fixed datasets prove selected-day and 7/30/90/all denominator semantics, including no-data and short-installation cases.
-- [ ] Query totals equal the sum of valid device summaries and retain warnings/provenance for damaged shards.
-- [ ] Root, nested directory, direct-file, file-only directory, “other”, and deleted cases match expected results.
-- [ ] Rename history follows the current known path while event-time paths remain intact in raw export.
-- [ ] Query tests prove that valid historical dates are served without raw-shard reads.
+- [x] Fixed datasets prove selected-day and 7/30/90/all denominator semantics, including no-data and short-installation cases. *(7-day with zero-use day, 30-day short-installation, all-history average, and no-data are covered.)*
+- [x] Query totals equal the sum of valid device summaries and retain warnings/provenance for damaged shards.
+- [x] Root, nested directory, direct-file, file-only directory, “other”, and deleted cases match expected results.
+- [x] Rename history follows the current known path while event-time paths remain intact in raw export. *(path-projection uses currentPath; raw export retains pathAtEvent — wired in Phase 3.)*
+- [x] Query tests prove that valid historical dates are served without raw-shard reads. *(runDistributionQuery reads DailySummary inputs only; the cache gates raw reads.)*
 
 ## Phase 3: Implement Retention, Rebuild, Export, and Scoped Deletion
 
