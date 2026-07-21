@@ -73,6 +73,16 @@ export class ActivityMapController implements TrackingObserver {
 		return this.model;
 	}
 
+	/** Default query for a newly opened header chart popover. */
+	getHeaderDefaultQuery(): DistributionQuery {
+		return {
+			metric: 'activeMs',
+			range: { mode: 'day', localDate: this.today },
+			path: '',
+			view: 'children',
+		};
+	}
+
 	subscribe(listener: (model: ActivityMapViewModel) => void): () => void {
 		if (this.stopped) return () => {};
 		this.listeners.add(listener);

@@ -33,6 +33,17 @@ function tracking(): TrackingControl & { updates: number; pauses: number; resume
 }
 
 describe('activity map controller', () => {
+	it('provides a today vault-root query for a newly opened header chart', () => {
+		const settings = normalizeSettings({ deviceId: 'd1' });
+		const controller = new ActivityMapController(settings, { run: async (query) => result(query, 0) }, { update: async () => settings }, tracking(), '2026-07-21');
+		expect(controller.getHeaderDefaultQuery()).toEqual({
+			metric: 'activeMs',
+			range: { mode: 'day', localDate: '2026-07-21' },
+			path: '',
+			view: 'children',
+		});
+	});
+
 	it('ignores a stale slow query after a newer navigation resolves', async () => {
 		const pending: Array<{ query: DistributionQuery; resolve: (value: DistributionResult) => void }> = [];
 		const service: QueryService = {

@@ -111,10 +111,24 @@
 }
 
 .activity-map-donut path:hover,
-.activity-map-donut path:focus-visible {
+.activity-map-donut path:focus-visible,
+.activity-map-donut path.is-highlighted {
 	opacity: 0.78;
 	outline: none;
 	transform: scale(1.015);
+}
+
+.activity-map-donut path.is-dimmed {
+	opacity: 0.24;
+}
+
+.activity-map-chart-tooltip {
+	min-height: 1.5em;
+	margin-top: var(--size-2-1);
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+	font-variant-numeric: tabular-nums;
+	text-align: center;
 }
 
 .activity-map-donut-total {
@@ -200,24 +214,52 @@
 
 .activity-map-header-action {
 	position: relative;
-}
-
-.activity-map-header-action.is-active {
-	color: var(--interactive-accent);
-}
-
-.activity-map-header-action.is-idle,
-.activity-map-header-action.is-paused,
-.activity-map-header-action.is-untrackable {
 	color: var(--text-muted);
 }
 
-.activity-map-header-action.is-pending {
-	color: var(--text-warning);
+.activity-map-header-donut {
+	display: block;
+	width: 20px;
+	height: 20px;
+	overflow: visible;
 }
 
-.activity-map-header-action.is-degraded {
-	color: var(--text-error);
+.activity-map-header-donut-track,
+.activity-map-header-donut-value {
+	fill: none;
+	stroke-width: 2.5;
+}
+
+.activity-map-header-donut-track {
+	stroke: var(--background-modifier-border-hover);
+}
+
+.activity-map-header-donut-value {
+	stroke: var(--interactive-accent);
+	stroke-linecap: round;
+	transform: rotate(-90deg);
+	transform-origin: 10px 10px;
+}
+
+.activity-map-header-action.is-pinned {
+	background: var(--background-modifier-hover);
+}
+
+.activity-map-header-action.is-pending::after,
+.activity-map-header-action.is-degraded::after {
+	position: absolute;
+	right: 2px;
+	bottom: 2px;
+	width: 5px;
+	height: 5px;
+	border: 1px solid var(--background-primary);
+	border-radius: 50%;
+	background: var(--text-warning);
+	content: '';
+}
+
+.activity-map-header-action.is-degraded::after {
+	background: var(--text-error);
 }
 
 .activity-map-popover {
@@ -226,14 +268,87 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--size-4-3);
-	width: min(20rem, calc(100vw - 1rem));
-	max-height: min(30rem, calc(100vh - 1rem));
+	width: min(30rem, calc(100vw - 1rem));
+	max-height: min(42rem, calc(100vh - 1rem));
 	padding: var(--size-4-4);
 	overflow: auto;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-m);
 	background: var(--background-primary);
 	box-shadow: var(--shadow-s);
+}
+
+.activity-map-chart-popover.is-pinned {
+	border-color: var(--interactive-accent);
+}
+
+.activity-map-popover-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--size-4-2);
+}
+
+.activity-map-popover-header h3 {
+	margin: 0;
+}
+
+.activity-map-popover .activity-map-controls {
+	grid-template-columns: minmax(7rem, 1fr) minmax(8rem, 1fr) auto auto minmax(8rem, 1fr);
+}
+
+.activity-map-popover-summary {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: var(--size-2-1) var(--size-4-3);
+	align-items: baseline;
+}
+
+.activity-map-popover-summary .activity-map-summary-vault {
+	grid-column: 1 / -1;
+}
+
+.activity-map-popover-chart .activity-map-donut {
+	width: min(100%, 20rem);
+}
+
+.activity-map-chart-legend {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+}
+
+.activity-map-chart-legend-row {
+	display: grid;
+	grid-template-columns: 0.75rem minmax(0, 1fr) auto auto;
+	gap: var(--size-4-2);
+	align-items: center;
+	width: 100%;
+	padding: var(--size-2-1) var(--size-2-2);
+	border: 0;
+	background: transparent;
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+	text-align: left;
+}
+
+.activity-map-chart-legend-row:hover,
+.activity-map-chart-legend-row:focus-visible,
+.activity-map-chart-legend-row.is-highlighted,
+.activity-map-detail-row.is-highlighted {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.activity-map-chart-legend-percent,
+.activity-map-chart-legend-value {
+	white-space: nowrap;
+}
+
+.activity-map-popover-auxiliary {
+	padding-top: var(--size-4-2);
+	border-top: 1px solid var(--background-modifier-border);
+	color: var(--text-muted);
 }
 
 .activity-map-popover h3,

@@ -8,7 +8,7 @@
 | Scope | `src/ui/`, `src/export/`, settings UI, plugin composition, v0.1 integration and release evidence |
 | Type | feat |
 | Priority | P0 |
-| Status | in-progress |
+| Status | review |
 | Completed | pending |
 | Dependencies | [Activity Tracking Runtime](01-activity-tracking-runtime-plan.md), [Local Data and Query](02-local-data-and-query-plan.md) |
 | Decisions | [Interface and export](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), [Privacy and network boundary](../constitution/2026-07-21-activity-map-product-and-data.md#privacy-and-network-boundary), [Presentation architecture](../../ARCHITECTURE.md#presentation-and-export), [PRD information architecture](../../docs/PRD.md#信息架构与交互), [PRD release acceptance](../../docs/PRD.md#发布验收) |
@@ -20,7 +20,7 @@
 - [x] Phase 2: Implement initial file-header status and popover lifecycle
 - [x] Phase 3: Implement SVG export and local data controls
 - [x] Phase 4: Complete automated accessibility, platform integration, and release-candidate evidence
-- [ ] Phase 5: Correct the header entry and deliver the interactive donut popover
+- [x] Phase 5: Correct the header entry and deliver the interactive donut popover
 
 ## Background
 
@@ -30,7 +30,7 @@ The current view is a truthful placeholder. Users need one coherent interface fo
 
 ### Current Behavior
 
-The plugin composes tracking, local data, queries, settings, commands, a dockable hierarchical statistics view, one status action per eligible file view, standalone SVG/JSON export, rebuild controls, and drift-checked scoped deletion. The current header action swaps icons on runtime updates and its hover surface is a text status card; it does not satisfy the approved Webtime-style interactive donut entry. Phase 5 reopens this Spec to correct that P0 UX before real Obsidian acceptance.
+The plugin composes tracking, local data, queries, settings, commands, a dockable hierarchical statistics view, one stable data-backed mini donut per eligible file view, a pinnable hierarchical donut popover, standalone SVG/JSON export, rebuild controls, and drift-checked scoped deletion. The rejected icon-swapping text card has been removed; final owner review and real Obsidian desktop/mobile verification remain pending.
 
 ### Goals and Non-goals
 
@@ -382,12 +382,12 @@ Replace the rejected text-first hover card and icon swapping with the approved s
 
 ### Tasks
 
-- [ ] Render one persistent miniature SVG donut in each eligible file header; update its current-file/vault-today ratio without replacing the owned SVG nodes.
-- [ ] Keep tracking status in accessible text and restrained CSS state so active/idle/pending/paused/degraded changes cannot flash or swap the main icon.
-- [ ] Replace the text-first summary card with a vault-root chart popover that reuses range controls, breadcrumbs, `ChartModel`, donut interaction, and synchronized legend values.
-- [ ] Implement hover/focus open, click-to-pin/unpin, pointer/focus retention, outside/Escape close, and a separate expand-to-ItemView action that preserves the current query.
-- [ ] Share directory, local-files, other, deleted, and file activation rules between the popover and ItemView; preserve keyboard and touch/click fallbacks.
-- [ ] Add focused DOM/lifecycle fixtures, rerun the integrated journey, and synchronize Constitution, PRD, Architecture, Roadmap, README, release notes, and Spec evidence.
+- [x] Render one persistent miniature SVG donut in each eligible file header; update its current-file/vault-today ratio without replacing the owned SVG nodes.
+- [x] Keep tracking status in accessible text and restrained CSS state so active/idle/pending/paused/degraded changes cannot flash or swap the main icon.
+- [x] Replace the text-first summary card with a vault-root chart popover that reuses range controls, breadcrumbs, `ChartModel`, donut interaction, and synchronized legend values.
+- [x] Implement hover/focus open, click-to-pin/unpin, pointer/focus retention, outside/Escape close, and a separate expand-to-ItemView action that preserves the current query.
+- [x] Share directory, local-files, other, deleted, and file activation rules between the popover and ItemView; preserve keyboard and touch/click fallbacks.
+- [x] Add focused DOM/lifecycle fixtures, rerun the integrated journey, and synchronize Constitution, PRD, Architecture, Roadmap, README, release notes, and Spec evidence.
 
 ### Files
 
@@ -408,13 +408,13 @@ Replace the rejected text-first hover card and icon swapping with the approved s
 
 ### Acceptance Criteria
 
-- [ ] Repeated tracking snapshots keep the same header SVG nodes and do not trigger icon replacement; equal data ratios do not rewrite arc geometry.
-- [ ] Real today data controls the mini donut, while missing/zero/error states retain one stable empty ring without fabricated activity.
-- [ ] Hover/focus reveals a donut-first vault-root popover; trigger click pins/unpins it, and expand opens the ItemView with the same query.
-- [ ] Hover/focus on every rendered slice shows its name, percentage, and exact value and synchronizes the matching legend row.
-- [ ] Directory and virtual-group clicks drill or expand in-place; file clicks open the file; breadcrumbs and range changes preserve coherent state.
-- [ ] Keyboard, focus restoration, outside/Escape close, reduced motion, theme tokens, and mobile no-hover fallbacks pass focused tests.
-- [ ] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, strict specs validation, Markdown link checks, and `git diff --check` pass.
+- [x] Repeated tracking snapshots keep the same header SVG nodes and do not trigger icon replacement; equal data ratios do not rewrite arc geometry.
+- [x] Real today data controls the mini donut, while missing/zero/error states retain one stable empty ring without fabricated activity.
+- [x] Hover/focus reveals a donut-first vault-root popover; trigger click pins/unpins it, and expand opens the ItemView with the same query.
+- [x] Hover/focus on every rendered slice shows its name, percentage, and exact value and synchronizes the matching legend row.
+- [x] Directory and virtual-group clicks drill or expand in-place; file clicks open the file; breadcrumbs and range changes preserve coherent state.
+- [x] Keyboard, focus restoration, outside/Escape close, reduced motion, theme tokens, and mobile no-hover fallbacks pass focused tests.
+- [x] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, strict specs validation, Markdown link checks, and `git diff --check` pass.
 
 ## Risks and Mitigations
 
@@ -478,3 +478,11 @@ Replace the rejected text-first hover card and icon swapping with the approved s
 - Evidence: focused data/query/controller fixtures plus the integrated technical journey remain distinct from real Obsidian evidence.
 - Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (220 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); `git diff --check`.
 - Lifecycle: this Spec and `v0.1` stay `review`; no new Critic verdict was issued, and both desktop/mobile Post-Critic Acceptance checkboxes remain open for the owner's final validation.
+
+### Owner-directed Header UX correction
+
+- Scope: the owner rejected the text-first hover card and icon swapping, approved a vault-root interactive donut popover, click-to-pin behavior, a separate expand action, and a stable data-backed header mini donut.
+- Executor fixes: Header actions retain one SVG ring and update only the real current-file/vault-today arc; semantic status no longer calls `setIcon`. The popover now shares controller query state, date/range controls, breadcrumbs, `ChartModel`, tooltip, legend highlighting, and activation semantics with the ItemView.
+- Evidence: focused fixtures prove stable SVG node identity, ratio updates, today-root defaults, shared activation, date navigation, donut-first source boundaries, keyboard labels, and non-color status text. The full automated suite passes 225 tests.
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (225 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); repository Markdown links; `git diff --check`.
+- Lifecycle: Phase 5 is technically complete and this Spec returns to `review`. The previous three-round Critic budget remains exhausted, so this owner-directed correction does not create a fourth Critic verdict; real desktop/mobile Post-Critic Acceptance stays open.

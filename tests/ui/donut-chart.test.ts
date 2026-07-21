@@ -2,6 +2,8 @@ import { describe, expect, it } from '../helpers/test-harness';
 
 import { buildChartModel, stableColor } from '../../src/ui/components/donut-chart';
 import type { DistributionItem, DistributionResult } from '../../src/query/distribution-query';
+import { distributionActivation } from '../../src/ui/distribution-activation';
+import { shiftLocalDate } from '../../src/ui/components/range-controls';
 
 function item(id: string, kind: DistributionItem['kind'], value: number, memberIds = [id]): DistributionItem {
 	return { id, kind, label: id, path: kind === 'directory' || kind === 'file' ? id : null, value, percentOfScope: value / 100, memberIds };
@@ -45,5 +47,17 @@ describe('donut chart model', () => {
 		const model = buildChartModel(distribution([item('dir:x', 'directory', 80), other]));
 		expect(model.items[1]?.kind).toBe('other');
 		expect(model.items[1]?.path).toBeNull();
+	});
+
+	it('shares directory, local-files, other, and file activation semantics', () => {
+		expect(distributionActivation(item('dir:projects', 'directory', 50))).toEqual({ kind: 'navigate', path: 'dir:projects', view: 'children' });
+		expect(distributionActivation({ ...item('group:local-files', 'local-files', 20), path: 'projects' })).toEqual({ kind: 'navigate', path: 'projects', view: 'local-files' });
+		expect(distributionActivation(item('group:other', 'other', 10, ['a', 'b']))).toEqual({ kind: 'expand-other', memberIds: ['a', 'b'] });
+		expect(distributionActivation(item('notes/a.md', 'file', 20))).toEqual({ kind: 'open-file', path: 'notes/a.md' });
+	});
+
+	it('moves selected-day navigation across month boundaries', () => {
+		expect(shiftLocalDate('2026-07-01', -1)).toBe('2026-06-30');
+		expect(shiftLocalDate('2026-07-31', 1)).toBe('2026-08-01');
 	});
 });

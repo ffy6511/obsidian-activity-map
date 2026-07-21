@@ -1,7 +1,6 @@
 import {
 	FileView,
 	Plugin,
-	setIcon,
 	TFolder,
 	type EventRef,
 	type TAbstractFile,
@@ -54,6 +53,7 @@ export default class ActivityMapPlugin extends Plugin {
 		const inventory = new ObsidianShardInventory(adapter);
 		const observers: TrackingObserver[] = [];
 		const summariesHolder: { value: DailySummaryRepository | null } = { value: null };
+		const controllerHolder: { value: ActivityMapController | null } = { value: null };
 		const dataServices = new DataServices({
 			registry,
 			fileAdapter: adapter,
@@ -63,7 +63,10 @@ export default class ActivityMapPlugin extends Plugin {
 				const repository = summariesHolder.value;
 				if (!repository) return;
 				const rebuilt = await repository.rebuild({ deviceId, localDate, nowIso: new Date().toISOString() });
-				if (!rebuilt.rawUnavailable) await repository.save({ deviceId, localDate, summary: rebuilt.summary });
+				if (!rebuilt.rawUnavailable) {
+					await repository.save({ deviceId, localDate, summary: rebuilt.summary });
+					await controllerHolder.value?.dispatch({ kind: 'refresh' });
+				}
 			},
 		});
 		const summaries = new DailySummaryRepository({ shardStore: dataServices.getShardStore(), pathAdapter: adapter, fileAdapter: adapter });
@@ -107,6 +110,7 @@ export default class ActivityMapPlugin extends Plugin {
 			localDateFor(Date.now(), Intl.DateTimeFormat().resolvedOptions().timeZone),
 			dataOperations,
 		);
+		controllerHolder.value = controller;
 		observers.push(controller);
 		this.controller = controller;
 
@@ -128,8 +132,8 @@ export default class ActivityMapPlugin extends Plugin {
 			workspace: this.app.workspace,
 			controller,
 			openView: () => this.activateView(),
+			openFile: (filePath) => this.app.workspace.openLinkText(filePath, '', false),
 			isFileView: (view): view is FileView => view instanceof FileView,
-			setIcon,
 			reportWarning: (message) => controller.reportWarning(message),
 		});
 		this.headerActions = headerActions;

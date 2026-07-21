@@ -10,6 +10,7 @@ import { renderDetailList } from './components/detail-list';
 import { formatMetric, formatPercent, metricLabel } from './format';
 import { renderDataControls } from './data-controls';
 import { QueryHistory } from './query-history';
+import { distributionActivation } from './distribution-activation';
 
 export const ACTIVITY_MAP_VIEW_TYPE = 'activity-map-view';
 
@@ -95,7 +96,13 @@ export class ActivityMapView extends ItemView {
 		if (distribution.coverage) summary.createDiv({ text: `${distribution.coverage.firstDate} – ${distribution.coverage.lastDate}`, cls: 'activity-map-summary-coverage' });
 		const body = this.contentEl.createDiv({ cls: 'activity-map-body' });
 		const chart = body.createDiv({ cls: 'activity-map-chart-panel' });
-		renderDonutChart({ container: chart, distribution, onActivate: (item) => this.activateItem(item) });
+		let detailHandle: { highlight(itemId: string | null): void } | null = null;
+		const chartHandle = renderDonutChart({
+			container: chart,
+			distribution,
+			onActivate: (item) => this.activateItem(item),
+			onHighlight: (item) => detailHandle?.highlight(item?.id ?? null),
+		});
 		const details = body.createDiv({ cls: 'activity-map-details-panel' });
 		const detailItems = this.expandedOther
 			? distribution.detailItems.filter((item) => item.memberIds.some((id) => this.expandedOther?.includes(id)))
@@ -106,7 +113,13 @@ export class ActivityMapView extends ItemView {
 			const close = heading.createEl('button', { text: 'Show all', cls: 'mod-cta' });
 			close.addEventListener('click', () => { this.expandedOther = null; this.render(model); });
 		}
-		renderDetailList({ container: details, distribution, items: detailItems, onActivate: (item) => this.activateItem(item) });
+		detailHandle = renderDetailList({
+			container: details,
+			distribution,
+			items: detailItems,
+			onActivate: (item) => this.activateItem(item),
+			onHighlight: (item) => chartHandle.highlight(item?.id ?? null),
+		});
 		if (model.warnings.length > 0) {
 			const warnings = this.contentEl.createEl('details', { cls: 'activity-map-warnings' });
 			warnings.createEl('summary', { text: `${model.warnings.length} data warning${model.warnings.length === 1 ? '' : 's'}` });
@@ -117,16 +130,15 @@ export class ActivityMapView extends ItemView {
 	}
 
 	private activateItem(item: DistributionItem | ChartItem): void {
-		if (item.kind === 'directory' && item.path !== null) {
+		const activation = distributionActivation(item);
+		if (activation.kind === 'navigate') {
 			this.expandedOther = null;
-			void this.navigate({ kind: 'set-path', path: item.path });
-		} else if (item.kind === 'local-files') {
-			void this.navigate({ kind: 'set-path', path: item.path ?? '', view: 'local-files' });
-		} else if (item.kind === 'other') {
-			this.expandedOther = [...item.memberIds];
+			void this.navigate({ kind: 'set-path', path: activation.path, view: activation.view });
+		} else if (activation.kind === 'expand-other') {
+			this.expandedOther = activation.memberIds;
 			this.render(this.controller.getViewModel());
-		} else if (item.kind === 'file' && item.path) {
-			const file = this.hostApp.vault.getAbstractFileByPath(item.path);
+		} else if (activation.kind === 'open-file') {
+			const file = this.hostApp.vault.getAbstractFileByPath(activation.path);
 			if (file instanceof TFile) void this.hostApp.workspace.getLeaf(false).openFile(file);
 		}
 	}

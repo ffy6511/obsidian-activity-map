@@ -21,11 +21,15 @@ describe('automated accessibility and platform presentation checks', () => {
 	it('preserves focus across rerenders and names transient and destructive controls', async () => {
 		const view = await source('src/ui/activity-map-view.ts');
 		const popover = await source('src/ui/summary-popover.ts');
+		const miniDonut = await source('src/ui/header-mini-donut.ts');
 		const deletion = await source('src/ui/deletion-confirmation.ts');
 		expect(view.includes('data-activity-map-id')).toBeTrue();
 		expect(view.includes('?.focus()')).toBeTrue();
 		expect(popover.includes("event.key === 'Escape'")).toBeTrue();
 		expect(popover.includes('this.trigger.focus()')).toBeTrue();
+		expect(popover.includes('togglePinned()')).toBeTrue();
+		expect(popover.includes("'aria-label': 'Activity Map chart'")).toBeTrue();
+		expect(miniDonut.includes("setAttribute('aria-hidden', 'true')")).toBeTrue();
 		expect(deletion.includes("role: 'alertdialog'")).toBeTrue();
 		expect(deletion.includes('Delete planned data')).toBeTrue();
 	});
