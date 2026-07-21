@@ -8,7 +8,7 @@
 | Scope | `src/ui/`, `src/export/`, settings UI, plugin composition, v0.1 integration and release evidence |
 | Type | feat |
 | Priority | P0 |
-| Status | review |
+| Status | in-progress |
 | Completed | pending |
 | Dependencies | [Activity Tracking Runtime](01-activity-tracking-runtime-plan.md), [Local Data and Query](02-local-data-and-query-plan.md) |
 | Decisions | [Interface and export](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), [Privacy and network boundary](../constitution/2026-07-21-activity-map-product-and-data.md#privacy-and-network-boundary), [Presentation architecture](../../ARCHITECTURE.md#presentation-and-export), [PRD information architecture](../../docs/PRD.md#信息架构与交互), [PRD release acceptance](../../docs/PRD.md#发布验收) |
@@ -17,9 +17,10 @@
 
 - [x] Phase 0: Compose services, settings, commands, and view state
 - [x] Phase 1: Implement the full statistics view and native SVG chart
-- [x] Phase 2: Implement file-header status and interactive summary popover
+- [x] Phase 2: Implement initial file-header status and popover lifecycle
 - [x] Phase 3: Implement SVG export and local data controls
 - [x] Phase 4: Complete automated accessibility, platform integration, and release-candidate evidence
+- [ ] Phase 5: Correct the header entry and deliver the interactive donut popover
 
 ## Background
 
@@ -29,7 +30,7 @@ The current view is a truthful placeholder. Users need one coherent interface fo
 
 ### Current Behavior
 
-The plugin composes tracking, local data, queries, settings, commands, a dockable hierarchical statistics view, one status action per eligible file view, standalone SVG/JSON export, rebuild controls, and drift-checked scoped deletion. Complete accessibility/platform integration evidence and real Obsidian verification remain pending.
+The plugin composes tracking, local data, queries, settings, commands, a dockable hierarchical statistics view, one status action per eligible file view, standalone SVG/JSON export, rebuild controls, and drift-checked scoped deletion. The current header action swaps icons on runtime updates and its hover surface is a text status card; it does not satisfy the approved Webtime-style interactive donut entry. Phase 5 reopens this Spec to correct that P0 UX before real Obsidian acceptance.
 
 ### Goals and Non-goals
 
@@ -37,7 +38,7 @@ Goals:
 
 - Compose Specs 01 and 02 behind a presentation-safe controller.
 - Deliver the dockable full view, directory navigation, native SVG donut, complete detail list, and responsive states.
-- Add file-header status actions and a focusable non-modal summary popover with Ribbon/command fallbacks.
+- Add a stable data-backed file-header mini donut and a focusable, pinnable hierarchical donut popover with Ribbon/command fallbacks.
 - Provide settings, pause/resume, recovery decisions, raw JSON export, rebuild, scoped deletion, and both SVG export modes.
 - Meet keyboard, focus, theme, reduced-motion, desktop, mobile-viewer, privacy, and release-documentation requirements.
 - Produce automated evidence plus real Obsidian desktop and mobile journeys for `v0.1` acceptance.
@@ -51,7 +52,7 @@ Non-goals:
 
 ### Key Insight
 
-Use one immutable `ActivityMapViewModel` for the full view, header popover, detail list, and SVG exporter. Commands emit controller intents; only the controller calls tracking, query, or data services. This keeps presentation from mutating raw evidence and ensures the exported chart uses the same values shown on screen.
+Use one immutable `ActivityMapViewModel` for the full view, header popover, detail list, and SVG exporter. The header action derives only a compact current-file/vault-today ratio from real query data. Commands emit controller intents; only the controller calls tracking, query, or data services. This keeps presentation from mutating raw evidence and ensures the popover, full view, and exported chart use the same values and activation semantics.
 
 ## Design
 
@@ -148,10 +149,13 @@ Use the public `FileView.addAction()` API for each eligible file view and retain
 
 - Add or refresh actions on layout readiness, active-leaf changes, file opens, and layout changes.
 - Remove only plugin-owned elements when a view becomes ineligible or the plugin unloads.
-- The action exposes active, idle, pending, paused, untrackable, and degraded states through icon, accessible name, and tooltip.
-- Click opens or reveals the full view. Hover and keyboard focus open the summary popover on desktop-capable pointer environments.
+- The action installs one stable miniature SVG donut. Its arc is `current file activeMs / vault activeMs` for today; unavailable or zero data renders the same empty ring.
+- Runtime state updates accessible name, tooltip, CSS state, and a restrained semantic marker without replacing the donut DOM. Repeated snapshots with the same ratio do not rewrite geometry.
+- Hover and keyboard focus open the chart popover on desktop-capable pointer environments. Click toggles pinned/unpinned state; opening the full view is a separate expand action.
 - The popover is plugin-owned DOM attached to the action's owner document, remains open while pointer/focus is within trigger or popover, closes on `Escape` or outside interaction, and restores focus to the trigger.
-- The popover is non-modal and does not trap focus. It contains current-file today time, vault today time, state reason, pending include/exclude, pause/resume, and open-view actions.
+- The popover is non-modal and does not trap focus. It defaults to today's vault-root distribution and reuses the full view's range controls, breadcrumbs, native donut, synchronized legend, tooltip, and slice activation rules.
+- Directory activation drills down in-place; local-files, other, deleted, and file activation match the ItemView. Expanding the ItemView preserves the popover's current query.
+- Tracking state, pending include/exclude, pause/resume, and recent automatic-exclusion undo remain available as a compact auxiliary section without displacing the chart.
 - A recent automatic exclusion exposes its bounded undo action; undo returns the interval to pending review and never includes time immediately.
 - If public header integration fails, record a warning and keep Ribbon and command access fully functional.
 - Mobile registers no hover behavior and uses Ribbon, command, and the full view.
@@ -370,6 +374,48 @@ Real Obsidian desktop and mobile-viewer journeys require the technical and Criti
 - [x] Roadmap deliverables and acceptance boxes are checked only for evidence actually collected across Specs 01–03.
 - [x] Generated `main.js`, `manifest.json`, and `styles.css` install as one local plugin artifact set.
 
+## Phase 5: Correct the Header Entry and Deliver the Interactive Donut Popover
+
+### Goal
+
+Replace the rejected text-first hover card and icon swapping with the approved stable mini donut and directly interactive hierarchical chart.
+
+### Tasks
+
+- [ ] Render one persistent miniature SVG donut in each eligible file header; update its current-file/vault-today ratio without replacing the owned SVG nodes.
+- [ ] Keep tracking status in accessible text and restrained CSS state so active/idle/pending/paused/degraded changes cannot flash or swap the main icon.
+- [ ] Replace the text-first summary card with a vault-root chart popover that reuses range controls, breadcrumbs, `ChartModel`, donut interaction, and synchronized legend values.
+- [ ] Implement hover/focus open, click-to-pin/unpin, pointer/focus retention, outside/Escape close, and a separate expand-to-ItemView action that preserves the current query.
+- [ ] Share directory, local-files, other, deleted, and file activation rules between the popover and ItemView; preserve keyboard and touch/click fallbacks.
+- [ ] Add focused DOM/lifecycle fixtures, rerun the integrated journey, and synchronize Constitution, PRD, Architecture, Roadmap, README, release notes, and Spec evidence.
+
+### Files
+
+- `src/ui/header-action-manager.ts`
+- `src/ui/header-mini-donut.ts`
+- `src/ui/summary-popover.ts`
+- `src/ui/components/donut-chart.ts`
+- `src/ui/components/chart-legend.ts`
+- `src/ui/components/range-controls.ts`
+- `src/ui/components/breadcrumbs.ts`
+- `src/ui/activity-map-controller.ts`
+- `src/ui/activity-map-view.ts`
+- `styles.css`
+- `tests/ui/header-action-manager.test.ts`
+- `tests/ui/summary-popover.test.ts`
+- `tests/ui/donut-chart.test.ts`
+- `tests/ui/accessibility.test.ts`
+
+### Acceptance Criteria
+
+- [ ] Repeated tracking snapshots keep the same header SVG nodes and do not trigger icon replacement; equal data ratios do not rewrite arc geometry.
+- [ ] Real today data controls the mini donut, while missing/zero/error states retain one stable empty ring without fabricated activity.
+- [ ] Hover/focus reveals a donut-first vault-root popover; trigger click pins/unpins it, and expand opens the ItemView with the same query.
+- [ ] Hover/focus on every rendered slice shows its name, percentage, and exact value and synchronizes the matching legend row.
+- [ ] Directory and virtual-group clicks drill or expand in-place; file clicks open the file; breadcrumbs and range changes preserve coherent state.
+- [ ] Keyboard, focus restoration, outside/Escape close, reduced motion, theme tokens, and mobile no-hover fallbacks pass focused tests.
+- [ ] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, strict specs validation, Markdown link checks, and `git diff --check` pass.
+
 ## Risks and Mitigations
 
 | Risk | Mitigation |
@@ -377,6 +423,7 @@ Real Obsidian desktop and mobile-viewer journeys require the technical and Criti
 | Header actions rely on a view lifecycle outside plugin-owned DOM | Use public `FileView.addAction`, maintain a weak registry, remove only owned elements, and retain Ribbon/command fallbacks. |
 | Live chart and exported SVG diverge | Derive both from one immutable `ChartModel` and test value/color equality. |
 | Frequent runtime updates cause excessive query/render work | Separate status snapshots from distribution invalidation and batch DOM updates. |
+| Header status changes flash or rebuild the icon | Keep one SVG ring mounted, update geometry only when the real ratio changes, and express state through accessible text plus restrained CSS. |
 | Destructive UI executes a changed scope | Require a backend deletion plan and revalidate the exact plan ID before mutation. |
 | Mobile lacks a desktop export or hover capability | Make viewing and navigation independent of both; capability-detect optional export and report its availability honestly. |
 | Fixture tests are mistaken for real Obsidian evidence | Record automated and real desktop/mobile results separately and leave Roadmap acceptance open until each named journey passes. |

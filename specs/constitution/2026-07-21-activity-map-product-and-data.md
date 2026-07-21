@@ -75,7 +75,9 @@ A user works across several Obsidian windows and project folders. Activity Map a
 
 ### Interface and Export
 
-- Provide a file-header state action with a focusable interactive popover, plus Ribbon and command fallbacks.
+- Provide a stable file-header donut action with a focusable interactive chart popover, plus Ribbon and command fallbacks. Hover/focus reveals the chart; action click pins or unpins it; opening the dockable view remains a separate control.
+- Render the header action as a stable miniature donut whose real-data arc represents the current file's share of today's vault activity. When data is unavailable, keep the same fixed donut outline instead of swapping tracking-state icons.
+- Make the header popover and dockable view share the same query, native SVG donut, legend, range controls, breadcrumbs, and slice activation semantics. The popover defaults to today's vault-root distribution.
 - Use a dockable `ItemView` as the complete interface. Mobile interaction must not depend on hover.
 - Use a native SVG donut with stable colors, text detail, keyboard navigation, breadcrumbs, and explicit local-versus-vault percentages.
 - Export a full information graphic by default and offer a chart-only SVG. Both outputs embed necessary styles and accessible metadata.
@@ -199,3 +201,4 @@ Rejected because keyboard interaction, accessible semantics, and standalone vect
 | Date | Change | Reason |
 | --- | --- | --- |
 | 2026-07-21 | Established the initial product, attribution, identity, storage, privacy, UI, and extensibility decisions. | Provide a stable implementation boundary before feature development. |
+| 2026-07-21 | Made the file-header entry a stable data-backed miniature donut and the popover an interactive hierarchical donut rather than a text status card. | Align the primary desktop entry with the Webtime Tracker reference and preserve direct hover, focus, pin, and drill-down interaction. |
