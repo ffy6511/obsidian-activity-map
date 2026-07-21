@@ -13,6 +13,7 @@ export interface FakeDataAdapterOptions {
 	/** Throw on the Nth call to a method (1-indexed). */
 	fail?: {
 		write?: number;
+		append?: number;
 		read?: number;
 		rename?: number;
 		remove?: number;
@@ -29,7 +30,7 @@ export interface FakeDataAdapterOptions {
  */
 export class FakeDataAdapter implements JsonFileAdapter, PathAdapter {
 	private readonly files = new Map<string, string>();
-	private readonly counters = { write: 0, read: 0, rename: 0, remove: 0 };
+	private readonly counters = { write: 0, append: 0, read: 0, rename: 0, remove: 0 };
 	private readonly options: FakeDataAdapterOptions;
 
 	constructor(options: FakeDataAdapterOptions = {}) {
@@ -78,6 +79,15 @@ export class FakeDataAdapter implements JsonFileAdapter, PathAdapter {
 		this.files.set(this.normalize(path), contents);
 	}
 
+	async append(path: string, contents: string): Promise<void> {
+		this.counters.append += 1;
+		if (this.shouldFail('append')) {
+			throw new Error('injected-append-failure');
+		}
+		const normalized = this.normalize(path);
+		this.files.set(normalized, `${this.files.get(normalized) ?? ''}${contents}`);
+	}
+
 	async remove(path: string): Promise<void> {
 		this.counters.remove += 1;
 		if (this.shouldFail('remove')) {
@@ -112,11 +122,11 @@ export class FakeDataAdapter implements JsonFileAdapter, PathAdapter {
 	}
 
 	/** Call counts per method, for assertion. */
-	stats(): { write: number; read: number; rename: number; remove: number } {
+	stats(): { write: number; append: number; read: number; rename: number; remove: number } {
 		return { ...this.counters };
 	}
 
-	private shouldFail(method: 'write' | 'read' | 'rename' | 'remove'): boolean {
+	private shouldFail(method: 'write' | 'append' | 'read' | 'rename' | 'remove'): boolean {
 		const threshold = this.options.fail?.[method];
 		return threshold !== undefined && this.counters[method] >= threshold;
 	}

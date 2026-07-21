@@ -142,6 +142,8 @@ describe('activity engine idle clipping', () => {
 		h.engine.submit({ kind: 'activity', sample: sample(5_000) });
 		// 60s gap — within the 30min recovery limit.
 		h.engine.submit({ kind: 'idle-confirm', sample: sample(65_000) });
+		expect(h.engine.pendingRecovery()).toHaveLength(0);
+		h.engine.submit({ kind: 'focus-target', sample: sample(65_000), target: target('a') });
 		const pending = h.engine.pendingRecovery();
 		expect(pending).toHaveLength(1);
 		expect(pending[0]?.gapMs).toBe(60_000);
@@ -157,6 +159,8 @@ describe('activity engine automatic exclusion', () => {
 		h.engine.submit({ kind: 'activity', sample: sample(5_000) });
 		// 120s gap exceeds the 60s limit -> auto-exclude.
 		h.engine.submit({ kind: 'idle-confirm', sample: sample(125_000) });
+		expect(h.decisions).toHaveLength(0);
+		h.engine.submit({ kind: 'focus-target', sample: sample(125_000), target: target('a') });
 		expect(h.decisions).toHaveLength(1);
 		expect(h.decisions[0]?.kind).toBe('exclude');
 		expect(h.decisions[0]?.automatic).toBeTrue();
@@ -170,6 +174,7 @@ describe('activity engine automatic exclusion', () => {
 		h.engine.submit({ kind: 'focus-target', sample: sample(0), target: target('a') });
 		h.engine.submit({ kind: 'activity', sample: sample(5_000) });
 		h.engine.submit({ kind: 'idle-confirm', sample: sample(125_000) });
+		h.engine.submit({ kind: 'focus-target', sample: sample(125_000), target: target('a') });
 		const decision = h.decisions[0];
 		expect(decision).toBeDefined();
 		const undone = h.engine.undoAutomaticExclusion(
@@ -190,6 +195,7 @@ describe('activity engine automatic exclusion', () => {
 		h.engine.submit({ kind: 'focus-target', sample: sample(0), target: target('a') });
 		h.engine.submit({ kind: 'activity', sample: sample(5_000) });
 		h.engine.submit({ kind: 'idle-confirm', sample: sample(125_000) });
+		h.engine.submit({ kind: 'focus-target', sample: sample(125_000), target: target('a') });
 		const decision = h.decisions[0];
 		// 20s later exceeds the 10s undo window.
 		const undone = h.engine.undoAutomaticExclusion(
@@ -207,6 +213,7 @@ describe('activity engine recovery decisions', () => {
 		h.engine.submit({ kind: 'focus-target', sample: sample(0), target: target('a') });
 		h.engine.submit({ kind: 'activity', sample: sample(5_000) });
 		h.engine.submit({ kind: 'idle-confirm', sample: sample(65_000) });
+		h.engine.submit({ kind: 'focus-target', sample: sample(65_000), target: target('a') });
 		const pending = h.engine.pendingRecovery();
 		const decision = h.engine.resolveRecovery({
 			candidateId: pending[0]?.candidateId ?? '',
@@ -223,6 +230,7 @@ describe('activity engine recovery decisions', () => {
 		h.engine.submit({ kind: 'focus-target', sample: sample(0), target: target('a') });
 		h.engine.submit({ kind: 'activity', sample: sample(5_000) });
 		h.engine.submit({ kind: 'idle-confirm', sample: sample(65_000) });
+		h.engine.submit({ kind: 'focus-target', sample: sample(65_000), target: target('a') });
 		const pending = h.engine.pendingRecovery();
 		const decision = h.engine.resolveRecovery({
 			candidateId: pending[0]?.candidateId ?? '',
@@ -239,6 +247,7 @@ describe('activity engine recovery decisions', () => {
 		h.engine.submit({ kind: 'focus-target', sample: sample(0), target: target('a') });
 		h.engine.submit({ kind: 'activity', sample: sample(5_000) });
 		h.engine.submit({ kind: 'idle-confirm', sample: sample(65_000) });
+		h.engine.submit({ kind: 'focus-target', sample: sample(65_000), target: target('a') });
 		const id = h.engine.pendingRecovery()[0]?.candidateId ?? '';
 		const first = h.engine.resolveRecovery({ candidateId: id, kind: 'include', decidedAt: 'x' });
 		const second = h.engine.resolveRecovery({ candidateId: id, kind: 'include', decidedAt: 'y' });

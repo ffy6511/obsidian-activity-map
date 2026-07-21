@@ -12,7 +12,7 @@
  * so this property is testable without persistence.
  */
 
-import type { RuntimeCheckpoint } from '../domain/activity';
+import type { RuntimeCheckpoint, TrackingTarget } from '../domain/activity';
 import type { Clock } from '../platform/clock';
 import { ActivityEngine } from './activity-engine';
 
@@ -32,6 +32,8 @@ export function reconcileCheckpoint(args: {
 	engine: ActivityEngine;
 	clock: Clock;
 	nowSample: ReturnType<Clock['now']>;
+	currentTarget?: TrackingTarget | null;
+	idleThresholdMs?: number;
 }): ReconcileResult {
 	const { checkpoint, engine, nowSample } = args;
 	if (!checkpoint) {
@@ -46,10 +48,47 @@ export function reconcileCheckpoint(args: {
 	// Structural validity: an active checkpoint must name a target and start.
 	if (
 		checkpoint.state === 'active' &&
-		(!checkpoint.currentTarget || !checkpoint.sessionStartedAt)
+		(!checkpoint.currentTarget ||
+			!checkpoint.sessionStartedAt ||
+			!checkpoint.lastTrustedActivityAt)
 	) {
 		return { outcome: 'quarantined', reason: 'active-checkpoint-missing-target' };
 	}
+	if (checkpoint.state === 'active') {
+		const startedAt = Date.parse(checkpoint.sessionStartedAt ?? '');
+		const lastTrustedAt = Date.parse(checkpoint.lastTrustedActivityAt ?? '');
+		if (
+			!Number.isFinite(startedAt) ||
+			!Number.isFinite(lastTrustedAt) ||
+			startedAt > lastTrustedAt ||
+			lastTrustedAt > nowSample.wallMs
+		) {
+			return { outcome: 'quarantined', reason: 'active-checkpoint-invalid-time-range' };
+		}
+	}
 	engine.restore(checkpoint, nowSample);
+	if (checkpoint.state === 'active' && checkpoint.currentTarget) {
+		const currentTarget = args.currentTarget === undefined
+			? checkpoint.currentTarget
+			: args.currentTarget;
+		const lastTrustedAt = Date.parse(checkpoint.lastTrustedActivityAt ?? '');
+		const gapMs = nowSample.wallMs - lastTrustedAt;
+		const sameForegroundTarget = currentTarget?.fileId === checkpoint.currentTarget.fileId;
+		const idleThresholdMs = args.idleThresholdMs ?? Number.POSITIVE_INFINITY;
+
+		if (!sameForegroundTarget || gapMs >= idleThresholdMs) {
+			// Recovered monotonic samples are synthesized from the persisted wall
+			// interval. Applying idle-confirm therefore closes exactly at the last
+			// trusted sample and never awards the offline/startup gap.
+			engine.submit({ kind: 'idle-confirm', sample: nowSample });
+			if (!sameForegroundTarget) {
+				engine.submit({ kind: 'untrackable', sample: nowSample, reason: 'checkpoint-target-mismatch' });
+			}
+		} else {
+			// A recent, still-foreground checkpoint may continue through the same
+			// focus transition used by the live runtime.
+			engine.submit({ kind: 'focus-target', sample: nowSample, target: currentTarget });
+		}
+	}
 	return { outcome: 'restored' };
 }

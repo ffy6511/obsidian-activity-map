@@ -388,4 +388,14 @@ Real Obsidian desktop and mobile-viewer journeys require the technical and Criti
 
 ## Evaluation Record
 
-Implementation and the complete automated technical gate are ready for one joint Specs 01–03 Critic evaluation. Real desktop/mobile journeys remain open Post-Critic Acceptance work and keep Phase 4 and `v0.1` incomplete.
+### Round 1
+
+- Critic: `/root/joint_critic` (joint Specs 01–03 evaluation, read-only)
+- Review scope: full
+- Evidence reviewed: Constitution, PRD, Architecture, Roadmap, Specs 01–03, source/tests, generated artifact set, and the 200-test technical-candidate gate.
+- Findings: P0 idle confirmation immediately reopened attribution without trusted resume; P0 production startup bypassed checkpoint focus/idle/gap reconciliation; P0 normal NDJSON append could replace authoritative raw evidence after a failed read.
+- Selected fixes: all three blocking findings; no lower-priority findings were proposed.
+- Executor fixes: corrected runtime resume and startup composition, introduced true append-only shard writes, and extended the integrated journey plus focused failure fixtures.
+- Deferred findings: none; real desktop/mobile journeys remain open Post-Critic Acceptance work and keep this Spec and `v0.1` in review.
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (207 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); `git diff --check`.
+- Verdict: changes-required; corrected artifacts were submitted to the same joint Critic for Round 2.

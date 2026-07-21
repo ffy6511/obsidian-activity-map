@@ -259,12 +259,13 @@ Spec 02 implements local evidence, derived summaries, and read-only product quer
 closed runtime record
   -> validate domain values
   -> add schemaVersion / recordId / deviceId / fileId / pathAtEvent
-  -> enqueue append for exactly one device/date shard
+  -> validate the existing shard and enqueue one adapter append for its device/date
   -> read + rebuild the matching daily summary
   -> verify replacement is readable and fingerprint-matches the source record ids
   -> invalidate matching query-cache snapshots
 
 # recordId is the idempotency key for uncertain append retries.
+# Normal append never replaces a raw shard; unreadable/corrupt sources abort before mutation.
 # One malformed line is isolated and reported; unrelated records still load.
 # Raw retention runs only after the corresponding daily summary is verified.
 # Maintenance operations emit typed per-date progress and explicit partial-failure results.

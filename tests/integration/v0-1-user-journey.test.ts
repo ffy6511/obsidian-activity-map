@@ -71,6 +71,10 @@ describe('v0.1 integrated local journey', () => {
 		clock.advance(60_000);
 		coordinator.onIdleTimer();
 		await flush();
+		expect(snapshots.at(-1)?.state).toBe('idle');
+		expect(snapshots.at(-1)?.pendingRecovery).toHaveLength(0);
+		activity.callback?.({ isTrusted: true, type: 'pointerdown' });
+		await flush();
 		const candidate = snapshots.at(-1)?.pendingRecovery[0];
 		expect(candidate).toBeDefined();
 		await coordinator.resolveRecovery({ candidateId: candidate?.candidateId ?? '', kind: 'include' });

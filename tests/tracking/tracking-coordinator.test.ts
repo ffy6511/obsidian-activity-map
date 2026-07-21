@@ -15,6 +15,7 @@ import { InMemoryCheckpointPort, InMemoryTrackingSink } from '../../src/tracking
 import { createFakeClock, type FakeClock } from '../helpers/fake-clock';
 import { DEFAULT_SETTINGS, normalizeSettings } from '../../src/domain/settings';
 import type { TrackingSnapshot } from '../../src/domain/activity';
+import type { RuntimeCheckpoint } from '../../src/domain/activity';
 
 function settings(overrides: Record<string, unknown> = {}) {
 	return normalizeSettings({ ...DEFAULT_SETTINGS, deviceId: 'd1', ...overrides });
@@ -79,13 +80,23 @@ function fakeWorkspace(initialLeaf: ResolvedLeaf | null): {
 }
 
 /** A no-op activity event source whose blur can be fired manually. */
-function fakeActivitySource(): ActivityEventSource & { fireBlur(): void } {
+function fakeActivitySource(): ActivityEventSource & {
+	fireActivity(type?: string): void;
+	fireBlur(): void;
+} {
 	const blurCbs = new Set<() => void>();
+	const activityCbs = new Set<(event: { isTrusted?: boolean; type?: string }) => void>();
 	return {
-		attachActivityListeners: () => () => {},
+		attachActivityListeners: (cb) => {
+			activityCbs.add(cb);
+			return () => activityCbs.delete(cb);
+		},
 		onBlur: (cb) => {
 			blurCbs.add(cb);
 			return () => blurCbs.delete(cb);
+		},
+		fireActivity(type = 'pointerdown') {
+			for (const cb of activityCbs) cb({ isTrusted: true, type });
 		},
 		fireBlur() {
 			for (const cb of blurCbs) cb();
@@ -251,6 +262,62 @@ describe('tracking coordinator lifecycle', () => {
 		// This is structurally guaranteed by isTrustedActivityEvent at attach
 		// time; here we assert the helper is the gate the coordinator uses.
 		expect(isTrustedActivityEvent({ isTrusted: false })).toBeFalse();
+	});
+
+	it('stays idle until a trusted resume signal and creates the gap at resume', async () => {
+		const clock = createFakeClock();
+		const ws = fakeWorkspace(leaf('l1', 'notes/a.md'));
+		const { coordinator, sink, snapshots, mainSource } = makeCoordinator({ clock, workspace: ws.source });
+		coordinator.start();
+		await flush(clock, 5_000);
+		mainSource.fireActivity();
+		await flush(clock, 180_000);
+		coordinator.onIdleTimer();
+		await flush(clock);
+		expect(snapshots.at(-1)?.state).toBe('idle');
+		expect(snapshots.at(-1)?.pendingRecovery).toHaveLength(0);
+		expect(sink.sessions).toHaveLength(1);
+
+		// Timer/topology callbacks cannot reopen or increment openCount.
+		ws.fireActiveLeafChange();
+		await flush(clock, 10_000);
+		expect(snapshots.at(-1)?.state).toBe('idle');
+		expect(sink.sessions).toHaveLength(1);
+
+		mainSource.fireActivity();
+		await flush(clock);
+		expect(snapshots.at(-1)?.state).toBe('active');
+		expect(snapshots.at(-1)?.pendingRecovery).toHaveLength(1);
+		await coordinator.stop();
+	});
+
+	it('uses production checkpoint reconciliation before startup listeners', async () => {
+		const clock = createFakeClock();
+		const now = clock.now().wallMs;
+		const ws = fakeWorkspace(leaf('l1', 'notes/a.md'));
+		const { coordinator, snapshots, mainSource } = makeCoordinator({ clock, workspace: ws.source });
+		const checkpoint: RuntimeCheckpoint = {
+			schemaVersion: 1,
+			state: 'active',
+			currentTarget: { fileId: 'file-1', path: 'notes/a.md', windowId: 'main', leafId: 'l1' },
+			sessionStartedAt: new Date(now - 240_000).toISOString(),
+			lastTrustedActivityAt: new Date(now - 200_000).toISOString(),
+			editBurst: null,
+			pendingRecovery: [],
+			recentDecisions: [],
+			savedAt: new Date(now - 200_000).toISOString(),
+		};
+		const result = await coordinator.restore(checkpoint);
+		expect(result.outcome).toBe('restored');
+		expect(coordinator.getSnapshot()?.state).toBe('idle');
+		coordinator.start();
+		await flush(clock);
+		expect(coordinator.getSnapshot()?.state).toBe('idle');
+		mainSource.fireActivity();
+		await flush(clock);
+		expect(snapshots.at(-1)?.state).toBe('active');
+		expect(snapshots.at(-1)?.pendingRecovery).toHaveLength(1);
+		await coordinator.stop();
 	});
 
 	it('pause and resume flow through the controller', async () => {

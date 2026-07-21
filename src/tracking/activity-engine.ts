@@ -95,6 +95,8 @@ export class ActivityEngine {
 	private settings: ActivityMapSettings;
 	private readonly recovery: RecoveryQueue;
 	private readonly callbacks: EngineCallbacks;
+	/** Ordinary idle gaps are finalized only when a trusted resume sample arrives. */
+	private idleGap: { session: OpenSession; lastTrusted: ClockSample } | null = null;
 	/** Whether the most-recent transition was an app-blur (affects refocus openCount). */
 	private blurred = false;
 	private stopped = false;
@@ -193,6 +195,16 @@ export class ActivityEngine {
 		const sameFile =
 			this.open !== null && this.open.target.fileId === target.fileId;
 		if (this.open === null) {
+			if (this.state === 'idle' && this.idleGap) {
+				// The timer only closes earned time. The first trusted resume target
+				// owns the uncertain gap's endpoint and recovery classification.
+				this.maybeCreateRecoveryCandidate(
+					this.idleGap.session,
+					this.idleGap.lastTrusted,
+					sample,
+				);
+				this.idleGap = null;
+			}
 			// Opening from untrackable/idle/resume. openCount is 1 unless this is
 			// an app-refocus of the same file we last tracked (blur -> refocus).
 			const isRefocus = this.blurred && sameFileAfterBlur(this.lastTarget, target);
@@ -228,6 +240,7 @@ export class ActivityEngine {
 		if (this.open) {
 			this.closeOpen(sample, 'untrackable');
 		}
+		this.idleGap = null;
 		this.enterState('untrackable', 'untrackable', sample);
 	}
 
@@ -260,7 +273,10 @@ export class ActivityEngine {
 		const session = this.open;
 		const gapMs = monotonicDelta(session.lastTrustedActivitySample, sample);
 		this.closeOpenAt(session.lastTrustedActivitySample, 'idle');
-		this.maybeCreateRecoveryCandidate(session, session.lastTrustedActivitySample, sample);
+		this.idleGap = {
+			session,
+			lastTrusted: session.lastTrustedActivitySample,
+		};
 		void gapMs;
 		this.enterState('idle', 'idle', session.lastTrustedActivitySample);
 	}
@@ -277,6 +293,7 @@ export class ActivityEngine {
 			const session = this.open;
 			this.closeOpenAt(session.lastTrustedActivitySample, 'sleep');
 			this.autoExcludeGap(session, session.lastTrustedActivitySample, sample);
+			this.idleGap = null;
 			this.enterState('idle', 'idle', session.lastTrustedActivitySample);
 		}
 	}
@@ -288,6 +305,7 @@ export class ActivityEngine {
 		if (this.open) {
 			this.closeOpen(sample, 'pause');
 		}
+		this.idleGap = null;
 		this.settings = { ...this.settings, manuallyPaused: true };
 		this.enterState('paused', 'paused', sample);
 	}
@@ -575,20 +593,47 @@ export class ActivityEngine {
 		this.callbacks.onCheckpoint(checkpoint);
 	}
 
-	/** Restore from a checkpoint. Applies the same rules as live tracking. */
+	/** Restore checkpoint state; the reconciler immediately applies live gap/focus rules. */
 	restore(checkpoint: RuntimeCheckpoint, sample: ClockSample): void {
 		if (checkpoint.state === 'active' && checkpoint.currentTarget) {
 			const target = checkpoint.currentTarget;
-			const startSample: ClockSample = {
-				// We cannot reconstruct the original monotonic time; use a
-				// zero-relative baseline so subsequent deltas measure from now.
-				wallMs: checkpoint.sessionStartedAt
-					? Date.parse(checkpoint.sessionStartedAt)
-					: sample.wallMs,
-				monotonicMs: sample.monotonicMs,
-				timeZone: sample.timeZone,
+			const startedAtMs = checkpoint.sessionStartedAt
+				? Date.parse(checkpoint.sessionStartedAt)
+				: sample.wallMs;
+			const lastTrustedActivityMs = checkpoint.lastTrustedActivityAt
+				? Date.parse(checkpoint.lastTrustedActivityAt)
+				: startedAtMs;
+			const elapsedBeforeCheckpoint = Math.max(0, lastTrustedActivityMs - startedAtMs);
+			const gapToNow = Math.max(0, sample.wallMs - lastTrustedActivityMs);
+			const lastTrustedMonotonic = sample.monotonicMs - gapToNow;
+			const startedMonotonic = lastTrustedMonotonic - elapsedBeforeCheckpoint;
+			const editBurst = new EditingBurst(this.settings.editSilenceMs);
+			if (checkpoint.editBurst && checkpoint.editBurst.fileId === target.fileId) {
+				const lastEditAt = Date.parse(checkpoint.editBurst.lastEditAt);
+				if (Number.isFinite(lastEditAt)) {
+					editBurst.restore([], lastEditAt, lastEditAt);
+				}
+			}
+			this.open = {
+				target,
+				startedSample: {
+					wallMs: startedAtMs,
+					monotonicMs: startedMonotonic,
+					timeZone: sample.timeZone,
+				},
+				startedAtMs,
+				lastTrustedActivityMs,
+				lastTrustedActivitySample: {
+					wallMs: lastTrustedActivityMs,
+					monotonicMs: lastTrustedMonotonic,
+					timeZone: sample.timeZone,
+				},
+				editBurst,
+				openCount: 1,
 			};
-			this.openSession(startSample, target, 0);
+			this.lastTarget = target;
+			this.state = 'active';
+			this.stateReason = 'active';
 		} else {
 			this.state = checkpoint.state;
 		}

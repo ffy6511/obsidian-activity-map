@@ -15,6 +15,8 @@
 export interface JsonFileAdapter {
 	read(path: string): Promise<string>;
 	write(path: string, contents: string): Promise<void>;
+	/** Append bytes without replacing existing contents. Required for raw evidence shards. */
+	append(path: string, contents: string): Promise<void>;
 	exists(path: string): Promise<boolean>;
 	remove(path: string): Promise<void>;
 	rename(from: string, to: string): Promise<void>;

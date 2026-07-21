@@ -104,6 +104,50 @@ describe('ndjson shard store corruption isolation', () => {
 });
 
 describe('ndjson shard store concurrency and rewrite', () => {
+	it('normal append uses the append primitive and never rewrites the shard', async () => {
+		const adapter = new FakeDataAdapter();
+		const store = new NdjsonShardStore(adapter);
+		await store.append('/shard.ndjson', [buildSessionEnvelope(segment('f1', '2026-01-01', 1_000), 'dev1')]);
+		expect(adapter.stats().append).toBe(1);
+		expect(adapter.stats().write).toBe(0);
+	});
+
+	it('aborts without mutation when the authoritative shard cannot be read', async () => {
+		const seedAdapter = new FakeDataAdapter();
+		const existing = buildSessionEnvelope(segment('f1', '2026-01-01', 1_000), 'dev1');
+		await new NdjsonShardStore(seedAdapter).append('/shard.ndjson', [existing]);
+		const original = seedAdapter.peek('/shard.ndjson') ?? '';
+		const adapter = new FakeDataAdapter({ fail: { read: 1 } });
+		adapter.seed('/shard.ndjson', original);
+		const store = new NdjsonShardStore(adapter);
+		let rejected = false;
+		try {
+			await store.append('/shard.ndjson', [buildSessionEnvelope(segment('f2', '2026-01-01', 2_000), 'dev1')]);
+		} catch {
+			rejected = true;
+		}
+		expect(rejected).toBeTrue();
+		expect(adapter.peek('/shard.ndjson')).toBe(original);
+		expect(adapter.stats().append).toBe(0);
+	});
+
+	it('preserves existing bytes when append is interrupted', async () => {
+		const seedAdapter = new FakeDataAdapter();
+		await new NdjsonShardStore(seedAdapter).append('/shard.ndjson', [buildSessionEnvelope(segment('f1', '2026-01-01', 1_000), 'dev1')]);
+		const original = seedAdapter.peek('/shard.ndjson') ?? '';
+		const adapter = new FakeDataAdapter({ fail: { append: 1 } });
+		adapter.seed('/shard.ndjson', original);
+		const store = new NdjsonShardStore(adapter);
+		let rejected = false;
+		try {
+			await store.append('/shard.ndjson', [buildSessionEnvelope(segment('f2', '2026-01-01', 2_000), 'dev1')]);
+		} catch {
+			rejected = true;
+		}
+		expect(rejected).toBeTrue();
+		expect(adapter.peek('/shard.ndjson')).toBe(original);
+	});
+
 	it('concurrent appends to the same shard serialize without interleaving', async () => {
 		const adapter = new FakeDataAdapter();
 		const store = new NdjsonShardStore(adapter);

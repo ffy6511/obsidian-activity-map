@@ -38,6 +38,12 @@ export class ObsidianDataAdapter implements JsonFileAdapter, PathAdapter {
 		await this.adapter.write(normalized, contents);
 	}
 
+	async append(path: string, contents: string): Promise<void> {
+		const normalized = this.normalize(path);
+		await this.ensureParent(normalized);
+		await this.adapter.append(normalized, contents);
+	}
+
 	exists(path: string): Promise<boolean> {
 		return this.adapter.exists(this.normalize(path));
 	}

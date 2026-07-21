@@ -111,7 +111,12 @@ export default class ActivityMapPlugin extends Plugin {
 		this.controller = controller;
 
 		const loadedCheckpoint = await checkpoint.load();
-		if (loadedCheckpoint.checkpoint) coordinator.restore(loadedCheckpoint.checkpoint);
+		if (loadedCheckpoint.checkpoint) {
+			const reconciliation = await coordinator.restore(loadedCheckpoint.checkpoint);
+			if (reconciliation.outcome === 'quarantined') {
+				coordinator.degrade(reconciliation.reason ?? 'checkpoint-quarantined');
+			}
+		}
 		if (loadedCheckpoint.quarantined) coordinator.degrade(loadedCheckpoint.reason ?? 'checkpoint-quarantined');
 		this.registerView(ACTIVITY_MAP_VIEW_TYPE, (leaf) => new ActivityMapView(leaf, controller, this.app));
 		this.addRibbonIcon('chart-pie', 'Open activity map', () => void this.activateView());

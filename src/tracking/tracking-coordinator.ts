@@ -28,6 +28,7 @@ import type {
 import type { ActivityMapSettings } from '../domain/settings';
 import type { Clock } from '../platform/clock';
 import { ActivityEngine, type EngineEmissions } from './activity-engine';
+import { reconcileCheckpoint, type ReconcileResult } from './checkpoint-reconciler';
 import {
 	isTrustedActivityEvent,
 	resolveTarget,
@@ -135,8 +136,9 @@ export class TrackingCoordinator {
 			this.engine.submit({ kind: 'start', sample: this.opts.clock.now() });
 		}
 		this.registerWorkspaceListeners();
-		// Resolve the initial leaf once after start.
-		void this.refreshTarget();
+		// A restored checkpoint was already reconciled against the initial leaf.
+		// Do not let startup topology reopen idle/untrackable attribution.
+		if (!this.restored) void this.refreshTarget();
 	}
 
 	/** Stop tracking and flush; rejects new transitions after this returns. */
@@ -215,7 +217,6 @@ export class TrackingCoordinator {
 			return;
 		}
 		this.engine.submit({ kind: 'idle-confirm', sample });
-		void this.refreshTarget();
 	}
 
 	/** Called by the host's heartbeat scheduler; detects sleep-like gaps. */
@@ -252,8 +253,7 @@ export class TrackingCoordinator {
 		this.unsubs.push(
 			mainSource.attachActivityListeners((event) => {
 				if (isTrustedActivityEvent(event)) {
-					if (event.type === 'focus') void this.refreshTarget();
-					this.engine.submit({ kind: 'activity', sample: this.opts.clock.now() });
+					this.onTrustedActivity(event);
 				}
 			}),
 		);
@@ -269,8 +269,7 @@ export class TrackingCoordinator {
 		const source = this.opts.attachWindowEvents(winId);
 		const offActivity = source.attachActivityListeners((event) => {
 			if (isTrustedActivityEvent(event)) {
-				if (event.type === 'focus') void this.refreshTarget();
-				this.engine.submit({ kind: 'activity', sample: this.opts.clock.now() });
+				this.onTrustedActivity(event);
 			}
 		});
 		const offBlur = source.onBlur(() => {
@@ -291,23 +290,41 @@ export class TrackingCoordinator {
 		await this.refreshTarget();
 	}
 
-	private async refreshTarget(): Promise<void> {
+	private onTrustedActivity(event: { type?: string }): void {
+		const sample = this.opts.clock.now();
+		if (this.engine.getState() === 'idle') {
+			void this.refreshTarget(sample, true);
+			return;
+		}
+		if (event.type === 'focus') void this.refreshTarget(sample, true);
+		this.engine.submit({ kind: 'activity', sample });
+	}
+
+	private async refreshTarget(
+		providedSample?: ReturnType<Clock['now']>,
+		allowIdleResume = false,
+	): Promise<void> {
 		if (this.stopped) {
 			return;
 		}
+		if (this.engine.getState() === 'idle' && !allowIdleResume) return;
 		// Serialize target resolution: file-identity is async, but transitions
 		// must apply in the order we observe leaves, not in identity-resolve order.
 		await this.queue.enqueue(async () => {
 			if (this.stopped) {
 				return;
 			}
+			// A topology refresh can be queued before the idle timer closes the
+			// session. Recheck at execution time so that stale queued work cannot
+			// become an implicit resume signal.
+			if (this.engine.getState() === 'idle' && !allowIdleResume) return;
 			const leaf = this.opts.workspace.getActiveLeaf();
 			const resolution = await resolveTarget({
 				leaf,
 				resolveFileId: (path) => this.opts.identity.resolve({ path }),
 				isExcluded: this.opts.isExcluded,
 			});
-			const sample = this.opts.clock.now();
+			const sample = providedSample ?? this.opts.clock.now();
 			if (resolution.kind === 'target') {
 				this.engine.submit({ kind: 'focus-target', sample, target: resolution.target });
 			} else {
@@ -343,9 +360,25 @@ export class TrackingCoordinator {
 		this.engine.enterDegraded(reason, this.opts.clock.now());
 	}
 
-	/** Restore from a checkpoint at startup (applies the same rules as live). */
-	restore(checkpoint: RuntimeCheckpoint): void {
-		this.engine.restore(checkpoint, this.opts.clock.now());
+	/** Reconcile one startup checkpoint against current focus and elapsed gap. */
+	async restore(checkpoint: RuntimeCheckpoint): Promise<ReconcileResult> {
+		if (this.restored) return { outcome: 'restored' };
+		const sample = this.opts.clock.now();
+		const leaf = this.opts.workspace.getActiveLeaf();
+		const resolution = await resolveTarget({
+			leaf,
+			resolveFileId: (path) => this.opts.identity.resolve({ path }),
+			isExcluded: this.opts.isExcluded,
+		});
+		const result = reconcileCheckpoint({
+			checkpoint,
+			engine: this.engine,
+			clock: this.opts.clock,
+			nowSample: sample,
+			currentTarget: resolution.kind === 'target' ? resolution.target : null,
+			idleThresholdMs: this.settings.idleThresholdMs,
+		});
 		this.restored = true;
+		return result;
 	}
 }

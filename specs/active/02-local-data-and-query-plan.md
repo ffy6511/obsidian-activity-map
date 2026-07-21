@@ -404,4 +404,14 @@ Complete the backend for local data ownership without exposing destructive opera
 
 ## Evaluation Record
 
-Implementation and technical gates are complete. Per owner direction, this Spec entered `review` together with Specs 01 and 03 for one joint independent evaluation; real Obsidian acceptance remains owned by Spec 03.
+### Round 1
+
+- Critic: `/root/joint_critic` (joint Specs 01–03 evaluation, read-only)
+- Review scope: full
+- Evidence reviewed: Constitution, PRD, Architecture, Roadmap, Specs 01–03, source/tests, generated artifact set, and the 200-test technical-candidate gate.
+- Findings: P0 idle confirmation immediately reopened attribution without trusted resume; P0 production startup bypassed checkpoint focus/idle/gap reconciliation; P0 normal NDJSON append could replace authoritative raw evidence after a failed read.
+- Selected fixes: all three blocking findings; no lower-priority findings were proposed.
+- Executor fixes: raw shards now use serialized public adapter appends, reject unreadable/corrupt sources before mutation, and preserve existing bytes under injected read/append failure; startup now calls the reconciler before listeners start.
+- Deferred findings: none; real desktop/mobile journeys remain Spec 03 Post-Critic Acceptance work, not Critic defects.
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (207 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); `git diff --check`.
+- Verdict: changes-required; corrected artifacts were submitted to the same joint Critic for Round 2.

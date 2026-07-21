@@ -8,10 +8,10 @@
  * diagnostic). Reads isolate malformed or schema-invalid lines and continue
  * with the valid records, surfacing the affected shard.
  *
- * Normal append never rewrites a raw shard: it reads the current contents,
- * appends the new line, and writes the whole file back through SafeJsonStore-
- * style verification (read-back). Scoped deletion is an explicit maintenance
- * transaction that rewrites a shard; it lives in the deletion service.
+ * Normal append never rewrites a raw shard: it validates the existing shard,
+ * appends complete lines through the adapter's append primitive, then verifies
+ * them by read-back. Scoped deletion is the only maintenance transaction that
+ * rewrites a shard.
  */
 
 import { SchemaError, validateEventEnvelope, type ValidatedEventEnvelope } from './schema';
@@ -49,9 +49,8 @@ export class NdjsonShardStore {
 	constructor(private readonly adapter: JsonFileAdapter) {}
 
 	/**
-	 * Append records to a shard. Reads the current file, drops any records whose
-	 * recordId is already present (idempotency), appends the new lines, and
-	 * verifies the write by reading back. Serialized per shard path.
+	 * Append records to a shard. An unreadable or corrupt existing shard aborts
+	 * before mutation; recordId deduplication makes uncertain append retries safe.
 	 */
 	async append(
 		path: string,
@@ -176,20 +175,19 @@ export class NdjsonShardStore {
 	): Promise<AppendResult> {
 		// Read existing recordIds for idempotency.
 		const existing = await this.read(path);
+		if (existing.diagnostics.length > 0) {
+			throw new Error('ndjson-append-source-unreadable-or-corrupt');
+		}
 		const presentIds = new Set(existing.records.map((r) => r.recordId));
 		const toAppend = records.filter((r) => !presentIds.has(r.recordId));
 		const duplicatesSkipped = records.length - toAppend.length;
 		if (toAppend.length === 0) {
 			return { appended: 0, duplicatesSkipped };
 		}
-		// Build the new full contents: existing lines + new lines.
-		const existingText = await this.safeReadText(path);
 		const newLines = toAppend.map((r) => serializeEnvelopeLine(r).trimEnd()).join('\n');
-		const combined =
-			existingText.length > 0
-				? `${existingText}${existingText.endsWith('\n') ? '' : '\n'}${newLines}\n`
-				: `${newLines}\n`;
-		await this.adapter.write(path, combined);
+		// DataAdapter.append preserves authoritative bytes if the operation fails;
+		// a retry re-reads recordIds before adding any uncertain record again.
+		await this.adapter.append(path, `${newLines}\n`);
 		// Verify: re-read and confirm all appended recordIds are present exactly once.
 		const verify = await this.read(path);
 		for (const r of toAppend) {
@@ -199,16 +197,5 @@ export class NdjsonShardStore {
 			}
 		}
 		return { appended: toAppend.length, duplicatesSkipped };
-	}
-
-	private async safeReadText(path: string): Promise<string> {
-		try {
-			if (!(await this.adapter.exists(path))) {
-				return '';
-			}
-			return await this.adapter.read(path);
-		} catch {
-			return '';
-		}
 	}
 }
