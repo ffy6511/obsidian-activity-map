@@ -16,7 +16,7 @@
 ## Phases
 
 - [x] Phase 0: Compose services, settings, commands, and view state
-- [ ] Phase 1: Implement the full statistics view and native SVG chart
+- [x] Phase 1: Implement the full statistics view and native SVG chart
 - [ ] Phase 2: Implement file-header status and interactive summary popover
 - [ ] Phase 3: Implement SVG export and local data controls
 - [ ] Phase 4: Complete accessibility, platform integration, and v0.1 release evidence
@@ -244,11 +244,11 @@ Deliver the complete selected-day, average, all-history, breadcrumb, donut, and 
 
 ### Tasks
 
-- [ ] Implement metric/range/date controls, breadcrumbs, scope summary, coverage, warnings, and empty/error states.
-- [ ] Implement directory, local-files, “other”, file, and deleted-row interactions.
-- [ ] Implement native SVG arc geometry, stable colors, focus selection, tooltip content, and reduced motion.
-- [ ] Implement the complete detail list with exact values and percent-of-scope text.
-- [ ] Add responsive rendering and view-state history for narrow sidebars and main-area leaves.
+- [x] Implement metric/range/date controls, breadcrumbs, scope summary, coverage, warnings, and empty/error states.
+- [x] Implement directory, local-files, “other”, file, and deleted-row interactions.
+- [x] Implement native SVG arc geometry, stable colors, focus selection, tooltip content, and reduced motion.
+- [x] Implement the complete detail list with exact values and percent-of-scope text.
+- [x] Add responsive rendering and view-state history for narrow sidebars and main-area leaves.
 
 ### Files
 
@@ -264,11 +264,11 @@ Deliver the complete selected-day, average, all-history, breadcrumb, donut, and 
 
 ### Acceptance Criteria
 
-- [ ] Fixed query models render correct labels, order, totals, vault share, denominator, and exact values.
-- [ ] Every chart item has equivalent detail-list text and keyboard activation.
-- [ ] “Other” never mutates the breadcrumb and exposes all grouped rows.
-- [ ] Empty results contain no fake chart slice and clearly distinguish no data from query failure.
-- [ ] Repeated rerenders do not leak DOM listeners or lose valid focus/selection.
+- [x] Fixed query models render correct labels, order, totals, vault share, denominator, and exact values.
+- [x] Every chart item has equivalent detail-list text and keyboard activation.
+- [x] “Other” never mutates the breadcrumb and exposes all grouped rows.
+- [x] Empty results contain no fake chart slice and clearly distinguish no data from query failure.
+- [x] Repeated rerenders do not leak DOM listeners or lose valid focus/selection. *(Each render replaces the owned subtree, restores selection by stable item id, and the ItemView releases its controller subscription on close.)*
 
 ## Phase 2: Implement File-Header Status and Interactive Summary Popover
 

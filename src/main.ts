@@ -1,6 +1,5 @@
 import {
 	FileView,
-	ItemView,
 	Plugin,
 	TFolder,
 	type EventRef,
@@ -25,40 +24,7 @@ import { LocalQueryService } from './query/query-service';
 import { ActivityMapController } from './ui/activity-map-controller';
 import { ActivityMapSettingsTab } from './ui/settings-tab';
 import { registerActivityMapCommands } from './ui/commands';
-
-export const ACTIVITY_MAP_VIEW_TYPE = 'activity-map-view';
-
-class ActivityMapBootstrapView extends ItemView {
-	private unsubscribe: (() => void) | null = null;
-
-	constructor(leaf: WorkspaceLeaf, private readonly controller: ActivityMapController) {
-		super(leaf);
-	}
-
-	getViewType(): string { return ACTIVITY_MAP_VIEW_TYPE; }
-	getDisplayText(): string { return 'Activity map'; }
-	getIcon(): string { return 'chart-pie'; }
-
-	onOpen(): Promise<void> {
-		this.contentEl.addClass('activity-map-view');
-		this.unsubscribe = this.controller.subscribe((model) => {
-			this.contentEl.empty();
-			const state = this.contentEl.createDiv({ cls: 'activity-map-empty-state' });
-			state.createEl('h2', { text: 'Activity map' });
-			state.createEl('p', { text: `Services ready · ${model.loadState}` });
-			if (model.error) state.createEl('p', { text: model.error });
-		});
-		void this.controller.dispatch({ kind: 'refresh' });
-		return Promise.resolve();
-	}
-
-	onClose(): Promise<void> {
-		this.unsubscribe?.();
-		this.unsubscribe = null;
-		this.contentEl.empty();
-		return Promise.resolve();
-	}
-}
+import { ACTIVITY_MAP_VIEW_TYPE, ActivityMapView } from './ui/activity-map-view';
 
 export default class ActivityMapPlugin extends Plugin {
 	private controller: ActivityMapController | null = null;
@@ -131,7 +97,7 @@ export default class ActivityMapPlugin extends Plugin {
 		const loadedCheckpoint = await checkpoint.load();
 		if (loadedCheckpoint.checkpoint) coordinator.restore(loadedCheckpoint.checkpoint);
 		if (loadedCheckpoint.quarantined) coordinator.degrade(loadedCheckpoint.reason ?? 'checkpoint-quarantined');
-		this.registerView(ACTIVITY_MAP_VIEW_TYPE, (leaf) => new ActivityMapBootstrapView(leaf, controller));
+		this.registerView(ACTIVITY_MAP_VIEW_TYPE, (leaf) => new ActivityMapView(leaf, controller, this.app));
 		this.addRibbonIcon('chart-pie', 'Open activity map', () => void this.activateView());
 		registerActivityMapCommands(this, controller, () => this.activateView());
 		this.addSettingTab(new ActivityMapSettingsTab(this.app, this, controller));

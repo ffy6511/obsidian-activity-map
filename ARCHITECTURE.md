@@ -15,7 +15,7 @@ Authority links:
 
 ## Current Implementation
 
-The tracking, persistence, maintenance, and query modules are implemented, covered by deterministic fixtures, and composed by the plugin entrypoint. The installable bundle now collects activity and maintains queryable daily summaries; the statistics renderer remains a bootstrap status view until Spec 03 Phase 1 lands:
+The tracking, persistence, maintenance, query, controller, and complete statistics view are implemented, covered by deterministic fixtures, and composed by the plugin entrypoint. The installable bundle collects activity, maintains queryable daily summaries, and renders range controls, hierarchical navigation, a native SVG donut, and the complete detail list:
 
 ```text
 src/
@@ -27,12 +27,12 @@ src/
 ├── ui/                     # Implemented controller, immutable view model, commands, and settings.
 └── main.ts                 # Composes recovery, tracking, data, query, and bootstrap presentation.
 
-styles.css                  # Styles the bootstrap view; the complete visual system remains pending.
+styles.css                  # Responsive view, chart, detail, theme, focus, and reduced-motion styles.
 manifest.json               # Plugin ID activity-map; cross-platform manifest flag.
 main.js                     # Generated build artifact; ignored and never edited directly.
 ```
 
-The complete presentation, SVG export, header/popover, data-control UI, and real Obsidian journeys remain the `v0.1` target and are subject to the evidence checkboxes in Spec 03.
+SVG export, header/popover, data-control UI, and real Obsidian journeys remain the `v0.1` target and are subject to the evidence checkboxes in Spec 03.
 
 ## System Overview
 

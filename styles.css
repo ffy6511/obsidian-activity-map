@@ -1,24 +1,209 @@
 .activity-map-view {
+	--activity-map-panel: color-mix(in srgb, var(--background-secondary) 86%, transparent);
 	padding: var(--size-4-4);
+	container-type: inline-size;
+	overflow: auto;
 }
 
-.activity-map-empty-state {
-	display: flex;
-	min-height: 12rem;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
+.activity-map-view-header h2 {
+	margin: 0 0 var(--size-4-3);
+	font-size: var(--font-ui-large);
+}
+
+.activity-map-controls {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, auto));
 	gap: var(--size-4-2);
+	align-items: center;
+	margin-bottom: var(--size-4-3);
+}
+
+.activity-map-controls select,
+.activity-map-controls input {
+	min-width: 0;
+}
+
+.activity-map-breadcrumbs {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-1);
+	min-height: var(--input-height);
+	overflow-x: auto;
+	white-space: nowrap;
+}
+
+.activity-map-breadcrumb {
+	width: auto;
+	padding-inline: var(--size-4-2);
+}
+
+.activity-map-breadcrumb:disabled {
+	color: var(--text-normal);
+	opacity: 1;
+}
+
+.activity-map-breadcrumb-separator {
+	color: var(--text-faint);
+}
+
+.activity-map-summary {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: var(--size-2-1) var(--size-4-4);
+	margin: var(--size-4-4) 0;
+	padding: var(--size-4-4);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background: var(--activity-map-panel);
+}
+
+.activity-map-summary-label,
+.activity-map-summary-vault,
+.activity-map-summary-coverage {
+	color: var(--text-muted);
+}
+
+.activity-map-summary-total {
+	grid-row: span 2;
+	font-size: 1.5rem;
+	font-weight: var(--font-semibold);
+}
+
+.activity-map-body {
+	display: grid;
+	grid-template-columns: minmax(13rem, 1fr) minmax(15rem, 1.15fr);
+	gap: var(--size-4-4);
+	align-items: start;
+}
+
+.activity-map-chart-panel,
+.activity-map-details-panel {
+	min-width: 0;
+}
+
+.activity-map-donut {
+	display: block;
+	width: min(100%, 24rem);
+	margin-inline: auto;
+	overflow: visible;
+}
+
+.activity-map-donut path {
+	stroke: var(--background-primary);
+	stroke-width: 2;
+	transition: opacity 120ms ease, transform 120ms ease;
+	transform-origin: center;
+}
+
+.activity-map-donut path:hover,
+.activity-map-donut path:focus-visible {
+	opacity: 0.78;
+	outline: none;
+	transform: scale(1.015);
+}
+
+.activity-map-donut-total {
+	fill: var(--text-normal);
+	font-size: 14px;
+	font-weight: var(--font-semibold);
+	pointer-events: none;
+}
+
+.activity-map-detail-list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-1);
+}
+
+.activity-map-detail-row {
+	display: grid;
+	grid-template-columns: 0.75rem minmax(0, 1fr) auto auto;
+	gap: var(--size-4-2);
+	align-items: center;
+	width: 100%;
+	padding: var(--size-4-2);
+	border: 0;
+	border-radius: var(--radius-s);
+	background: transparent;
+	color: var(--text-normal);
+	text-align: left;
+}
+
+.activity-map-detail-row:hover,
+.activity-map-detail-row:focus-visible {
+	background: var(--background-modifier-hover);
+}
+
+.activity-map-detail-swatch {
+	width: 0.65rem;
+	height: 0.65rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 50%;
+	background: var(--activity-map-item-color);
+}
+
+.activity-map-detail-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.activity-map-detail-value {
+	font-variant-numeric: tabular-nums;
+	font-weight: var(--font-medium);
+}
+
+.activity-map-detail-percent {
+	min-width: 3ch;
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+	text-align: right;
+}
+
+.activity-map-detail-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: var(--size-4-2);
+	font-weight: var(--font-semibold);
+}
+
+.activity-map-state {
+	padding: var(--size-4-8) var(--size-4-4);
 	color: var(--text-muted);
 	text-align: center;
 }
 
-.activity-map-empty-state h2,
-.activity-map-empty-state p {
-	margin: 0;
+.activity-map-state.mod-error {
+	color: var(--text-error);
 }
 
-.activity-map-empty-state p {
-	max-width: 28rem;
-	line-height: var(--line-height-normal);
+.activity-map-warnings {
+	margin-top: var(--size-4-4);
+	color: var(--text-warning);
+}
+
+@container (max-width: 34rem) {
+	.activity-map-controls,
+	.activity-map-body {
+		grid-template-columns: 1fr;
+	}
+
+	.activity-map-donut {
+		width: min(100%, 18rem);
+	}
+
+	.activity-map-detail-row {
+		grid-template-columns: 0.75rem minmax(0, 1fr) auto;
+	}
+
+	.activity-map-detail-percent {
+		display: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.activity-map-donut path {
+		transition: none;
+	}
 }
