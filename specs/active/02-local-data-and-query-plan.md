@@ -427,3 +427,15 @@ Complete the backend for local data ownership without exposing destructive opera
 - Deferred findings: none; real desktop/mobile journeys remain Spec 03 Post-Critic Acceptance work.
 - Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (215 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); `git diff --check`.
 - Verdict: changes-required; corrected artifacts were submitted to the same joint Critic for final Round 3.
+
+### Round 3
+
+- Critic: `/root/joint_critic` (joint Specs 01–03 evaluation, read-only)
+- Review scope: full
+- Evidence reviewed: commits `9adba5f` and `8687a05`, both prior fix batches, current source/tests/docs, and the clean 215-test gate.
+- Findings: P1 persisted daily summaries lack deep metrics/identity/warning validation and visible corrupt-summary query diagnostics; P1 deleted history is not filtered by the selected directory; P1 deletion execution re-enumerates after drift validation and is not frozen to per-path preview fingerprints.
+- Selected fixes: none; the three-round Critic limit is exhausted.
+- Executor fixes: none in this round.
+- Deferred findings: all three blocking data/query findings remain unresolved and are not accepted as follow-ups; real desktop/mobile journeys remain Spec 03 Post-Critic Acceptance work.
+- Validation rerun: Critic confirmed `npm run check`, `npm run lint`, `npm test -- --run` (215 passed), `npm run build`, strict specs validation, and `git diff --check` all pass on the clean worktree.
+- Verdict: fail; keep Specs 01–03 in `review` and do not start another automatic Critic.
