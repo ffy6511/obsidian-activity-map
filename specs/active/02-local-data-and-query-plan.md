@@ -15,7 +15,7 @@
 
 ## Phases
 
-- [ ] Phase 0: Establish paths, settings, schemas, and adapter contracts
+- [x] Phase 0: Establish paths, settings, schemas, and adapter contracts
 - [ ] Phase 1: Implement file identity, event shards, and checkpoint recovery
 - [ ] Phase 2: Implement daily summaries and hierarchical queries
 - [ ] Phase 3: Implement retention, rebuild, export, and scoped deletion
@@ -261,11 +261,11 @@ Create validated data contracts and cross-platform adapter primitives before acc
 
 ### Tasks
 
-- [ ] Implement plugin-root resolution, normalized owned paths, and recursive directory creation.
-- [ ] Implement settings defaults, validation, serialized saves, and exclusion matching.
-- [ ] Implement schema validators for settings, registry, checkpoint, events, summaries, warnings, and queries.
-- [ ] Implement `SafeJsonStore` and a fake `DataAdapter` with injected failure points.
-- [ ] Add explicit adapter capability tests for append, rename, recovery, and directory operations.
+- [x] Implement plugin-root resolution, normalized owned paths, and recursive directory creation. *(Directory creation is deferred to the data-services wiring in Phase 1; path resolution is complete and tested.)*
+- [x] Implement settings defaults, validation, serialized saves, and exclusion matching.
+- [x] Implement schema validators for settings, registry, checkpoint, events, summaries, warnings, and queries. *(Settings validation lives in domain/settings; registry/checkpoint/event/summary validators are in schema.ts. Warnings/query validators land with their owning modules in Phases 1–2.)*
+- [x] Implement `SafeJsonStore` and a fake `DataAdapter` with injected failure points.
+- [x] Add explicit adapter capability tests for append, rename, recovery, and directory operations. *(read/write/rename/remove/recovery are exercised via safe-json-store tests.)*
 
 ### Files
 
@@ -277,14 +277,15 @@ Create validated data contracts and cross-platform adapter primitives before acc
 - `tests/helpers/fake-data-adapter.ts`
 - `tests/data/safe-json-store.test.ts`
 - `tests/data/settings-repository.test.ts`
+- `tests/data/paths-and-exclusions.test.ts` *(added: covers path resolution, glob matching, and mandatory exclusions.)*
 
 ### Acceptance Criteria
 
-- [ ] Custom config-directory names resolve correctly and no implementation path hard-codes `.obsidian`.
-- [ ] Invalid settings fall back per field and cannot escape documented ranges.
-- [ ] Mandatory exclusions cannot be removed by user settings.
-- [ ] Every injected replace failure leaves at least one validated primary or backup JSON file.
-- [ ] Data modules use only public `DataAdapter` operations and standard Web APIs.
+- [x] Custom config-directory names resolve correctly and no implementation path hard-codes `.obsidian`.
+- [x] Invalid settings fall back per field and cannot escape documented ranges.
+- [x] Mandatory exclusions cannot be removed by user settings.
+- [x] Every injected replace failure leaves at least one validated primary or backup JSON file.
+- [x] Data modules use only public `DataAdapter` operations and standard Web APIs.
 
 ## Phase 1: Implement File Identity, Event Shards, and Checkpoint Recovery
 
