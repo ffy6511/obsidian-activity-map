@@ -12,15 +12,6 @@
 import type { ClosedSessionSegment, RecoveryDecision } from '../domain/activity';
 import { validateEventEnvelope, type ValidatedEventEnvelope } from './schema';
 
-/** Generate a record id using the standard crypto UUID API. */
-function newRecordId(): string {
-	const win = typeof window !== 'undefined' ? (window as { crypto?: { randomUUID?: () => string } }) : undefined;
-	if (win?.crypto && typeof win.crypto.randomUUID === 'function') {
-		return win.crypto.randomUUID();
-	}
-	return `rec-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
 /** Build a `session` envelope from one closed segment. */
 export function buildSessionEnvelope(
 	segment: ClosedSessionSegment,
@@ -28,7 +19,9 @@ export function buildSessionEnvelope(
 ): ValidatedEventEnvelope {
 	const envelope: ValidatedEventEnvelope = {
 		schemaVersion: 1,
-		recordId: newRecordId(),
+		// One session produces at most one segment per local date. Replaying a
+		// close after append-before-checkpoint failure therefore reuses this key.
+		recordId: `session:${segment.sessionId}:${segment.localDate}`,
 		type: 'session',
 		deviceId,
 		fileId: segment.target.fileId,
@@ -61,7 +54,10 @@ export function buildAdjustmentEnvelope(
 ): ValidatedEventEnvelope {
 	const envelope: ValidatedEventEnvelope = {
 		schemaVersion: 1,
-		recordId: newRecordId(),
+		// Candidate + decision class is the durable idempotency key. If the
+		// adjustment append succeeds but its clearing checkpoint does not, the
+		// startup retry resolves to this same record instead of double-counting.
+		recordId: `adjustment:${decision.candidateId}:${decision.automatic ? 'automatic' : 'user'}`,
 		type: 'adjustment',
 		deviceId,
 		fileId,

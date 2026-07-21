@@ -19,7 +19,6 @@ import { sessionShardPath, dailySummaryPath, checkpointPath, filesRegistryPath }
 import type { JsonFileAdapter } from './safe-json-store';
 import type { DataOperationProgress, ShardInventory } from './retention-service';
 import type { FileRegistry } from './file-registry';
-import { fingerprintRecords } from './daily-summary-repository';
 
 /** Deletion scope. */
 export type DeletionScope =
@@ -78,7 +77,6 @@ export class DeletionService {
 		const scopeDate = scope.kind === 'date' ? scope.localDate : null;
 		const sessionShards = await this.inventory.listSessionShards();
 		const summaryShards = await this.inventory.listDailySummaries();
-		const shardFingerprints: string[] = [];
 		const affectedPaths: string[] = [];
 		let affectedRecordCount = 0;
 		let affectedSummaryCount = 0;
@@ -96,7 +94,6 @@ export class DeletionService {
 			if (scopedRecords.length === 0 && scopeFileId !== null) {
 				continue;
 			}
-			shardFingerprints.push(`${shardKey(shard)}:${fingerprintRecords(read.records)}`);
 			affectedRecordCount += scopedRecords.length;
 			affectedPaths.push(sessionPath, dailyPath);
 			affectedSummaryCount += 1;
@@ -115,15 +112,34 @@ export class DeletionService {
 		if (scope.kind === 'all') {
 			affectedPaths.push(checkpointPath(this.pathAdapter), filesRegistryPath(this.pathAdapter));
 		}
+		const uniqueAffectedPaths = [...new Set(affectedPaths)].sort();
 		return {
 			planId: newPlanId(),
 			scope: args.scope,
-			affectedPaths: [...new Set(affectedPaths)],
+			affectedPaths: uniqueAffectedPaths,
 			affectedRecordCount,
 			affectedSummaryCount,
 			createdAt: args.nowIso,
-			sourceFingerprint: shardFingerprints.sort().join('||'),
+			sourceFingerprint: await this.fingerprintPaths(uniqueAffectedPaths),
 		};
+	}
+
+	/** Fingerprint every path the plan may mutate, including summary-only data. */
+	private async fingerprintPaths(paths: readonly string[]): Promise<string> {
+		const entries: string[] = [];
+		for (const path of paths) {
+			if (!(await this.fileAdapter.exists(path))) {
+				entries.push(`${path}:missing`);
+				continue;
+			}
+			try {
+				const contents = await this.fileAdapter.read(path);
+				entries.push(`${path}:${contents.length}:${fingerprintText(contents)}`);
+			} catch {
+				entries.push(`${path}:unreadable`);
+			}
+		}
+		return entries.join('||');
 	}
 
 	/**
@@ -236,4 +252,16 @@ export class DeletionService {
 			errors,
 		};
 	}
+}
+
+/** Stable bounded content fingerprint for destructive-plan drift detection. */
+function fingerprintText(contents: string): string {
+	let first = 0x811c9dc5;
+	let second = 0x9e3779b9;
+	for (let index = 0; index < contents.length; index += 1) {
+		const code = contents.charCodeAt(index);
+		first = Math.imul(first ^ code, 0x01000193) >>> 0;
+		second = Math.imul(second ^ (code + index), 0x85ebca6b) >>> 0;
+	}
+	return `${first.toString(16).padStart(8, '0')}${second.toString(16).padStart(8, '0')}`;
 }

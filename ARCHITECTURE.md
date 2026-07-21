@@ -232,6 +232,8 @@ idle   --resume---------------------> active(new session + separate recovery can
 
 One callback creates one immutable wall/monotonic clock sample. Wall time owns timestamps and local-date boundaries; monotonic time owns elapsed durations and delayed-heartbeat detection. Closed intervals are split at local midnight only after their final endpoint is known, so idle rollback cannot leave an already persisted fragment.
 
+Trusted activity refreshes a bounded live checkpoint, including collapsed completed-edit duration plus the current burst endpoints. `editor-change` carries its source file/leaf/window through the platform boundary and is accepted only when it matches the unique foreground target.
+
 ## Data Layer and Query Engine
 
 Spec 02 implements local evidence, derived summaries, and read-only product queries.
@@ -265,6 +267,7 @@ closed runtime record
   -> invalidate matching query-cache snapshots
 
 # recordId is the idempotency key for uncertain append retries.
+# Session/date and recovery-candidate decision keys remain stable across checkpoint retries.
 # Normal append never replaces a raw shard; unreadable/corrupt sources abort before mutation.
 # One malformed line is isolated and reported; unrelated records still load.
 # Raw retention runs only after the corresponding daily summary is verified.
@@ -317,7 +320,7 @@ DistributionResult
 # Paths and labels are escaped before entering SVG markup.
 ```
 
-UI code sends intents to the controller. It cannot append records, rewrite summaries, or delete files directly. Destructive actions execute only the immutable plan returned by the data layer and abort when that plan becomes stale.
+UI code sends intents to the controller. It cannot append records, rewrite summaries, or delete files directly. Destructive actions execute only the immutable plan returned by the data layer; the plan fingerprints every affected raw, summary-only, checkpoint, and registry path and aborts before mutation when any source changes.
 
 The header-action manager listens to public workspace lifecycle events, owns one `FileView.addAction()` element per live file view through a weak registry, and removes only those elements on view removal or unload. Status icons and text come from tracking snapshots. Each popover is attached to its trigger's owner document so pop-out windows keep independent focus, pointer, and close behavior. Hover listeners are capability-gated; keyboard focus, Ribbon, commands, and the full view remain usable without hover or when header integration reports a warning.
 

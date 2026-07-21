@@ -415,3 +415,15 @@ Complete the backend for local data ownership without exposing destructive opera
 - Deferred findings: none; real desktop/mobile journeys remain Spec 03 Post-Critic Acceptance work, not Critic defects.
 - Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (207 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); `git diff --check`.
 - Verdict: changes-required; corrected artifacts were submitted to the same joint Critic for Round 2.
+
+### Round 2
+
+- Critic: `/root/joint_critic` (joint Specs 01–03 evaluation, read-only)
+- Review scope: full
+- Evidence reviewed: commit `9adba5f`, Round 1 fixes/evidence, current production paths, and the clean 207-test gate.
+- Findings: P0 live checkpoints and recovery-decision crash idempotency were incomplete; P1 `editor-change` discarded its source leaf/file; P1 deletion drift fingerprints omitted summary-only authoritative data.
+- Selected fixes: all three blocking findings.
+- Executor fixes: raw session/adjustment retries now use durable semantic record IDs and aggregate legacy candidate duplicates once; checkpoint decision clearing follows append ordering; deletion plan fingerprints cover full affected path/content state including retained summaries.
+- Deferred findings: none; real desktop/mobile journeys remain Spec 03 Post-Critic Acceptance work.
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (215 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); `git diff --check`.
+- Verdict: changes-required; corrected artifacts were submitted to the same joint Critic for final Round 3.

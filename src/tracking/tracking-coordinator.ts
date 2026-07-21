@@ -51,8 +51,14 @@ export interface WorkspaceSource {
 	onActiveLeafChange(cb: () => void): () => void;
 	/** Subscribe to file-open events; returns an unsubscribe. */
 	onFileOpen(cb: (leaf: ResolvedLeaf) => void): () => void;
-	/** Subscribe to editor changes on the active file; returns an unsubscribe. */
-	onEditorChange(cb: () => void): () => void;
+	/** Subscribe to editor changes with their originating file/view identity. */
+	onEditorChange(cb: (source: EditorChangeSource) => void): () => void;
+}
+
+export interface EditorChangeSource {
+	path: string;
+	leafId?: string;
+	windowId?: string;
 }
 
 /** Source of trusted DOM activity events for one window. */
@@ -195,11 +201,13 @@ export class TrackingCoordinator {
 		candidateId: string;
 		kind: 'include' | 'exclude';
 	}): Promise<RecoveryDecision | null> {
+		const sample = this.opts.clock.now();
 		return this.queue.enqueue(() =>
 			this.engine.resolveRecovery({
 				candidateId: args.candidateId,
 				kind: args.kind,
-				decidedAt: new Date(this.opts.clock.now().wallMs).toISOString(),
+				decidedAt: new Date(sample.wallMs).toISOString(),
+				sample,
 			}),
 		);
 	}
@@ -243,7 +251,16 @@ export class TrackingCoordinator {
 			}),
 		);
 		this.unsubs.push(
-			workspace.onEditorChange(() => {
+			workspace.onEditorChange((source) => {
+				const target = this.lastSnapshot?.currentTarget;
+				if (
+					!target ||
+					target.path !== source.path ||
+					(source.leafId !== undefined && target.leafId !== source.leafId) ||
+					(source.windowId !== undefined && target.windowId !== source.windowId)
+				) {
+					return;
+				}
 				this.engine.submit({ kind: 'edit', sample: this.opts.clock.now() });
 			}),
 		);

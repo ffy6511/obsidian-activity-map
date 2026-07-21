@@ -34,12 +34,14 @@ import {
 	toIso,
 	type ClockSample,
 } from '../platform/clock';
-import { EditingBurst, unionLengthMs, type BurstInterval } from './editing-burst';
+import { EditingBurst } from './editing-burst';
 import {
 	RecoveryQueue,
 	AUTO_EXCLUSION_UNDO_MS,
 	type PendingCandidate,
 } from './recovery-queue';
+
+const MAX_LIVE_CHECKPOINT_INTERVAL_MS = 30_000;
 
 /**
  * Inputs the coordinator normalizes from Obsidian/DOM events. Each carries one
@@ -100,6 +102,7 @@ export class ActivityEngine {
 	/** Whether the most-recent transition was an app-blur (affects refocus openCount). */
 	private blurred = false;
 	private stopped = false;
+	private lastCheckpointMonotonicMs: number | null = null;
 
 	constructor(settings: ActivityMapSettings, callbacks: EngineCallbacks) {
 		this.settings = settings;
@@ -354,6 +357,20 @@ export class ActivityEngine {
 		}
 		this.open.lastTrustedActivityMs = sample.wallMs;
 		this.open.lastTrustedActivitySample = sample;
+		this.maybeFlushLiveCheckpoint(sample);
+	}
+
+	private maybeFlushLiveCheckpoint(sample: ClockSample): void {
+		const intervalMs = Math.min(
+			MAX_LIVE_CHECKPOINT_INTERVAL_MS,
+			Math.max(5_000, Math.floor(this.settings.idleThresholdMs / 2)),
+		);
+		if (
+			this.lastCheckpointMonotonicMs === null ||
+			sample.monotonicMs - this.lastCheckpointMonotonicMs >= intervalMs
+		) {
+			this.flushCheckpoint(sample);
+		}
 	}
 
 	private closeOpen(closeSample: ClockSample, reason: SessionClosureReason): void {
@@ -382,9 +399,7 @@ export class ActivityEngine {
 		);
 		// Close any open edit burst with a hard clip at the close instant.
 		session.editBurst.closeHard(closeSample.wallMs);
-		const burstIntervals = session.editBurst.snapshotIntervals();
-		const clipped = clipBurstsToSession(burstIntervals, session.startedAtMs, closeSample.wallMs);
-		let editingMs = unionLengthMs(clipped);
+		let editingMs = session.editBurst.totalMs(closeSample.wallMs);
 		if (!Number.isFinite(editingMs) || editingMs < 0) {
 			editingMs = 0;
 		}
@@ -487,6 +502,7 @@ export class ActivityEngine {
 		candidateId: string;
 		kind: 'include' | 'exclude';
 		decidedAt: string;
+		sample?: ClockSample;
 	}): RecoveryDecision | null {
 		// Idempotency: if the candidate is already resolved, return its prior
 		// decision without re-emitting, so duplicate UI clicks cannot duplicate
@@ -503,6 +519,13 @@ export class ActivityEngine {
 				: this.recovery.exclude(args);
 		if (decision) {
 			this.callbacks.onEmit({ segments: [], decisions: [decision] });
+			if (args.sample) {
+				// The coordinator queues record append before this checkpoint. A
+				// deterministic adjustment recordId closes the remaining crash window.
+				this.stateReason = 'recovery-resolved';
+				this.flushCheckpoint(args.sample);
+				this.publishSnapshot(args.sample);
+			}
 		}
 		return decision;
 	}
@@ -571,6 +594,8 @@ export class ActivityEngine {
 	}
 
 	private flushCheckpoint(sample: ClockSample): void {
+		this.lastCheckpointMonotonicMs = sample.monotonicMs;
+		const editState = this.open?.editBurst.checkpointState();
 		const checkpoint: RuntimeCheckpoint = {
 			schemaVersion: 1,
 			state: this.state,
@@ -579,11 +604,15 @@ export class ActivityEngine {
 			lastTrustedActivityAt: this.open
 				? toIso(this.open.lastTrustedActivityMs)
 				: null,
-			editBurst: this.open
+			editBurst: this.open && editState?.lastEditAt !== null
 				? {
 						fileId: this.open.target.fileId,
-						lastEditAt: toIso(this.open.editBurst.lastEditAt() ?? this.open.lastTrustedActivityMs),
+						lastEditAt: toIso(editState?.lastEditAt ?? this.open.lastTrustedActivityMs),
 						silenceMs: this.settings.editSilenceMs,
+						completedMs: editState?.completedMs ?? 0,
+						openSince: editState?.openSince === null || editState?.openSince === undefined
+							? null
+							: toIso(editState.openSince),
 					}
 				: null,
 			pendingRecovery: [...this.recovery.pendingCandidates()],
@@ -610,8 +639,11 @@ export class ActivityEngine {
 			const editBurst = new EditingBurst(this.settings.editSilenceMs);
 			if (checkpoint.editBurst && checkpoint.editBurst.fileId === target.fileId) {
 				const lastEditAt = Date.parse(checkpoint.editBurst.lastEditAt);
-				if (Number.isFinite(lastEditAt)) {
-					editBurst.restore([], lastEditAt, lastEditAt);
+				const openSince = checkpoint.editBurst.openSince
+					? Date.parse(checkpoint.editBurst.openSince)
+					: lastEditAt;
+				if (Number.isFinite(lastEditAt) && Number.isFinite(openSince)) {
+					editBurst.restore(checkpoint.editBurst.completedMs ?? 0, openSince, lastEditAt);
 				}
 			}
 			this.open = {
@@ -669,20 +701,4 @@ function sameFileAfterBlur(
 	current: TrackingTarget,
 ): boolean {
 	return last !== null && last.fileId === current.fileId;
-}
-
-function clipBurstsToSession(
-	bursts: readonly BurstInterval[],
-	sessionStartMs: number,
-	sessionEndMs: number,
-): BurstInterval[] {
-	const out: BurstInterval[] = [];
-	for (const b of bursts) {
-		const start = Math.max(b.start, sessionStartMs);
-		const end = Math.min(b.end, sessionEndMs);
-		if (end > start) {
-			out.push({ start, end });
-		}
-	}
-	return out;
 }

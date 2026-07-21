@@ -23,6 +23,8 @@ export interface BurstInterval {
 /** Mutable editing-burst accumulator for one in-flight session/target. */
 export class EditingBurst {
 	private readonly intervals: BurstInterval[] = [];
+	/** Closed-burst duration recovered from a bounded checkpoint. */
+	private carriedMs = 0;
 	/** Open burst's latest edit time; null when no burst is open. */
 	private openSince: number | null = null;
 	private openLastEdit: number | null = null;
@@ -111,7 +113,20 @@ export class EditingBurst {
 				end: Math.min(naturalEnd, asOfMs),
 			});
 		}
-		return unionLengthMs(all);
+		return this.carriedMs + unionLengthMs(all);
+	}
+
+	/** Bounded checkpoint state; completed intervals collapse to one duration. */
+	checkpointState(): {
+		completedMs: number;
+		openSince: number | null;
+		lastEditAt: number | null;
+	} {
+		return {
+			completedMs: this.carriedMs + unionLengthMs(this.intervals),
+			openSince: this.openSince,
+			lastEditAt: this.openLastEdit,
+		};
 	}
 
 	/** Snapshot the closed intervals for checkpoint recovery. */
@@ -120,11 +135,13 @@ export class EditingBurst {
 	}
 
 	/** Restore from a checkpoint snapshot of intervals. */
-	restore(intervals: readonly BurstInterval[], openSince: number | null, openLastEdit: number | null): void {
+	restore(
+		completedMs: number,
+		openSince: number | null,
+		openLastEdit: number | null,
+	): void {
 		this.intervals.length = 0;
-		for (const iv of intervals) {
-			this.intervals.push({ start: iv.start, end: iv.end });
-		}
+		this.carriedMs = Number.isFinite(completedMs) ? Math.max(0, completedMs) : 0;
 		this.openSince = openSince;
 		this.openLastEdit = openLastEdit;
 	}

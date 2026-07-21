@@ -32,13 +32,16 @@ function decision(candidateId: string, decidedAt: string): RecoveryDecision {
 }
 
 /** Fake inventory that returns whatever (deviceId, localDate) pairs it's given. */
-function fakeInventory(shards: { deviceId: string; localDate: string }[]): ShardInventory {
+function fakeInventory(
+	shards: { deviceId: string; localDate: string }[],
+	summaries = shards,
+): ShardInventory {
 	return {
 		async listSessionShards() {
 			return shards;
 		},
 		async listDailySummaries() {
-			return shards;
+			return summaries;
 		},
 	};
 }
@@ -121,6 +124,20 @@ describe('rebuild service', () => {
 		});
 		expect(result.outcomes[0]?.outcome).toBe('failed');
 		expect((await s.shardStore.read(dev1Path(s))).records).toHaveLength(1);
+	});
+
+	it('deduplicates legacy adjustment retries by candidate identity during rebuild', async () => {
+		const s = setup();
+		const first = buildAdjustmentEnvelope(decision('candidate-1', '2026-07-20T00:01:00.000Z'), 'dev1', 'f1', 'a.md', '2026-07-20');
+		const duplicate = { ...first, recordId: 'legacy-random-retry-id' };
+		await s.shardStore.append(dev1Path(s), [first, duplicate]);
+		const rebuilt = await s.summaries.rebuild({
+			deviceId: 'dev1',
+			localDate: '2026-07-20',
+			nowIso: '2026-07-21T00:00:00.000Z',
+		});
+		expect(rebuilt.summary.metricsByFileId.f1?.activeMs).toBe(5_000);
+		expect(rebuilt.summary.warnings.some((warning) => warning.code === 'duplicate-adjustment')).toBeTrue();
 	});
 });
 
@@ -292,6 +309,43 @@ describe('deletion service', () => {
 		await seedShard(s, 'dev1', '2026-07-20', [segment('f2', 'b.md', '2026-07-20', 5_000)]);
 		const executed = await service.executeDeletion({ plan, nowIso: '2026-07-21T00:01:00.000Z' });
 		expect(executed.outcome).toBe('aborted-drift');
+	});
+
+	it('aborts when summary-only authoritative data changes after preview', async () => {
+		const s = setup();
+		const summaryRef = { deviceId: 'dev1', localDate: '2026-07-01' };
+		await s.summaries.save({
+			...summaryRef,
+			summary: {
+				schemaVersion: 1,
+				...summaryRef,
+				generatedAt: '2026-07-20T00:00:00.000Z',
+				sourceRecordCount: 1,
+				sourceFingerprint: 'retained-source',
+				metricsByFileId: { f1: { activeMs: 10_000, editingMs: 0, openCount: 1 } },
+				warnings: [],
+			},
+		});
+		const inventory = fakeInventory([], [summaryRef]);
+		const service = new DeletionService(inventory, s.shardStore, s.summaries, s.pathAdapter, s.adapter, s.registry);
+		const plan = await service.planDeletion({
+			scope: { kind: 'date', localDate: summaryRef.localDate },
+			nowIso: '2026-07-21T00:00:00.000Z',
+		});
+		expect(plan.affectedSummaryCount).toBe(1);
+		const current = await s.summaries.load(summaryRef);
+		if (!current) throw new Error('summary fixture missing');
+		await s.summaries.save({
+			...summaryRef,
+			summary: {
+				...current,
+				generatedAt: '2026-07-21T00:00:30.000Z',
+				metricsByFileId: { f1: { activeMs: 20_000, editingMs: 0, openCount: 1 } },
+			},
+		});
+		const executed = await service.executeDeletion({ plan, nowIso: '2026-07-21T00:01:00.000Z' });
+		expect(executed.outcome).toBe('aborted-drift');
+		expect((await s.summaries.load(summaryRef))?.metricsByFileId.f1?.activeMs).toBe(20_000);
 	});
 
 	it('file scope rewrites affected shards without removing whole dates', async () => {

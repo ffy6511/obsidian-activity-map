@@ -181,6 +181,29 @@ describe('checkpoint reconciliation', () => {
 		expect(h.engine.pendingRecovery()).toHaveLength(0);
 	});
 
+	it('restores completed and open editing-burst evidence from a live checkpoint', () => {
+		const source = makeEngine();
+		source.engine.submit({ kind: 'start', sample: sample(0) });
+		const target = { fileId: 'f', path: 'a.md', windowId: 'main', leafId: 'l1' };
+		source.engine.submit({ kind: 'focus-target', sample: sample(0), target });
+		source.engine.submit({ kind: 'edit', sample: sample(10_000) });
+		source.engine.submit({ kind: 'edit', sample: sample(40_000) });
+		const checkpoint = source.checkpoints.at(-1);
+		expect(checkpoint?.editBurst?.completedMs).toBe(15_000);
+
+		const restored = makeEngine();
+		reconcileCheckpoint({
+			checkpoint: checkpoint ?? null,
+			engine: restored.engine,
+			clock: { now: () => sample(45_000) },
+			nowSample: sample(45_000),
+			currentTarget: target,
+			idleThresholdMs: 180_000,
+		});
+		restored.engine.submit({ kind: 'stop', sample: sample(50_000) });
+		expect(restored.sessions[0]?.editingMs).toBe(25_000);
+	});
+
 	it('shutdown after any transition persists a closed record or leaves a recoverable checkpoint', () => {
 		const h = makeEngine();
 		h.engine.submit({ kind: 'start', sample: sample(0) });

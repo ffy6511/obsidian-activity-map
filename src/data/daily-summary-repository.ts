@@ -158,6 +158,7 @@ export function aggregateMetrics(
 	warnings: DataWarning[],
 ): Record<string, DailyFileMetrics> {
 	const byFile: Record<string, DailyFileMetrics> = {};
+	const seenAdjustments = new Set<string>();
 	for (const record of records) {
 		const bucket = (byFile[record.fileId] ??= { activeMs: 0, editingMs: 0, openCount: 0 });
 		if (record.type === 'session') {
@@ -170,6 +171,15 @@ export function aggregateMetrics(
 		} else if (record.type === 'adjustment') {
 			const payload = record.payload;
 			if (payload.kind === 'adjustment') {
+				const adjustmentKey = `${payload.candidateId}:${payload.automatic ? 'automatic' : 'user'}`;
+				if (seenAdjustments.has(adjustmentKey)) {
+					warnings.push({
+						code: 'duplicate-adjustment',
+						message: `duplicate recovery adjustment ignored for ${payload.candidateId}`,
+					});
+					continue;
+				}
+				seenAdjustments.add(adjustmentKey);
 				bucket.activeMs += payload.deltaMs;
 			}
 		}

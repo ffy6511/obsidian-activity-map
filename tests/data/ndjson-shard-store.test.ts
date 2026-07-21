@@ -191,4 +191,30 @@ describe('ndjson shard store concurrency and rewrite', () => {
 		const read = await store.read('/shard.ndjson');
 		expect(read.records[0]?.payload).toMatchObject({ kind: 'adjustment', deltaMs: 5_000 });
 	});
+
+	it('uses a durable candidate idempotency key across adjustment retries', async () => {
+		const adapter = new FakeDataAdapter();
+		const store = new NdjsonShardStore(adapter);
+		const first = buildAdjustmentEnvelope(decision('c1'), 'dev1', 'f1', 'f1.md', '2026-01-01');
+		const retry = buildAdjustmentEnvelope(decision('c1'), 'dev1', 'f1', 'f1.md', '2026-01-01');
+		expect(retry.recordId).toBe(first.recordId);
+		await store.append('/shard.ndjson', [first]);
+		const result = await store.append('/shard.ndjson', [retry]);
+		expect(result.appended).toBe(0);
+		expect(result.duplicatesSkipped).toBe(1);
+		expect((await store.read('/shard.ndjson')).records).toHaveLength(1);
+	});
+
+	it('uses a durable session idempotency key across close retries', async () => {
+		const adapter = new FakeDataAdapter();
+		const store = new NdjsonShardStore(adapter);
+		const closed = segment('f1', '2026-01-01', 1_000);
+		const first = buildSessionEnvelope(closed, 'dev1');
+		const retry = buildSessionEnvelope({ ...closed, endedAt: '2026-01-01T00:00:02.000Z' }, 'dev1');
+		expect(retry.recordId).toBe(first.recordId);
+		await store.append('/shard.ndjson', [first]);
+		const result = await store.append('/shard.ndjson', [retry]);
+		expect(result.appended).toBe(0);
+		expect((await store.read('/shard.ndjson')).records).toHaveLength(1);
+	});
 });

@@ -171,7 +171,16 @@ export default class ActivityMapPlugin extends Plugin {
 				const leaf = this.resolveLeaf(workspace.getMostRecentLeaf());
 				if (leaf) callback(leaf);
 			})),
-			onEditorChange: (callback) => subscribe(workspace.on('editor-change', callback)),
+			onEditorChange: (callback) => subscribe(workspace.on('editor-change', (_editor, info) => {
+				const file = info.file;
+				if (!file) return;
+				const resolved = info instanceof FileView ? this.resolveLeaf(info.leaf) : null;
+				callback({
+					path: file.path,
+					leafId: resolved?.leafId,
+					windowId: resolved?.windowId,
+				});
+			})),
 		};
 	}
 

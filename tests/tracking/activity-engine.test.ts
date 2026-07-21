@@ -259,6 +259,19 @@ describe('activity engine recovery decisions', () => {
 });
 
 describe('activity engine editing bursts', () => {
+	it('checkpoints trusted activity and bounded editing state during a long session', () => {
+		const h = createEngine();
+		h.engine.submit({ kind: 'start', sample: sample(0) });
+		h.engine.submit({ kind: 'focus-target', sample: sample(0), target: target('a') });
+		const openedWrites = h.checkpoints.length;
+		h.engine.submit({ kind: 'activity', sample: sample(10_000) });
+		expect(h.checkpoints).toHaveLength(openedWrites);
+		h.engine.submit({ kind: 'edit', sample: sample(31_000) });
+		expect(h.checkpoints.length).toBeGreaterThan(openedWrites);
+		expect(h.checkpoints.at(-1)?.lastTrustedActivityAt).toBe(new Date(31_000).toISOString());
+		expect(h.checkpoints.at(-1)?.editBurst?.openSince).toBe(new Date(31_000).toISOString());
+	});
+
 	it('editingMs never exceeds activeMs', () => {
 		const h = createEngine();
 		h.engine.submit({ kind: 'start', sample: sample(0) });

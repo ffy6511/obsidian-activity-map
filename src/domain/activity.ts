@@ -158,4 +158,8 @@ export interface EditingBurstCheckpoint {
 	fileId: string;
 	lastEditAt: string;
 	silenceMs: number;
+	/** Duration of fully closed bursts before the currently open burst. */
+	completedMs?: number;
+	/** Start of the currently open burst; absent in older schema-1 checkpoints. */
+	openSince?: string | null;
 }

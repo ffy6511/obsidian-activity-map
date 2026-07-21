@@ -399,3 +399,15 @@ Real Obsidian desktop and mobile-viewer journeys require the technical and Criti
 - Deferred findings: none; real desktop/mobile journeys remain open Post-Critic Acceptance work and keep this Spec and `v0.1` in review.
 - Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (207 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); `git diff --check`.
 - Verdict: changes-required; corrected artifacts were submitted to the same joint Critic for Round 2.
+
+### Round 2
+
+- Critic: `/root/joint_critic` (joint Specs 01–03 evaluation, read-only)
+- Review scope: full
+- Evidence reviewed: commit `9adba5f`, Round 1 fixes/evidence, current production paths, and the clean 207-test gate.
+- Findings: P0 live checkpoints and recovery-decision crash idempotency were incomplete; P1 `editor-change` discarded its source leaf/file; P1 deletion drift fingerprints omitted summary-only authoritative data.
+- Selected fixes: all three blocking findings.
+- Executor fixes: runtime checkpoints and retry IDs now preserve crash semantics, Obsidian editor events retain view identity through the platform boundary, and UI-retained deletion plans now reject summary-only drift before mutation.
+- Deferred findings: none; real desktop/mobile journeys remain open Post-Critic Acceptance work and keep this Spec and `v0.1` in review.
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (215 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); `git diff --check`.
+- Verdict: changes-required; corrected artifacts were submitted to the same joint Critic for final Round 3.

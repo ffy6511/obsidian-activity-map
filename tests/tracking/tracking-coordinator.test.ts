@@ -9,6 +9,7 @@ import {
 import {
 	TrackingCoordinator,
 	type ActivityEventSource,
+	type EditorChangeSource,
 	type WorkspaceSource,
 } from '../../src/tracking/tracking-coordinator';
 import { InMemoryCheckpointPort, InMemoryTrackingSink } from '../../src/tracking/ports';
@@ -42,12 +43,12 @@ function fakeWorkspace(initialLeaf: ResolvedLeaf | null): {
 	setActiveLeaf(leaf: ResolvedLeaf | null): void;
 	fireActiveLeafChange(): void;
 	fireFileOpen(leaf: ResolvedLeaf): void;
-	fireEditorChange(): void;
+	fireEditorChange(source: EditorChangeSource): void;
 } {
 	let active = initialLeaf;
 	const leafCbs = new Set<() => void>();
 	const fileOpenCbs = new Set<(leaf: ResolvedLeaf) => void>();
-	const editorCbs = new Set<() => void>();
+	const editorCbs = new Set<(source: EditorChangeSource) => void>();
 	return {
 		source: {
 			getActiveLeaf: () => active,
@@ -73,8 +74,8 @@ function fakeWorkspace(initialLeaf: ResolvedLeaf | null): {
 		fireFileOpen(leaf) {
 			for (const cb of fileOpenCbs) cb(leaf);
 		},
-		fireEditorChange() {
-			for (const cb of editorCbs) cb();
+		fireEditorChange(source) {
+			for (const cb of editorCbs) cb(source);
 		},
 	};
 }
@@ -318,6 +319,47 @@ describe('tracking coordinator lifecycle', () => {
 		expect(snapshots.at(-1)?.state).toBe('active');
 		expect(snapshots.at(-1)?.pendingRecovery).toHaveLength(1);
 		await coordinator.stop();
+	});
+
+	it('checkpoints a recovery decision after its durable append boundary', async () => {
+		const clock = createFakeClock();
+		const ws = fakeWorkspace(leaf('l1', 'notes/a.md'));
+		const { coordinator, checkpoint, sink, mainSource } = makeCoordinator({ clock, workspace: ws.source });
+		coordinator.start();
+		await flush(clock, 5_000);
+		mainSource.fireActivity();
+		await flush(clock, 180_000);
+		coordinator.onIdleTimer();
+		await flush(clock);
+		mainSource.fireActivity();
+		await flush(clock);
+		const candidate = coordinator.getSnapshot()?.pendingRecovery[0];
+		expect(candidate).toBeDefined();
+		await coordinator.resolveRecovery({ candidateId: candidate?.candidateId ?? '', kind: 'include' });
+		await coordinator.settle();
+		expect(sink.decisions).toHaveLength(1);
+		expect(checkpoint.snapshot?.pendingRecovery).toHaveLength(0);
+		expect(checkpoint.snapshot?.recentDecisions[0]?.candidateId).toBe(candidate?.candidateId);
+		await coordinator.stop();
+	});
+
+	it('ignores editor changes from a background file or leaf', async () => {
+		const clock = createFakeClock();
+		const ws = fakeWorkspace(leaf('front', 'notes/a.md'));
+		const { coordinator, sink } = makeCoordinator({ clock, workspace: ws.source });
+		coordinator.start();
+		await flush(clock, 5_000);
+		ws.fireEditorChange({ path: 'notes/background.md', leafId: 'back', windowId: 'main' });
+		await flush(clock, 5_000);
+		ws.fireEditorChange({ path: 'notes/a.md', leafId: 'back', windowId: 'main' });
+		await flush(clock, 5_000);
+		ws.fireEditorChange({ path: 'notes/a.md', leafId: 'front', windowId: 'main' });
+		await flush(clock, 5_000);
+		await coordinator.stop();
+		expect(sink.sessions).toHaveLength(1);
+		expect(sink.sessions[0]?.editingMs).toBeGreaterThan(0);
+		// Only the matching foreground edit opens a burst at 15s.
+		expect(sink.sessions[0]?.editingMs).toBe(5_000);
 	});
 
 	it('pause and resume flow through the controller', async () => {
