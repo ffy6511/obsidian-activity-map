@@ -8,7 +8,7 @@
 | Scope | `src/ui/`, `src/export/`, settings UI, plugin composition, v0.1 integration and release evidence |
 | Type | feat |
 | Priority | P0 |
-| Status | review |
+| Status | in-progress |
 | Completed | pending |
 | Dependencies | [Activity Tracking Runtime](01-activity-tracking-runtime-plan.md), [Local Data and Query](02-local-data-and-query-plan.md) |
 | Decisions | [Interface and export](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), [Privacy and network boundary](../constitution/2026-07-21-activity-map-product-and-data.md#privacy-and-network-boundary), [Presentation architecture](../../ARCHITECTURE.md#presentation-and-export), [PRD information architecture](../../docs/PRD.md#信息架构与交互), [PRD release acceptance](../../docs/PRD.md#发布验收) |
@@ -21,6 +21,7 @@
 - [x] Phase 3: Implement SVG export and local data controls
 - [x] Phase 4: Complete automated accessibility, platform integration, and release-candidate evidence
 - [x] Phase 5: Correct the header entry and deliver the interactive donut popover
+- [ ] Phase 6: Simplify the popover layout and render the real header distribution
 
 ## Background
 
@@ -30,7 +31,7 @@ The current view is a truthful placeholder. Users need one coherent interface fo
 
 ### Current Behavior
 
-The plugin composes tracking, local data, queries, settings, commands, a dockable hierarchical statistics view, one stable data-backed mini donut per eligible file view, a pinnable hierarchical donut popover, standalone SVG/JSON export, rebuild controls, and drift-checked scoped deletion. The rejected icon-swapping text card has been removed; final owner review and real Obsidian desktop/mobile verification remain pending.
+The plugin composes tracking, local data, queries, settings, commands, a dockable hierarchical statistics view, one stable but single-ratio mini donut per eligible file view, a pinnable hierarchical donut popover, standalone SVG/JSON export, rebuild controls, and drift-checked scoped deletion. The owner accepted the chart interaction but rejected the popover's duplicated title, totals, tooltip row, and tracking footer, plus the misleading single blue header arc. Phase 6 applies the approved tldraw layout and actual vault-root distribution before real Obsidian verification.
 
 ### Goals and Non-goals
 
@@ -415,6 +416,45 @@ Replace the rejected text-first hover card and icon swapping with the approved s
 - [x] Directory and virtual-group clicks drill or expand in-place; file clicks open the file; breadcrumbs and range changes preserve coherent state.
 - [x] Keyboard, focus restoration, outside/Escape close, reduced motion, theme tokens, and mobile no-hover fallbacks pass focused tests.
 - [x] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, strict specs validation, Markdown link checks, and `git diff --check` pass.
+
+## Phase 6: Simplify the Popover Layout and Render the Real Header Distribution
+
+### Goal
+
+Apply the owner-approved tldraw layout without transient rows and make the persistent header miniature truthfully preview today's vault-root chart.
+
+### Tasks
+
+- [ ] Remove the popover title, duplicate metric/total/vault-share summary, transient chart tooltip row, and ordinary tracking-status footer.
+- [ ] Keep one compact control row; render previous-day, calendar, next-day, and expand as equal icon buttons, with expand visually separated from the date group and the metric icon derived from the selected metric.
+- [ ] Move the current breadcrumb path below the donut, default it to the vault root, and constrain the legend to a fixed-height scroll region.
+- [ ] Add a dedicated today/vault-root distribution read for the Header action and reconcile stable miniature slice nodes using the shared color model, including the current in-flight activity in its owning root slice.
+- [ ] Preserve pin/focus/keyboard/activation behavior and add focused tests for the fixed layout, equal controls, scroll boundary, multi-slice geometry, empty state, and stable SVG ownership.
+- [ ] Synchronize Constitution, PRD, Architecture, Roadmap, README, release notes, and Spec evidence before returning the Spec to `review`.
+
+### Files
+
+- `src/ui/activity-map-controller.ts`
+- `src/ui/header-action-manager.ts`
+- `src/ui/header-mini-donut.ts`
+- `src/ui/summary-popover.ts`
+- `src/ui/components/donut-chart.ts`
+- `src/ui/components/range-controls.ts`
+- `styles.css`
+- `tests/ui/activity-map-controller.test.ts`
+- `tests/ui/header-action-manager.test.ts`
+- `tests/ui/summary-popover.test.ts`
+- `tests/ui/accessibility.test.ts`
+
+### Acceptance Criteria
+
+- [ ] Header SVG root identity survives distribution updates; stable slice IDs reuse their nodes, real root items render distinct shared-palette arcs, and zero/error data leaves only the fixed empty ring.
+- [ ] The header distribution includes the current unclosed active interval in the correct root directory or file slice without waiting for persistence.
+- [ ] Popover source and DOM fixtures contain no title bar, duplicate summary, transient chart tooltip, or ordinary tracking footer.
+- [ ] The current path follows the chart, defaults to `Vault`, updates after drill-down, and the legend scrolls within a bounded region without moving surrounding controls or chart.
+- [ ] Previous, calendar, next, and expand controls have one compact size; expand has a group gap and an accessible icon label; metric changes update the metric icon.
+- [ ] Slice pointer/focus changes only highlight the existing chart and legend nodes; pin/unpin, outside/Escape close, focus restoration, drill-down, file activation, and full-view expansion remain available.
+- [ ] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, strict specs validation, repository Markdown links, and `git diff --check` pass.
 
 ## Risks and Mitigations
 

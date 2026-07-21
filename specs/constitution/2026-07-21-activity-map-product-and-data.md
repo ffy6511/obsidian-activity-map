@@ -76,8 +76,10 @@ A user works across several Obsidian windows and project folders. Activity Map a
 ### Interface and Export
 
 - Provide a stable file-header donut action with a focusable interactive chart popover, plus Ribbon and command fallbacks. Hover/focus reveals the chart; action click pins or unpins it; opening the dockable view remains a separate control.
-- Render the header action as a stable miniature donut whose real-data arc represents the current file's share of today's vault activity. When data is unavailable, keep the same fixed donut outline instead of swapping tracking-state icons.
-- Make the header popover and dockable view share the same query, native SVG donut, legend, range controls, breadcrumbs, and slice activation semantics. The popover defaults to today's vault-root distribution.
+- Render the header action as a stable miniature of today's vault-root distribution, using the same stable slice identities and colors as the full donut. When data is unavailable, keep the same fixed donut outline instead of showing a synthetic single arc or swapping tracking-state icons.
+- Make the header popover and dockable view share the same query, native SVG donut, legend, range controls, path, and slice activation semantics. The popover defaults to today's vault-root distribution.
+- Keep the header popover structurally stable while a slice is highlighted: controls, donut, current path, and a bounded scrollable legend occupy fixed regions. Do not add a transient tooltip row, duplicate totals, vault-share summary, title bar, or ordinary tracking-status footer.
+- Place the expand icon after the date controls with a visible group gap. Previous-day, calendar, next-day, and expand controls use the same compact icon-button dimensions; the selected metric may use its own semantic icon.
 - Use a dockable `ItemView` as the complete interface. Mobile interaction must not depend on hover.
 - Use a native SVG donut with stable colors, text detail, keyboard navigation, breadcrumbs, and explicit local-versus-vault percentages.
 - Export a full information graphic by default and offer a chart-only SVG. Both outputs embed necessary styles and accessible metadata.
@@ -202,3 +204,4 @@ Rejected because keyboard interaction, accessible semantics, and standalone vect
 | --- | --- | --- |
 | 2026-07-21 | Established the initial product, attribution, identity, storage, privacy, UI, and extensibility decisions. | Provide a stable implementation boundary before feature development. |
 | 2026-07-21 | Made the file-header entry a stable data-backed miniature donut and the popover an interactive hierarchical donut rather than a text status card. | Align the primary desktop entry with the Webtime Tracker reference and preserve direct hover, focus, pin, and drill-down interaction. |
+| 2026-07-21 | Simplified the header popover to fixed controls, chart, path, and scrollable legend, and changed the header miniature from a single file-share arc to the actual vault-root distribution. | Remove duplicated information and hover-induced layout movement while making the persistent entry visually truthful to the chart it opens. |

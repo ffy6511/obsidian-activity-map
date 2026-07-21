@@ -33,7 +33,7 @@ Deliver a local-first Obsidian plugin that measures trustworthy file activity an
 - [x] Foreground-only per-file activity sessions with trusted activity signals, idle clipping, pause, sleep handling, and explicit corrections.
 - [x] Durable per-device daily session shards, recoverable aggregates, stable file identity, retention, export, rebuild, and deletion controls.
 - [x] Correct selected-day, rolling daily-average, all-history, path aggregation, detail, and deleted-file queries.
-- [x] Stable data-backed header mini donut, interactive hierarchical donut popover, dockable full view, and complete synchronized detail list.
+- [ ] Stable multi-slice header mini donut, fixed-layout hierarchical donut popover, dockable full view, and complete synchronized scrollable detail list.
 - [x] Standalone full-infographic and chart-only SVG export.
 - [ ] Full desktop behavior and a mobile interaction path that does not depend on hover.
 
@@ -44,7 +44,7 @@ Deliver a local-first Obsidian plugin that measures trustworthy file activity an
 - [x] Fixed-data query tests prove daily-average denominators, path drill-down, “local files”, “other”, rename, and deleted-file behavior.
 - [ ] A real Obsidian desktop journey covers installation, tracking, idle recovery, drill-down, data control, and both SVG exports.
 - [ ] A real Obsidian mobile journey covers loading statistics, changing ranges, drill-down, and details without hover.
-- [x] Keyboard, focus, pin/unpin, accessible-name, non-color encoding, theme, and reduced-motion checks pass across the header donut popover and full view.
+- [ ] Keyboard, focus, pin/unpin, stable-highlight layout, accessible-name, non-color encoding, theme, and reduced-motion checks pass across the header donut popover and full view.
 - [ ] Type checking, lint, automated tests, production build, specs validation, and independent Critic evaluation pass.
 - [x] README, PRD, Constitution, settings help, release notes, and installation instructions describe the verified behavior accurately.
 
