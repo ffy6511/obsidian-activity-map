@@ -4,7 +4,7 @@ Activity Map is a local-first Obsidian plugin for measuring trustworthy activity
 
 ## Project Status
 
-The repository contains composed tracking, local persistence, maintenance, hierarchical queries, settings, commands, a complete dockable statistics view, and file-header status popovers with deterministic automated tests. The current installable build records activity, maintains daily summaries, renders hierarchical native-SVG distributions, and exposes per-file today totals plus recovery and pause actions from eligible file headers. SVG export, data-control dialogs, and real Obsidian acceptance remain in progress.
+The repository contains composed tracking, local persistence, maintenance, hierarchical queries, settings, commands, dockable statistics, file-header status, SVG/JSON export, rebuild, and scoped deletion with deterministic automated tests. The current installable build exposes these capabilities through the full view and file-header popovers. Integrated platform/accessibility evidence and real Obsidian acceptance remain in progress.
 
 Treat this as a development build until the complete UI and real Obsidian journeys pass. Follow the [Roadmap](specs/ROADMAP.md) for release acceptance status.
 
@@ -63,7 +63,7 @@ manifest.json
 styles.css
 ```
 
-Reload Obsidian, disable Restricted Mode if appropriate for the development vault, and enable Activity Map under Community plugins. The current build begins local tracking after settings and checkpoint recovery. Use the Ribbon, command palette, or an eligible file-header status action to open the Activity Map view.
+Reload Obsidian, disable Restricted Mode if appropriate for the development vault, and enable Activity Map under Community plugins. The current build begins local tracking after settings and checkpoint recovery. Use the Ribbon, command palette, or an eligible file-header status action to open the Activity Map view; export, rebuild, and previewed deletion controls are available inside the full view.
 
 ## Repository Structure
 

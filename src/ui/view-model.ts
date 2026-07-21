@@ -1,8 +1,16 @@
 import type { ActivityMapSettings } from '../domain/settings';
 import type { TrackingSnapshot } from '../domain/activity';
 import type { DistributionQuery, DistributionResult } from '../query/distribution-query';
+import type { DeletionPlan } from '../data/deletion-service';
+import type { DataOperationProgress } from '../data/retention-service';
 
 export type ViewLoadState = 'loading' | 'ready' | 'empty' | 'error';
+export type DataOperationState =
+	| { kind: 'idle' }
+	| { kind: 'running'; operation: DataOperationProgress['operation'] | 'svg-export'; label: string; completed: number; total: number }
+	| { kind: 'deletion-preview'; plan: DeletionPlan }
+	| { kind: 'completed'; message: string }
+	| { kind: 'error'; message: string };
 
 /** Immutable state consumed by every Activity Map presentation surface. */
 export interface ActivityMapViewModel {
@@ -14,6 +22,7 @@ export interface ActivityMapViewModel {
 	warnings: string[];
 	error: string | null;
 	queryGeneration: number;
+	operation: DataOperationState;
 }
 
 export function initialViewModel(settings: ActivityMapSettings, today: string): ActivityMapViewModel {
@@ -31,5 +40,6 @@ export function initialViewModel(settings: ActivityMapSettings, today: string): 
 		warnings: [],
 		error: null,
 		queryGeneration: 0,
+		operation: { kind: 'idle' },
 	};
 }

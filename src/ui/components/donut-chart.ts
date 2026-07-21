@@ -99,7 +99,7 @@ export function renderDonutChart(args: {
 	args.container.appendChild(svg);
 }
 
-function donutPath(cx: number, cy: number, outer: number, inner: number, start: number, end: number): string {
+export function donutPath(cx: number, cy: number, outer: number, inner: number, start: number, end: number): string {
 	const span = Math.max(0, Math.min(Math.PI * 2 - 0.0001, end - start));
 	const actualEnd = start + span;
 	const large = span > Math.PI ? 1 : 0;

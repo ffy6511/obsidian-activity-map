@@ -27,6 +27,11 @@ import { ActivityMapSettingsTab } from './ui/settings-tab';
 import { registerActivityMapCommands } from './ui/commands';
 import { ACTIVITY_MAP_VIEW_TYPE, ActivityMapView } from './ui/activity-map-view';
 import { HeaderActionManager } from './ui/header-action-manager';
+import { RawExportService } from './data/raw-export-service';
+import { RebuildService } from './data/rebuild-service';
+import { DeletionService } from './data/deletion-service';
+import { BrowserExportDestination } from './export/export-destination';
+import { LocalDataOperations } from './ui/data-controls';
 
 export default class ActivityMapPlugin extends Plugin {
 	private controller: ActivityMapController | null = null;
@@ -63,6 +68,13 @@ export default class ActivityMapPlugin extends Plugin {
 		});
 		const summaries = new DailySummaryRepository({ shardStore: dataServices.getShardStore(), pathAdapter: adapter, fileAdapter: adapter });
 		summariesHolder.value = summaries;
+		const dataOperations = new LocalDataOperations(
+			new RawExportService(inventory, dataServices.getShardStore(), adapter),
+			new RebuildService(inventory, dataServices.getShardStore(), summaries),
+			new DeletionService(inventory, dataServices.getShardStore(), summaries, adapter, adapter, registry),
+			new BrowserExportDestination(document),
+			() => new Date(clock.now().wallMs).toISOString(),
+		);
 
 		this.windowById.set('main', window);
 		const workspaceSource = this.createWorkspaceSource();
@@ -93,6 +105,7 @@ export default class ActivityMapPlugin extends Plugin {
 			},
 			coordinator,
 			localDateFor(Date.now(), Intl.DateTimeFormat().resolvedOptions().timeZone),
+			dataOperations,
 		);
 		observers.push(controller);
 		this.controller = controller;

@@ -8,6 +8,7 @@ import { renderBreadcrumbs } from './components/breadcrumbs';
 import { renderDonutChart, type ChartItem } from './components/donut-chart';
 import { renderDetailList } from './components/detail-list';
 import { formatMetric, formatPercent, metricLabel } from './format';
+import { renderDataControls } from './data-controls';
 
 export const ACTIVITY_MAP_VIEW_TYPE = 'activity-map-view';
 
@@ -52,6 +53,7 @@ export class ActivityMapView extends ItemView {
 			this.expandedOther = null;
 			void this.controller.dispatch({ kind: 'set-path', path });
 		});
+		renderDataControls(this.contentEl, model, this.controller);
 		if (model.loadState === 'loading') {
 			this.contentEl.createEl('p', { text: 'Loading activity…', cls: 'activity-map-state', attr: { 'aria-live': 'polite' } });
 			return;

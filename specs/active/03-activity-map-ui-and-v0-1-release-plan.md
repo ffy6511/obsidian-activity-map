@@ -18,7 +18,7 @@
 - [x] Phase 0: Compose services, settings, commands, and view state
 - [x] Phase 1: Implement the full statistics view and native SVG chart
 - [x] Phase 2: Implement file-header status and interactive summary popover
-- [ ] Phase 3: Implement SVG export and local data controls
+- [x] Phase 3: Implement SVG export and local data controls
 - [ ] Phase 4: Complete accessibility, platform integration, and v0.1 release evidence
 
 ## Background
@@ -29,7 +29,7 @@ The current view is a truthful placeholder. Users need one coherent interface fo
 
 ### Current Behavior
 
-The plugin composes tracking, local data, queries, settings, commands, a dockable hierarchical statistics view, and one status action per eligible file view. The action and owner-document-aware popover expose tracking state, current-file and vault totals, recovery decisions, pause/resume, and full-view access. SVG export, data-control presentation, complete accessibility/platform integration evidence, and real Obsidian verification remain pending.
+The plugin composes tracking, local data, queries, settings, commands, a dockable hierarchical statistics view, one status action per eligible file view, standalone SVG/JSON export, rebuild controls, and drift-checked scoped deletion. Complete accessibility/platform integration evidence and real Obsidian verification remain pending.
 
 ### Goals and Non-goals
 
@@ -309,11 +309,11 @@ Complete user-owned export, rebuild, and destructive data workflows.
 
 ### Tasks
 
-- [ ] Implement deterministic infographic and chart-only SVG rendering from `ChartModel`.
-- [ ] Implement XML escaping, accessible metadata, inline styles, safe filenames, and export capability reporting.
-- [ ] Implement raw JSON export progress and download handling.
-- [ ] Implement rebuild progress/warnings and deletion-plan confirmation dialogs.
-- [ ] Prevent stale, concurrent, or partially failed data operations from reporting success.
+- [x] Implement deterministic infographic and chart-only SVG rendering from `ChartModel`.
+- [x] Implement XML escaping, accessible metadata, inline styles, safe filenames, and export capability reporting.
+- [x] Implement raw JSON export progress and download handling.
+- [x] Implement rebuild progress/warnings and deletion-plan confirmation dialogs.
+- [x] Prevent stale, concurrent, or partially failed data operations from reporting success.
 
 ### Files
 
@@ -327,11 +327,11 @@ Complete user-owned export, rebuild, and destructive data workflows.
 
 ### Acceptance Criteria
 
-- [ ] Both SVG modes parse as standalone SVG and contain `<title>`, `<desc>`, inline colors, and expected values.
-- [ ] Adversarial path/label fixtures cannot inject markup or scripts into exported SVG.
-- [ ] Full infographic and live view use identical distribution values and item colors.
-- [ ] A deletion action displays and executes the same unexpired plan ID and reports partial failure accurately.
-- [ ] Export and diagnostic logs contain no note content, selected text, or typed strings.
+- [x] Both SVG modes parse as standalone SVG and contain `<title>`, `<desc>`, inline colors, and expected values. *(Automated fixtures plus `xmllint --noout` parsing cover both modes.)*
+- [x] Adversarial path/label fixtures cannot inject markup or scripts into exported SVG.
+- [x] Full infographic and live view use identical distribution values and item colors.
+- [x] A deletion action displays and executes the same unexpired plan ID and reports partial failure accurately.
+- [x] Export and diagnostic logs contain no note content, selected text, or typed strings.
 
 ## Phase 4: Complete Accessibility, Platform Integration, and v0.1 Release Evidence
 
