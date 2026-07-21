@@ -22,6 +22,7 @@
 - [x] Phase 4: Complete automated accessibility, platform integration, and release-candidate evidence
 - [x] Phase 5: Correct the header entry and deliver the interactive donut popover
 - [x] Phase 6: Simplify the popover layout and render the real header distribution
+- [x] Phase 7: Keep the open popover live and refine fixed-layout alignment
 
 ## Background
 
@@ -31,7 +32,7 @@ The current view is a truthful placeholder. Users need one coherent interface fo
 
 ### Current Behavior
 
-The plugin composes tracking, local data, queries, settings, commands, a dockable hierarchical statistics view, one stable multi-slice vault-root miniature per eligible file view, a fixed-layout pinnable hierarchical donut popover, standalone SVG/JSON export, rebuild controls, and drift-checked scoped deletion. The duplicated title, totals, tooltip row, and tracking footer plus the misleading single blue file-share arc have been removed; real Obsidian desktop/mobile verification remains pending.
+The plugin composes tracking, local data, queries, settings, commands, a dockable hierarchical statistics view, one stable multi-slice vault-root miniature per eligible file view, an idle-bounded real-time pinnable hierarchical donut popover, standalone SVG/JSON export, rebuild controls, and drift-checked scoped deletion. The duplicated title, totals, tooltip row, tracking footer, misleading single blue file-share arc, and persisted-summary lag have been removed; real Obsidian desktop/mobile verification remains pending.
 
 ### Goals and Non-goals
 
@@ -456,6 +457,41 @@ Apply the owner-approved tldraw layout without transient rows and make the persi
 - [x] Slice pointer/focus changes only highlight the existing chart and legend nodes; pin/unpin, outside/Escape close, focus restoration, drill-down, file activation, and full-view expansion remain available.
 - [x] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, strict specs validation, repository Markdown links, and `git diff --check` pass.
 
+## Phase 7: Keep the Open Popover Live and Refine Fixed-Layout Alignment
+
+### Goal
+
+Remove the summary/heartbeat lag from the open chart while preserving trusted-time clipping and align the owner-requested path, legend, and control regions.
+
+### Tasks
+
+- [x] Extract one immutable live-distribution projection shared by the Header miniature and Popover, limited to today's `activeMs` query and the selected path/view.
+- [x] Tick an open Popover once per second without issuing a query or persistence write; clear the owner-window timer on close and clip growth at the trusted idle boundary.
+- [x] Render the current path as centered muted context without a card background; increase legend-row left padding and promote only the hovered/focused item name.
+- [x] Align metric/range selects, date navigation, and expand action to a shared control height with centered icons.
+- [x] Add deterministic projection and source/style tests and synchronize Constitution, PRD, Architecture, Roadmap, README, and Spec evidence.
+
+### Files
+
+- `src/ui/live-today.ts`
+- `src/ui/live-distribution.ts`
+- `src/ui/header-mini-donut.ts`
+- `src/ui/header-action-manager.ts`
+- `src/ui/summary-popover.ts`
+- `styles.css`
+- `tests/ui/live-distribution.test.ts`
+- `tests/ui/header-action-manager.test.ts`
+- `tests/ui/summary-popover.test.ts`
+
+### Acceptance Criteria
+
+- [x] The open Popover's total and owning slice increase between persisted query refreshes while active, then stop at the last trusted interaction plus `idleThresholdMs`.
+- [x] Historical days, non-`activeMs` metrics, out-of-scope paths, and nested files excluded by `local-files` view do not receive an invalid scope increment.
+- [x] Header miniature and Popover consume the same projection and do not mutate the controller's persisted `DistributionResult`.
+- [x] Closing the Popover clears its live timer; tracking snapshots update the render key without waiting for query generation changes.
+- [x] Path, legend padding/highlight colors, and all control heights/alignment match the fixed owner-approved layout without adding transient rows.
+- [x] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, strict specs validation, repository Markdown links, and `git diff --check` pass.
+
 ## Risks and Mitigations
 
 | Risk | Mitigation |
@@ -534,3 +570,11 @@ Apply the owner-approved tldraw layout without transient rows and make the persi
 - Evidence: focused tests cover dedicated root queries, stable SVG and slice identity, distinct ratios, live root attribution, empty rings, rejected Popover source regions, metric icons, equal icon classes, expand separation, and the scroll boundary. The full automated suite passes 225 tests.
 - Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (225 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); repository Markdown links; `git diff --check`.
 - Lifecycle: Phase 6 is technically complete and this Spec returns to `review`. No fourth Critic round is created; real desktop/mobile Post-Critic Acceptance stays open.
+
+### Owner-directed live-popover and alignment correction
+
+- Scope: the owner reported that the Header miniature included the active interval while the open Popover remained on its persisted summary, and requested a centered muted path, wider legend inset, muted default legend labels with name-only hover emphasis, and corrected control alignment.
+- Executor fixes: Header and Popover now share one immutable live-distribution projection. The open Popover advances once per second without querying or persisting, clips at the trusted idle boundary, and clears its owner-window timer on close. Path, legend, and controls use the requested fixed styling.
+- Evidence: deterministic fixtures cover live growth, idle clipping, historical and non-time exclusion, path scope, local-files scope, immutable input, timer ownership, and required CSS/source boundaries. The full automated suite passes 230 tests.
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (230 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); repository Markdown links; `git diff --check`.
+- Lifecycle: Phase 7 is technically complete and this Spec remains in `review`. No fourth Critic round is created; real desktop/mobile Post-Critic Acceptance stays open for the owner's final validation.

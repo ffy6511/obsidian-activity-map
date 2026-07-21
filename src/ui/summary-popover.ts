@@ -6,6 +6,7 @@ import { renderBreadcrumbs } from './components/breadcrumbs';
 import { renderChartLegend, type ChartLegendHandle } from './components/chart-legend';
 import { renderDonutChart, type ChartItem } from './components/donut-chart';
 import { renderRangeControls } from './components/range-controls';
+import { withLiveActivity } from './live-distribution';
 
 /** Interactive, pinnable header chart sharing the controller's query state. */
 export class SummaryPopover {
@@ -13,6 +14,7 @@ export class SummaryPopover {
 	private closeTimer: number | null = null;
 	private outsideHandler: ((event: PointerEvent) => void) | null = null;
 	private unsubscribe: (() => void) | null = null;
+	private liveTimer: number | null = null;
 	private pinned = false;
 	private expandedOther: string[] | null = null;
 	private lastRenderKey = '';
@@ -60,6 +62,10 @@ export class SummaryPopover {
 		doc.addEventListener('pointerdown', this.outsideHandler, true);
 		void this.controller.dispatch({ kind: 'set-query', query: this.controller.getHeaderDefaultQuery() });
 		this.unsubscribe = this.controller.subscribe((model) => this.renderIfChanged(model));
+		this.liveTimer = doc.defaultView?.setInterval(() => {
+			const model = this.controller.getViewModel();
+			if (isLiveTodayQuery(model)) this.renderIfChanged(model, true);
+		}, 1_000) ?? null;
 		this.position();
 	}
 
@@ -97,6 +103,8 @@ export class SummaryPopover {
 		this.outsideHandler = null;
 		this.unsubscribe?.();
 		this.unsubscribe = null;
+		if (this.liveTimer !== null) this.trigger.ownerDocument.defaultView?.clearInterval(this.liveTimer);
+		this.liveTimer = null;
 		this.element?.remove();
 		this.element = null;
 		this.pinned = false;
@@ -127,7 +135,10 @@ export class SummaryPopover {
 	}
 
 	private renderIfChanged(model: ActivityMapViewModel, force = false): void {
-		const key = `${String(model.queryGeneration)}:${model.loadState}:${this.expandedOther?.join(',') ?? ''}`;
+		const trackingKey = model.tracking
+			? `${model.tracking.state}:${model.tracking.sampledAt}:${model.tracking.lastTrustedActivityAt ?? ''}`
+			: 'none';
+		const key = `${String(model.queryGeneration)}:${model.loadState}:${trackingKey}:${this.expandedOther?.join(',') ?? ''}`;
 		if (!force && key === this.lastRenderKey) return;
 		this.lastRenderKey = key;
 		this.render(model);
@@ -168,7 +179,12 @@ export class SummaryPopover {
 	}
 
 	private renderDistribution(popover: HTMLElement, model: ActivityMapViewModel): void {
-		const distribution = model.distribution;
+		const distribution = model.distribution
+			? withLiveActivity(model.distribution, model.tracking, {
+				nowMs: Date.now(),
+				idleThresholdMs: model.settings.idleThresholdMs,
+			})
+			: null;
 		if (!distribution) return;
 
 		const chart = popover.createDiv({ cls: 'activity-map-popover-chart' });
@@ -221,4 +237,12 @@ export class SummaryPopover {
 		}
 	}
 
+}
+
+function isLiveTodayQuery(model: ActivityMapViewModel): boolean {
+	return model.loadState === 'ready' &&
+		model.distribution !== null &&
+		model.tracking?.state === 'active' &&
+		model.query.metric === 'activeMs' &&
+		model.query.range.mode === 'day';
 }

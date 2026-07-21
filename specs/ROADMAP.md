@@ -33,7 +33,7 @@ Deliver a local-first Obsidian plugin that measures trustworthy file activity an
 - [x] Foreground-only per-file activity sessions with trusted activity signals, idle clipping, pause, sleep handling, and explicit corrections.
 - [x] Durable per-device daily session shards, recoverable aggregates, stable file identity, retention, export, rebuild, and deletion controls.
 - [x] Correct selected-day, rolling daily-average, all-history, path aggregation, detail, and deleted-file queries.
-- [x] Stable multi-slice header mini donut, fixed-layout hierarchical donut popover, dockable full view, and complete synchronized scrollable detail list.
+- [x] Stable multi-slice header mini donut, idle-bounded real-time hierarchical donut popover, dockable full view, and complete synchronized scrollable detail list.
 - [x] Standalone full-infographic and chart-only SVG export.
 - [ ] Full desktop behavior and a mobile interaction path that does not depend on hover.
 

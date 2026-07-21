@@ -117,7 +117,7 @@ describe('header action manager', () => {
 		};
 		const controller = {
 			subscribe(listener: () => void) { listener(); return () => {}; },
-			getViewModel() { return { tracking: null, queryGeneration: 0 }; },
+			getViewModel() { return { tracking: null, queryGeneration: 0, settings: { idleThresholdMs: 180_000 } }; },
 			getHeaderDistribution: async () => ({
 				query: { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-21' }, path: '', view: 'children' },
 				scopeTotal: 100, vaultTotal: 100, percentOfVault: 1, denominatorDays: null, coverage: null, warnings: [],
@@ -162,7 +162,7 @@ describe('header action manager', () => {
 				on: () => ({}), offref: () => {},
 				iterateAllLeaves: () => { throw new Error('unsupported'); },
 			} as never,
-			controller: { subscribe: () => () => {}, getViewModel: () => ({ tracking: null, queryGeneration: 0 }), getHeaderDistribution: async () => { throw new Error('unavailable'); } } as never,
+			controller: { subscribe: () => () => {}, getViewModel: () => ({ tracking: null, queryGeneration: 0, settings: { idleThresholdMs: 180_000 } }), getHeaderDistribution: async () => { throw new Error('unavailable'); } } as never,
 			openView: async () => {},
 			openFile: async () => {},
 			isFileView: (candidate): candidate is FileView => Boolean(candidate),

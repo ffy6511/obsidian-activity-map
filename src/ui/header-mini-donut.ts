@@ -1,7 +1,7 @@
 import type { TrackingSnapshot } from '../domain/activity';
-import type { DistributionItem, DistributionResult } from '../query/distribution-query';
+import type { DistributionResult } from '../query/distribution-query';
 import { buildChartModel } from './components/donut-chart';
-import { liveTodayMs } from './live-today';
+import { withLiveActivity, type LiveDistributionOptions } from './live-distribution';
 
 export interface HeaderDonutSlice {
 	id: string;
@@ -77,9 +77,10 @@ export class HeaderMiniDonut implements HeaderMiniDonutPort {
 export function headerDonutSlices(
 	distribution: DistributionResult | null,
 	snapshot: TrackingSnapshot | null,
+	options: LiveDistributionOptions = {},
 ): HeaderDonutSlice[] {
 	if (!distribution) return [];
-	const withLive = addLiveActivity(distribution, snapshot);
+	const withLive = withLiveActivity(distribution, snapshot, options);
 	const model = buildChartModel(withLive);
 	if (model.total <= 0) return [];
 	return model.items.map((item) => ({
@@ -87,47 +88,6 @@ export function headerDonutSlices(
 		ratio: item.value / model.total,
 		color: item.color,
 	}));
-}
-
-function addLiveActivity(distribution: DistributionResult, snapshot: TrackingSnapshot | null): DistributionResult {
-	const liveMs = liveTodayMs(snapshot);
-	const target = snapshot?.currentTarget;
-	if (liveMs <= 0 || !target) return distribution;
-
-	const detailItems = distribution.detailItems.map((item) => ({ ...item, memberIds: [...item.memberIds] }));
-	const chartItems = distribution.chartItems.map((item) => ({ ...item, memberIds: [...item.memberIds] }));
-	addToOwningItem(detailItems, target.fileId, target.path, liveMs);
-	addToOwningItem(chartItems, target.fileId, target.path, liveMs);
-	const scopeTotal = distribution.scopeTotal + liveMs;
-	const vaultTotal = distribution.vaultTotal + liveMs;
-	for (const item of [...detailItems, ...chartItems]) item.percentOfScope = scopeTotal > 0 ? item.value / scopeTotal : 0;
-	return {
-		...distribution,
-		scopeTotal,
-		vaultTotal,
-		percentOfVault: vaultTotal > 0 ? scopeTotal / vaultTotal : 0,
-		detailItems,
-		chartItems,
-	};
-}
-
-function addToOwningItem(items: DistributionItem[], fileId: string, path: string, value: number): void {
-	const existing = items.find((item) => item.memberIds.includes(fileId));
-	if (existing) {
-		existing.value += value;
-		return;
-	}
-	const [root, ...rest] = path.split('/').filter(Boolean);
-	if (!root) return;
-	items.push({
-		id: rest.length > 0 ? `dir:${root}` : `file:${fileId}`,
-		kind: rest.length > 0 ? 'directory' : 'file',
-		label: root,
-		path: root,
-		value,
-		percentOfScope: 0,
-		memberIds: [fileId],
-	});
 }
 
 function normalizeSlices(slices: readonly HeaderDonutSlice[]): HeaderDonutSlice[] {

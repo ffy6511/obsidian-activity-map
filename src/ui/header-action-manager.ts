@@ -130,7 +130,10 @@ export class HeaderActionManager {
 			entry.action.setAttr('title', presentation.label);
 			entry.action.removeClasses(['is-active', 'is-idle', 'is-pending', 'is-paused', 'is-untrackable', 'is-degraded']);
 			entry.action.addClass(presentation.className);
-			entry.miniDonut.update(headerDonutSlices(this.headerDistribution, snapshot));
+			entry.miniDonut.update(headerDonutSlices(this.headerDistribution, snapshot, {
+				nowMs: Date.now(),
+				idleThresholdMs: model.settings.idleThresholdMs,
+			}));
 		}
 		this.refreshHeaderDistribution(model.queryGeneration);
 	}
@@ -143,7 +146,11 @@ export class HeaderActionManager {
 			this.headerDistribution = distribution;
 			this.headerGeneration = generation;
 			const snapshot = this.dependencies.controller.getViewModel().tracking;
-			const slices = headerDonutSlices(distribution, snapshot);
+			const model = this.dependencies.controller.getViewModel();
+			const slices = headerDonutSlices(distribution, snapshot, {
+				nowMs: Date.now(),
+				idleThresholdMs: model.settings.idleThresholdMs,
+			});
 			for (const entry of this.entries) entry.miniDonut.update(slices);
 		}).catch((error: unknown) => {
 			this.headerGeneration = generation;
