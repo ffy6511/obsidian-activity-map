@@ -84,7 +84,9 @@ src/
 │   ├── activity-engine.ts          # Pure serialized transitions and session invariants.
 │   ├── editing-burst.ts            # Union/clipping of editor activity intervals.
 │   ├── recovery-queue.ts            # Pending decisions and bounded auto-exclusion undo.
+│   ├── transition-queue.ts         # Serializes concurrent callbacks into ordered transitions.
 │   ├── heartbeat-monitor.ts        # Detects delayed callbacks without counting the gap.
+│   ├── checkpoint-reconciler.ts    # Startup replay/quarantine of in-flight checkpoints.
 │   ├── target-resolver.ts          # Focused leaf -> eligible file identity request.
 │   └── tracking-coordinator.ts     # Converts Obsidian/DOM events into engine inputs.
 │

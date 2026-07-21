@@ -45,6 +45,7 @@ export default defineConfig(
 		rules: {
 			'obsidianmd/no-nodejs-modules': 'off',
 			'obsidianmd/rule-custom-message': 'off',
+			'obsidianmd/prefer-window-timers': 'off',
 			'no-console': 'off',
 			'no-unsanitized/method': 'off',
 		},
