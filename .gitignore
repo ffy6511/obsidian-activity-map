@@ -15,3 +15,5 @@ data.json
 # Logs and operating-system state
 npm-debug.log*
 .DS_Store
+
+COMMIT.md

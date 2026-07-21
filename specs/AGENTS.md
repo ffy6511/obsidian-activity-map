@@ -6,9 +6,10 @@ For every specs task, read sources in this order:
 
 1. `constitution/` for stable product, data, privacy, and technical decisions.
 2. `../docs/PRD.md` for user-facing requirements and release acceptance.
-3. `ROADMAP.md` for version outcomes and version status.
-4. The single relevant file in `active/` for the current implementation delta.
-5. `research/` only when the task depends on evidence or an unresolved question.
+3. `../ARCHITECTURE.md` for current structure, target module ownership, dependency direction, and data flow.
+4. `ROADMAP.md` for version outcomes and version status.
+5. The single relevant file in `active/` for the current implementation delta.
+6. `research/` only when the task depends on evidence or an unresolved question.
 
 When sources conflict, update the highest-authority changed decision first and synchronize all downstream documents in the same change.
 
@@ -30,6 +31,7 @@ When sources conflict, update the highest-authority changed decision first and s
 - Active Spec statuses are `in-progress`, `review`, `completed`, and `cancelled`.
 - Move completed or cancelled Specs to `archive/` after recording the final Critic verdict and updating every inbound link.
 - Execute one Active Spec at a time unless the user explicitly requests a batch.
+- The `v0.1` dependency order is `01` tracking runtime → `02` local data/query → `03` UI/release. Multiple `in-progress` files record the approved plan; an implementation request must still select one Spec explicitly.
 - Follow `$spec-driven-delivery` for document contracts, phase execution, and the bounded independent Critic loop.
 
 ## Required Synchronization
@@ -37,6 +39,7 @@ When sources conflict, update the highest-authority changed decision first and s
 - User-visible behavior: update `../docs/PRD.md`, `../README.md`, and the related Roadmap version.
 - Stable product or data boundary: update Constitution before code or Active Spec projections.
 - Public interface, event schema, storage layout, or directory responsibility: update the owning Constitution heading and affected Specs.
+- Module ownership, dependency direction, lifecycle order, persistence flow, query boundary, or platform boundary: update `../ARCHITECTURE.md`.
 - Spec completion or archive move: update all Roadmap, Constitution, Research, docs, and Spec links in the same change.
 
 ## Validation

@@ -6,8 +6,10 @@
 
 - [产品需求文档](PRD.md)：定义产品目标、指标口径、功能范围、交互规则和发布验收标准。
 - [产品与数据决策](../specs/constitution/2026-07-21-activity-map-product-and-data.md)：定义跨版本保持稳定的数据、隐私与技术边界。
+- [项目架构](../ARCHITECTURE.md)：区分当前实现与 `v0.1` 目标模块，说明依赖、生命周期和数据流。
 - [版本路线图](../specs/ROADMAP.md)：定义各版本交付结果和验收状态。
 - [现有插件调研](../specs/research/2026-07-21-existing-plugin-landscape-research.md)：保存竞品、开源实现和技术证据。
+- [项目规范](../AGENTS.md)：定义全仓库代码、注释、文档、验证与数据安全要求。
 
 ## 文档职责
 

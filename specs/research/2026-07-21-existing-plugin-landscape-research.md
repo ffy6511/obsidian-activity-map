@@ -6,7 +6,7 @@
 | --- | --- |
 | Created | 2026-07-21 |
 | Area | technology-evaluation |
-| Related specs | none; feature implementation Specs have not started |
+| Related specs | [Tracking runtime](../active/01-activity-tracking-runtime-plan.md), [Local data and query](../active/02-local-data-and-query-plan.md), [UI and v0.1 release](../active/03-activity-map-ui-and-v0-1-release-plan.md) |
 | Status | concluded |
 
 ## Question
@@ -65,7 +65,7 @@ Proceed with the independent `obsidian-activity-map` repository. Use the officia
 
 No unresolved question blocks the repository foundation. Feature Specs must still verify the following implementation details before claiming their related Roadmap deliverables:
 
-- Cross-platform `DataAdapter` append and atomic-replacement behavior.
-- Public API coverage and degradation behavior for per-view header actions.
-- Mobile availability and fidelity of focus, activity, export, and editor-input signals.
+- Cross-platform `DataAdapter` append and recoverable-replacement behavior is verified in [Spec 02 Phase 0](../active/02-local-data-and-query-plan.md#phase-0-establish-paths-settings-schemas-and-adapter-contracts) and the real-device journey in Spec 03.
+- Public API coverage and degradation behavior for per-view header actions is verified in [Spec 03 Phase 2](../active/03-activity-map-ui-and-v0-1-release-plan.md#phase-2-implement-file-header-status-and-interactive-summary-popover).
+- Mobile viewing and available platform capabilities are verified in [Spec 03 Phase 4](../active/03-activity-map-ui-and-v0-1-release-plan.md#phase-4-complete-accessibility-platform-integration-and-v01-release-evidence).
 - Reliable reconciliation options for file moves that occur while Obsidian is closed.

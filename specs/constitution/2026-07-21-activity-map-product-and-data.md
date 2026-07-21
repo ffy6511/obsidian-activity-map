@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | Decision date | 2026-07-21 |
-| Related specs | none; feature implementation Specs have not started |
+| Related specs | [Tracking runtime](../active/01-activity-tracking-runtime-plan.md), [Local data and query](../active/02-local-data-and-query-plan.md), [UI and v0.1 release](../active/03-activity-map-ui-and-v0-1-release-plan.md) |
 | Product requirements | [Activity Map PRD](../../docs/PRD.md) |
 
 ## Decision Summary
