@@ -7,9 +7,9 @@ export function renderDeletionConfirmation(container: HTMLElement, plan: Deletio
 	panel.createEl('p', { text: `${scopeLabel(plan)} removes ${plan.affectedRecordCount} raw record${plan.affectedRecordCount === 1 ? '' : 's'} and ${plan.affectedSummaryCount} summar${plan.affectedSummaryCount === 1 ? 'y' : 'ies'}.` });
 	panel.createEl('p', { text: `Plan ID: ${plan.planId}`, cls: 'activity-map-plan-id' });
 	const actions = panel.createDiv({ cls: 'activity-map-popover-actions' });
-	const cancel = actions.createEl('button', { text: 'Cancel' });
+	const cancel = actions.createEl('button', { text: 'Cancel', attr: { 'data-activity-map-id': 'delete-cancel' } });
 	cancel.addEventListener('click', () => void controller.dispatch({ kind: 'dismiss-operation' }));
-	const execute = actions.createEl('button', { text: 'Delete planned data', cls: 'mod-warning' });
+	const execute = actions.createEl('button', { text: 'Delete planned data', cls: 'mod-warning', attr: { 'data-activity-map-id': 'delete-confirm' } });
 	execute.addEventListener('click', () => {
 		execute.disabled = true;
 		cancel.disabled = true;

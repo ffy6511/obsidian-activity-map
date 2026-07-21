@@ -8,7 +8,7 @@
 | Scope | `src/domain/`, `src/platform/`, `src/tracking/`, tracking tests |
 | Type | feat |
 | Priority | P0 |
-| Status | in-progress |
+| Status | review |
 | Completed | pending |
 | Dependencies | none |
 | Decisions | [Attribution and session semantics](../constitution/2026-07-21-activity-map-product-and-data.md#attribution-and-session-semantics), [Invariants](../constitution/2026-07-21-activity-map-product-and-data.md#invariants), [Tracking architecture](../../ARCHITECTURE.md#tracking-runtime), [PRD timing rules](../../docs/PRD.md#时间归属与空闲规则) |
@@ -352,4 +352,4 @@ Complete delayed-heartbeat handling, restart reconciliation contracts, public st
 
 ## Evaluation Record
 
-Implementation and technical gates are complete. Per owner direction, independent evaluation is deferred to one joint Specs 01–03 review after the complete `v0.1` vertical slice is implemented; this Spec remains `in-progress` until that review begins.
+Implementation and technical gates are complete. Per owner direction, this Spec entered `review` together with Specs 02–03 for one joint independent evaluation; real Obsidian acceptance remains owned by Spec 03.

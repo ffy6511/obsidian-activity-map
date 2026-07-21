@@ -27,6 +27,7 @@ export interface TrackingControl {
 	updateSettings(settings: ActivityMapSettings): void;
 	resolveRecovery(args: { candidateId: string; kind: 'include' | 'exclude' }): Promise<unknown>;
 	undoAutomaticExclusion(candidateId: string): boolean;
+	settle?(): Promise<void>;
 }
 
 export type ActivityMapIntent =
@@ -34,6 +35,7 @@ export type ActivityMapIntent =
 	| { kind: 'set-range'; range: RangeMode }
 	| { kind: 'set-path'; path: string; view?: 'children' | 'local-files' }
 	| { kind: 'set-metric'; metric: MetricKey }
+	| { kind: 'set-query'; query: DistributionQuery }
 	| { kind: 'pause' }
 	| { kind: 'resume' }
 	| { kind: 'resolve-recovery'; candidateId: string; decision: 'include' | 'exclude' }
@@ -53,6 +55,7 @@ export class ActivityMapController implements TrackingObserver {
 	private generation = 0;
 	private stopped = false;
 	private today: string;
+	private resumeAfterDeletion = false;
 
 	constructor(
 		settings: ActivityMapSettings,
@@ -124,7 +127,10 @@ export class ActivityMapController implements TrackingObserver {
 				await this.executeDeletion(intent.planId);
 				return;
 			case 'dismiss-operation':
-				if (this.model.operation.kind !== 'running') this.publish({ ...this.model, operation: { kind: 'idle' } });
+				if (this.model.operation.kind !== 'running') {
+					this.publish({ ...this.model, operation: { kind: 'idle' } });
+					this.resumeAfterDeletionIfNeeded();
+				}
 				return;
 			case 'update-settings': {
 				// Persistence is the commit point. Runtime behavior changes only after
@@ -146,6 +152,9 @@ export class ActivityMapController implements TrackingObserver {
 				break;
 			case 'set-metric':
 				this.model = { ...this.model, query: { ...this.model.query, metric: intent.metric } };
+				break;
+			case 'set-query':
+				this.model = { ...this.model, query: { ...intent.query, range: { ...intent.query.range } } };
 				break;
 			case 'refresh':
 				break;
@@ -232,17 +241,28 @@ export class ActivityMapController implements TrackingObserver {
 		if (this.model.operation.kind === 'running') return;
 		try {
 			if (!this.dataOperations) throw new Error('Data deletion is unavailable.');
+			if (this.model.operation.kind !== 'deletion-preview') {
+				this.resumeAfterDeletion = this.model.tracking?.state !== 'paused';
+				if (this.resumeAfterDeletion) {
+					// Close and persist the in-flight session before fingerprinting the
+					// destructive scope. Resume starts a fresh session after the outcome.
+					this.tracking.pause('data-deletion');
+					await this.tracking.settle?.();
+				}
+			}
 			const plan = await this.dataOperations.planDeletion(scope);
 			if (this.stopped) return;
 			this.publish({ ...this.model, operation: { kind: 'deletion-preview', plan } });
 		} catch (error) {
 			this.operationError(error);
+			this.resumeAfterDeletionIfNeeded();
 		}
 	}
 
 	private async executeDeletion(planId: string): Promise<void> {
 		if (!this.dataOperations || this.model.operation.kind !== 'deletion-preview' || this.model.operation.plan.planId !== planId || !isDeletionPlanFresh(this.model.operation.plan)) {
 			this.publish({ ...this.model, operation: { kind: 'error', message: 'Deletion plan is missing or stale. Create a new preview.' } });
+			this.resumeAfterDeletionIfNeeded();
 			return;
 		}
 		const plan = this.model.operation.plan;
@@ -256,8 +276,10 @@ export class ActivityMapController implements TrackingObserver {
 					: `Deletion partially failed for plan ${result.planId}: ${result.errors.map((error) => `${error.path}: ${error.message}`).join('; ')}`;
 			this.publish({ ...this.model, operation: result.outcome === 'completed' ? { kind: 'completed', message } : { kind: 'error', message } });
 			await this.refresh();
+			this.resumeAfterDeletionIfNeeded();
 		} catch (error) {
 			this.operationError(error);
+			this.resumeAfterDeletionIfNeeded();
 		}
 	}
 
@@ -275,6 +297,12 @@ export class ActivityMapController implements TrackingObserver {
 	private operationError(error: unknown): void {
 		if (this.stopped) return;
 		this.publish({ ...this.model, operation: { kind: 'error', message: error instanceof Error ? error.message : String(error) } });
+	}
+
+	private resumeAfterDeletionIfNeeded(): void {
+		if (!this.resumeAfterDeletion) return;
+		this.resumeAfterDeletion = false;
+		this.tracking.resume();
 	}
 }
 

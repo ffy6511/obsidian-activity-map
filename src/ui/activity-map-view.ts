@@ -9,12 +9,14 @@ import { renderDonutChart, type ChartItem } from './components/donut-chart';
 import { renderDetailList } from './components/detail-list';
 import { formatMetric, formatPercent, metricLabel } from './format';
 import { renderDataControls } from './data-controls';
+import { QueryHistory } from './query-history';
 
 export const ACTIVITY_MAP_VIEW_TYPE = 'activity-map-view';
 
 export class ActivityMapView extends ItemView {
 	private unsubscribe: (() => void) | null = null;
 	private expandedOther: string[] | null = null;
+	private readonly history = new QueryHistory();
 
 	constructor(leaf: WorkspaceLeaf, private readonly controller: ActivityMapController, private readonly hostApp: App) {
 		super(leaf);
@@ -38,20 +40,39 @@ export class ActivityMapView extends ItemView {
 		return Promise.resolve();
 	}
 
+	async goHistory(direction: 'back' | 'forward'): Promise<void> {
+		const current = this.controller.getViewModel().query;
+		const query = direction === 'back' ? this.history.back(current) : this.history.forward(current);
+		if (!query) return;
+		this.expandedOther = null;
+		await this.controller.dispatch({ kind: 'set-query', query });
+	}
+
 	private render(model: ActivityMapViewModel): void {
 		const focusedId = (this.contentEl.ownerDocument.activeElement as HTMLElement | null)?.dataset.activityMapId;
 		this.contentEl.empty();
-		this.contentEl.createEl('header', { cls: 'activity-map-view-header' }).createEl('h2', { text: 'Activity map' });
+		const header = this.contentEl.createEl('header', { cls: 'activity-map-view-header' });
+		header.createEl('h2', { text: 'Activity map' });
+		const headerActions = header.createDiv({ cls: 'activity-map-view-actions' });
+		const back = headerActions.createEl('button', { text: 'Back', attr: { 'data-activity-map-id': 'history-back' } });
+		back.disabled = !this.history.canGoBack;
+		back.addEventListener('click', () => void this.goHistory('back'));
+		const forward = headerActions.createEl('button', { text: 'Forward', attr: { 'data-activity-map-id': 'history-forward' } });
+		forward.disabled = !this.history.canGoForward;
+		forward.addEventListener('click', () => void this.goHistory('forward'));
+		const paused = model.tracking?.state === 'paused';
+		const pause = headerActions.createEl('button', { text: paused ? 'Resume tracking' : 'Pause tracking', attr: { 'data-activity-map-id': 'tracking-toggle' } });
+		pause.addEventListener('click', () => void this.controller.dispatch({ kind: paused ? 'resume' : 'pause' }));
 		renderRangeControls({
 			container: this.contentEl,
 			metric: model.query.metric,
 			range: model.query.range,
-			onMetric: (metric) => void this.controller.dispatch({ kind: 'set-metric', metric }),
-			onRange: (range) => void this.controller.dispatch({ kind: 'set-range', range }),
+			onMetric: (metric) => void this.navigate({ kind: 'set-metric', metric }),
+			onRange: (range) => void this.navigate({ kind: 'set-range', range }),
 		});
 		renderBreadcrumbs(this.contentEl, model.query.path, model.query.view, (path) => {
 			this.expandedOther = null;
-			void this.controller.dispatch({ kind: 'set-path', path });
+			void this.navigate({ kind: 'set-path', path });
 		});
 		renderDataControls(this.contentEl, model, this.controller);
 		if (model.loadState === 'loading') {
@@ -91,15 +112,16 @@ export class ActivityMapView extends ItemView {
 			warnings.createEl('summary', { text: `${model.warnings.length} data warning${model.warnings.length === 1 ? '' : 's'}` });
 			for (const warning of model.warnings) warnings.createEl('p', { text: warning });
 		}
-		if (focusedId) this.contentEl.querySelector<HTMLElement>(`[data-activity-map-id="${CSS.escape(focusedId)}"]`)?.focus();
+		const css = this.contentEl.ownerDocument.defaultView?.CSS;
+		if (focusedId && css) this.contentEl.querySelector<HTMLElement>(`[data-activity-map-id="${css.escape(focusedId)}"]`)?.focus();
 	}
 
 	private activateItem(item: DistributionItem | ChartItem): void {
 		if (item.kind === 'directory' && item.path !== null) {
 			this.expandedOther = null;
-			void this.controller.dispatch({ kind: 'set-path', path: item.path });
+			void this.navigate({ kind: 'set-path', path: item.path });
 		} else if (item.kind === 'local-files') {
-			void this.controller.dispatch({ kind: 'set-path', path: item.path ?? '', view: 'local-files' });
+			void this.navigate({ kind: 'set-path', path: item.path ?? '', view: 'local-files' });
 		} else if (item.kind === 'other') {
 			this.expandedOther = [...item.memberIds];
 			this.render(this.controller.getViewModel());
@@ -107,5 +129,10 @@ export class ActivityMapView extends ItemView {
 			const file = this.hostApp.vault.getAbstractFileByPath(item.path);
 			if (file instanceof TFile) void this.hostApp.workspace.getLeaf(false).openFile(file);
 		}
+	}
+
+	private async navigate(intent: Extract<Parameters<ActivityMapController['dispatch']>[0], { kind: 'set-path' | 'set-range' | 'set-metric' }>): Promise<void> {
+		this.history.push(this.controller.getViewModel().query);
+		await this.controller.dispatch(intent);
 	}
 }

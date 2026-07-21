@@ -6,10 +6,13 @@ export function registerActivityMapCommands(
 	plugin: Plugin,
 	controller: ActivityMapController,
 	openView: () => Promise<void>,
+	navigateHistory?: (direction: 'back' | 'forward') => Promise<void>,
 ): void {
 	plugin.addCommand({ id: 'open-view', name: 'Open view', callback: () => void openView() });
 	plugin.addCommand({ id: 'pause-tracking', name: 'Pause tracking', callback: () => void controller.dispatch({ kind: 'pause' }) });
 	plugin.addCommand({ id: 'resume-tracking', name: 'Resume tracking', callback: () => void controller.dispatch({ kind: 'resume' }) });
+	plugin.addCommand({ id: 'history-back', name: 'Go back in view history', callback: () => void navigateHistory?.('back') });
+	plugin.addCommand({ id: 'history-forward', name: 'Go forward in view history', callback: () => void navigateHistory?.('forward') });
 	plugin.addCommand({
 		id: 'previous-day',
 		name: 'Previous day',

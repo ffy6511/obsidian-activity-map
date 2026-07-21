@@ -9,14 +9,14 @@ export function renderRangeControls(args: {
 	onRange: (range: RangeMode) => void;
 }): void {
 	const controls = args.container.createDiv({ cls: 'activity-map-controls' });
-	const metric = controls.createEl('select', { attr: { 'aria-label': 'Metric' } });
+	const metric = controls.createEl('select', { attr: { 'aria-label': 'Metric', 'data-activity-map-id': 'metric' } });
 	for (const [value, label] of [['activeMs', 'Activity'], ['editingMs', 'Editing'], ['openCount', 'Open count']] as const) {
 		metric.createEl('option', { value, text: label });
 	}
 	metric.value = args.metric;
 	metric.addEventListener('change', () => args.onMetric(metric.value as MetricKey));
 
-	const mode = controls.createEl('select', { attr: { 'aria-label': 'Date range' } });
+	const mode = controls.createEl('select', { attr: { 'aria-label': 'Date range', 'data-activity-map-id': 'date-range' } });
 	for (const [value, label] of [['day', 'Selected day'], ['average-7', '7-day average'], ['average-30', '30-day average'], ['average-90', '90-day average'], ['average-all', 'All-history average'], ['all', 'All history']] as const) {
 		mode.createEl('option', { value, text: label });
 	}
@@ -28,7 +28,7 @@ export function renderRangeControls(args: {
 		else args.onRange({ mode: 'average', days: mode.value === 'average-all' ? 'all' : Number(mode.value.slice(8)) as 7 | 30 | 90, today });
 	});
 	if (args.range.mode === 'day') {
-		const date = controls.createEl('input', { type: 'date', attr: { 'aria-label': 'Selected date' } });
+		const date = controls.createEl('input', { type: 'date', attr: { 'aria-label': 'Selected date', 'data-activity-map-id': 'selected-date' } });
 		date.value = args.range.localDate;
 		date.addEventListener('change', () => {
 			if (date.value) args.onRange({ mode: 'day', localDate: date.value });

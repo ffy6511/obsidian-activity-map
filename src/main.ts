@@ -115,7 +115,7 @@ export default class ActivityMapPlugin extends Plugin {
 		if (loadedCheckpoint.quarantined) coordinator.degrade(loadedCheckpoint.reason ?? 'checkpoint-quarantined');
 		this.registerView(ACTIVITY_MAP_VIEW_TYPE, (leaf) => new ActivityMapView(leaf, controller, this.app));
 		this.addRibbonIcon('chart-pie', 'Open activity map', () => void this.activateView());
-		registerActivityMapCommands(this, controller, () => this.activateView());
+		registerActivityMapCommands(this, controller, () => this.activateView(), (direction) => this.navigateViewHistory(direction));
 		this.addSettingTab(new ActivityMapSettingsTab(this.app, this, controller));
 		this.registerVaultIdentityEvents(registry);
 		this.registerPopoutEvents(coordinator);
@@ -150,6 +150,10 @@ export default class ActivityMapPlugin extends Plugin {
 			await leaf.setViewState({ type: ACTIVITY_MAP_VIEW_TYPE, active: true });
 		}
 		await this.app.workspace.revealLeaf(leaf);
+	}
+
+	private async navigateViewHistory(direction: 'back' | 'forward'): Promise<void> {
+		await this.app.workspace.getActiveViewOfType(ActivityMapView)?.goHistory(direction);
 	}
 
 	private createWorkspaceSource(): WorkspaceSource {
@@ -188,9 +192,27 @@ export default class ActivityMapPlugin extends Plugin {
 		return {
 			attachActivityListeners: (callback) => {
 				const events = ['keydown', 'compositionend', 'pointerdown', 'pointermove', 'wheel', 'touchstart', 'focus'] as const;
-				const handler = (event: Event) => callback(event);
+				let pointerFrame: number | null = null;
+				let latestPointerEvent: Event | null = null;
+				const handler = (event: Event) => {
+					if (event.type !== 'pointermove' || typeof win.requestAnimationFrame !== 'function') {
+						callback(event);
+						return;
+					}
+					latestPointerEvent = event;
+					if (pointerFrame !== null) return;
+					pointerFrame = win.requestAnimationFrame(() => {
+						pointerFrame = null;
+						const latest = latestPointerEvent;
+						latestPointerEvent = null;
+						if (latest) callback(latest);
+					});
+				};
 				for (const event of events) win.addEventListener(event, handler, { capture: true, passive: true });
 				return () => {
+					if (pointerFrame !== null) win.cancelAnimationFrame(pointerFrame);
+					pointerFrame = null;
+					latestPointerEvent = null;
 					for (const event of events) win.removeEventListener(event, handler, { capture: true });
 				};
 			},

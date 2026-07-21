@@ -8,7 +8,7 @@
 | Scope | `src/ui/`, `src/export/`, settings UI, plugin composition, v0.1 integration and release evidence |
 | Type | feat |
 | Priority | P0 |
-| Status | in-progress |
+| Status | review |
 | Completed | pending |
 | Dependencies | [Activity Tracking Runtime](01-activity-tracking-runtime-plan.md), [Local Data and Query](02-local-data-and-query-plan.md) |
 | Decisions | [Interface and export](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), [Privacy and network boundary](../constitution/2026-07-21-activity-map-product-and-data.md#privacy-and-network-boundary), [Presentation architecture](../../ARCHITECTURE.md#presentation-and-export), [PRD information architecture](../../docs/PRD.md#信息架构与交互), [PRD release acceptance](../../docs/PRD.md#发布验收) |
@@ -19,7 +19,7 @@
 - [x] Phase 1: Implement the full statistics view and native SVG chart
 - [x] Phase 2: Implement file-header status and interactive summary popover
 - [x] Phase 3: Implement SVG export and local data controls
-- [ ] Phase 4: Complete accessibility, platform integration, and v0.1 release evidence
+- [x] Phase 4: Complete automated accessibility, platform integration, and release-candidate evidence
 
 ## Background
 
@@ -333,7 +333,7 @@ Complete user-owned export, rebuild, and destructive data workflows.
 - [x] A deletion action displays and executes the same unexpired plan ID and reports partial failure accurately.
 - [x] Export and diagnostic logs contain no note content, selected text, or typed strings.
 
-## Phase 4: Complete Accessibility, Platform Integration, and v0.1 Release Evidence
+## Phase 4: Complete Automated Accessibility, Platform Integration, and Release-Candidate Evidence
 
 ### Goal
 
@@ -341,12 +341,13 @@ Prove the three Specs form the complete `v0.1` product without overstating fixtu
 
 ### Tasks
 
-- [ ] Add automated keyboard, accessible-name, focus restoration, non-color encoding, theme, and reduced-motion checks.
-- [ ] Add an integrated fake-clock/fake-adapter journey from activity input through query, UI, correction, export, rebuild, and deletion.
-- [ ] Verify bundle imports, `isDesktopOnly: false`, startup/unload, and absence of network/telemetry code.
-- [ ] Execute and record real Obsidian desktop and mobile-viewer journeys after technical and Critic gates.
-- [ ] Update Architecture, README, PRD, Roadmap, Constitution links, settings help, installation instructions, and release notes to match verified behavior.
-- [ ] Produce release artifacts locally and verify their contents without publishing them.
+- [x] Add automated keyboard, accessible-name, focus restoration, non-color encoding, theme, and reduced-motion checks.
+- [x] Add an integrated fake-clock/fake-adapter journey from activity input through query, UI, correction, export, rebuild, and deletion.
+- [x] Verify bundle imports, `isDesktopOnly: false`, startup/unload, and absence of network/telemetry code.
+- [x] Update Architecture, README, PRD, Roadmap, Constitution links, settings help, installation instructions, and release notes to match verified behavior.
+- [x] Produce release artifacts locally and verify their contents without publishing them.
+
+Real Obsidian desktop and mobile-viewer journeys require the technical and Critic gates first. They are tracked only under Post-Critic Acceptance below, so fixture evidence cannot accidentally complete them.
 
 ### Files
 
@@ -362,12 +363,12 @@ Prove the three Specs form the complete `v0.1` product without overstating fixtu
 
 ### Acceptance Criteria
 
-- [ ] The integrated fixture journey covers foreground tracking, idle recovery, directory drill-down, all ranges, data controls, and both SVG modes.
-- [ ] Automated accessibility checks cover keyboard operation, focus restoration, names, text alternatives, theme tokens, and reduced motion.
-- [ ] The production bundle contains no Electron runtime dependency, telemetry endpoint, note-content capture, or hidden desktop-only requirement.
-- [ ] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, strict specs validation, and Markdown link checks pass.
-- [ ] Roadmap deliverables and acceptance boxes are checked only for evidence actually collected across Specs 01–03.
-- [ ] Generated `main.js`, `manifest.json`, and `styles.css` install as one local plugin artifact set.
+- [x] The integrated fixture journey covers foreground tracking, idle recovery, directory drill-down, all ranges, data controls, and both SVG modes.
+- [x] Automated accessibility checks cover keyboard operation, focus restoration, names, text alternatives, theme tokens, and reduced motion.
+- [x] The production bundle contains no Electron runtime dependency, telemetry endpoint, note-content capture, or hidden desktop-only requirement.
+- [x] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, strict specs validation, and Markdown link checks pass.
+- [x] Roadmap deliverables and acceptance boxes are checked only for evidence actually collected across Specs 01–03.
+- [x] Generated `main.js`, `manifest.json`, and `styles.css` install as one local plugin artifact set.
 
 ## Risks and Mitigations
 
@@ -387,4 +388,4 @@ Prove the three Specs form the complete `v0.1` product without overstating fixtu
 
 ## Evaluation Record
 
-No implementation or Critic evaluation has started. Add numbered rounds only after every Phase and technical gate passes and the Spec enters `review`; reserve one available round for successful Post-Critic Acceptance evidence.
+Implementation and the complete automated technical gate are ready for one joint Specs 01–03 Critic evaluation. Real desktop/mobile journeys remain open Post-Critic Acceptance work and keep Phase 4 and `v0.1` incomplete.

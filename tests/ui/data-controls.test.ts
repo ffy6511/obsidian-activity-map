@@ -31,15 +31,29 @@ function operations(overrides: Partial<DataOperationPort> = {}): DataOperationPo
 	};
 }
 
-function controller(dataOperations: DataOperationPort): ActivityMapController {
+function controller(dataOperations: DataOperationPort, runtime: TrackingControl = tracking()): ActivityMapController {
 	const settings = normalizeSettings({ deviceId: 'd1' });
-	return new ActivityMapController(settings, { run: async (query) => distribution(query) }, { update: async () => settings }, tracking(), '2026-07-21', dataOperations);
+	return new ActivityMapController(settings, { run: async (query) => distribution(query) }, { update: async () => settings }, runtime, '2026-07-21', dataOperations);
 }
 
 describe('data operation controller', () => {
 	it('expires deletion previews after the bounded confirmation window', () => {
 		expect(isDeletionPlanFresh({ createdAt: '2026-07-21T00:00:00.000Z' }, Date.parse('2026-07-21T00:04:59.000Z'))).toBeTrue();
 		expect(isDeletionPlanFresh({ createdAt: '2026-07-21T00:00:00.000Z' }, Date.parse('2026-07-21T00:05:01.000Z'))).toBeFalse();
+	});
+
+	it('settles the in-flight session before planning and resumes after cancellation', async () => {
+		const events: string[] = [];
+		const runtime: TrackingControl = {
+			pause: () => { events.push('pause'); },
+			resume: () => { events.push('resume'); },
+			settle: async () => { events.push('settle'); },
+			updateSettings: () => {}, resolveRecovery: async () => null, undoAutomaticExclusion: () => true,
+		};
+		const subject = controller(operations({ planDeletion: async () => { events.push('plan'); return plan(); } }), runtime);
+		await subject.dispatch({ kind: 'plan-deletion', scope: { kind: 'all' } });
+		await subject.dispatch({ kind: 'dismiss-operation' });
+		expect(events).toEqual(['pause', 'settle', 'plan', 'resume']);
 	});
 	it('executes the exact previewed deletion plan and reports partial failure as error', async () => {
 		const executed: { value: DeletionPlan | null } = { value: null };

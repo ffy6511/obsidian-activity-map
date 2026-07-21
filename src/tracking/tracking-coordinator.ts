@@ -178,6 +178,11 @@ export class TrackingCoordinator {
 		void this.refreshTarget();
 	}
 
+	/** Wait until all persistence triggered before this call has settled. */
+	settle(): Promise<void> {
+		return this.queue.idle();
+	}
+
 	/** Enter a safe degraded pause for a startup or persistence boundary error. */
 	degrade(reason: string): void {
 		this.engine.enterDegraded(reason, this.opts.clock.now());

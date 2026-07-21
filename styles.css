@@ -5,9 +5,24 @@
 	overflow: auto;
 }
 
+.activity-map-view-header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-3);
+}
+
 .activity-map-view-header h2 {
-	margin: 0 0 var(--size-4-3);
+	margin: 0;
 	font-size: var(--font-ui-large);
+}
+
+.activity-map-view-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-4-2);
 }
 
 .activity-map-controls {

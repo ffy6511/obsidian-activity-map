@@ -2,7 +2,7 @@
 
 ## Document Status
 
-This document describes the implemented repository skeleton and the approved target architecture for `v0.1`. Target modules are architectural constraints derived from the three Active Specs; their presence here is not implementation evidence.
+This document describes the implemented `v0.1` technical candidate and its remaining real-environment acceptance boundary. Source, automated fixtures, generated artifacts, and real Obsidian journeys remain distinct forms of evidence.
 
 Authority links:
 
@@ -32,7 +32,7 @@ manifest.json               # Plugin ID activity-map; cross-platform manifest fl
 main.js                     # Generated build artifact; ignored and never edited directly.
 ```
 
-Integrated accessibility/platform evidence and real Obsidian journeys remain the `v0.1` target and are subject to the evidence checkboxes in Spec 03.
+Automated integration, accessibility-source, privacy-source, XML, and generated-artifact checks are implemented. Joint Critic review and real Obsidian desktop/mobile journeys remain subject to the open evidence checkboxes in Spec 03.
 
 ## System Overview
 
@@ -321,6 +321,8 @@ UI code sends intents to the controller. It cannot append records, rewrite summa
 The header-action manager listens to public workspace lifecycle events, owns one `FileView.addAction()` element per live file view through a weak registry, and removes only those elements on view removal or unload. Status icons and text come from tracking snapshots. Each popover is attached to its trigger's owner document so pop-out windows keep independent focus, pointer, and close behavior. Hover listeners are capability-gated; keyboard focus, Ribbon, commands, and the full view remain usable without hover or when header integration reports a warning.
 
 Data operations are single-flight controller intents. SVG serialization consumes the same immutable `ChartModel` as the live donut, resolves its stable color tokens to inline standalone colors, escapes every user-derived string, and downloads through a capability-detected standard Web API boundary. Raw JSON export and rebuild relay typed per-date progress. Deletion renders the backend plan ID and counts, expires the UI confirmation after five minutes, executes the exact retained plan object, and maps drift or partial failure to explicit error state before refreshing queries.
+
+Before deletion planning, the controller closes the in-flight session and awaits the tracking transition queue so the plan fingerprints durable evidence. Cancellation and every execution outcome resume tracking only when the controller initiated that operational pause, creating a fresh attribution session after the destructive boundary.
 
 ## Failure and Privacy Boundaries
 

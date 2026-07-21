@@ -61,40 +61,40 @@ export function renderDataControls(container: HTMLElement, model: ActivityMapVie
 	const controls = section.createDiv({ cls: 'activity-map-data-control-buttons' });
 	const hasDistribution = model.distribution !== null && model.loadState !== 'loading' && model.loadState !== 'error';
 	for (const [mode, label] of [['infographic', 'Export infographic SVG'], ['chart-only', 'Export chart SVG']] as const) {
-		const button = controls.createEl('button', { text: label });
+		const button = controls.createEl('button', { text: label, attr: { 'data-activity-map-id': `export-${mode}` } });
 		button.disabled = !hasDistribution || model.operation.kind === 'running';
 		button.addEventListener('click', () => void controller.dispatch({ kind: 'export-svg', mode }));
 	}
-	const raw = controls.createEl('button', { text: 'Export raw JSON' });
+	const raw = controls.createEl('button', { text: 'Export raw JSON', attr: { 'data-activity-map-id': 'export-raw' } });
 	raw.disabled = model.operation.kind === 'running';
 	raw.addEventListener('click', () => void controller.dispatch({ kind: 'export-raw', scope: exportScopeFor(model) }));
-	const rebuild = controls.createEl('button', { text: 'Rebuild summaries' });
+	const rebuild = controls.createEl('button', { text: 'Rebuild summaries', attr: { 'data-activity-map-id': 'rebuild' } });
 	rebuild.disabled = model.operation.kind === 'running';
 	rebuild.addEventListener('click', () => void controller.dispatch({ kind: 'rebuild-summaries' }));
 
 	const deletion = section.createDiv({ cls: 'activity-map-deletion-controls' });
-	const dateButton = deletion.createEl('button', { text: 'Clear selected date' });
+	const dateButton = deletion.createEl('button', { text: 'Clear selected date', attr: { 'data-activity-map-id': 'clear-date' } });
 	dateButton.disabled = model.query.range.mode !== 'day' || model.operation.kind === 'running';
 	dateButton.addEventListener('click', () => {
 		if (model.query.range.mode === 'day') void controller.dispatch({ kind: 'plan-deletion', scope: { kind: 'date', localDate: model.query.range.localDate } });
 	});
-	const fileSelect = deletion.createEl('select', { attr: { 'aria-label': 'File to clear' } });
+	const fileSelect = deletion.createEl('select', { attr: { 'aria-label': 'File to clear', 'data-activity-map-id': 'file-scope' } });
 	fileSelect.createEl('option', { text: 'Choose a file…', value: '' });
 	for (const item of model.distribution?.detailItems ?? []) {
 		if (item.kind !== 'file' || item.memberIds.length !== 1) continue;
 		fileSelect.createEl('option', { text: item.path ?? item.label, value: item.memberIds[0] });
 	}
-	const fileButton = deletion.createEl('button', { text: 'Clear selected file' });
+	const fileButton = deletion.createEl('button', { text: 'Clear selected file', attr: { 'data-activity-map-id': 'clear-file' } });
 	fileButton.disabled = model.operation.kind === 'running';
 	fileButton.addEventListener('click', () => {
 		if (fileSelect.value) void controller.dispatch({ kind: 'plan-deletion', scope: { kind: 'file', fileId: fileSelect.value } });
 	});
-	const fileExport = deletion.createEl('button', { text: 'Export selected file JSON' });
+	const fileExport = deletion.createEl('button', { text: 'Export selected file JSON', attr: { 'data-activity-map-id': 'export-file' } });
 	fileExport.disabled = model.operation.kind === 'running';
 	fileExport.addEventListener('click', () => {
 		if (fileSelect.value) void controller.dispatch({ kind: 'export-raw', scope: { kind: 'file', fileId: fileSelect.value } });
 	});
-	const allButton = deletion.createEl('button', { text: 'Clear all activity data', cls: 'mod-warning' });
+	const allButton = deletion.createEl('button', { text: 'Clear all activity data', cls: 'mod-warning', attr: { 'data-activity-map-id': 'clear-all' } });
 	allButton.disabled = model.operation.kind === 'running';
 	allButton.addEventListener('click', () => void controller.dispatch({ kind: 'plan-deletion', scope: { kind: 'all' } }));
 

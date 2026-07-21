@@ -8,7 +8,7 @@
 | Scope | `src/data/`, `src/query/`, settings persistence, data tests |
 | Type | feat |
 | Priority | P0 |
-| Status | in-progress |
+| Status | review |
 | Completed | pending |
 | Dependencies | [Activity Tracking Runtime](01-activity-tracking-runtime-plan.md) |
 | Decisions | [File identity and aggregation](../constitution/2026-07-21-activity-map-product-and-data.md#file-identity-and-aggregation), [Persistence and retention](../constitution/2026-07-21-activity-map-product-and-data.md#persistence-and-retention), [Technical boundaries](../constitution/2026-07-21-activity-map-product-and-data.md#technical-boundaries), [Data architecture](../../ARCHITECTURE.md#data-layer-and-query-engine) |
@@ -404,4 +404,4 @@ Complete the backend for local data ownership without exposing destructive opera
 
 ## Evaluation Record
 
-Implementation and technical gates are complete. Per owner direction, independent evaluation is deferred to one joint Specs 01–03 review after the complete `v0.1` vertical slice is implemented; this Spec remains `in-progress` until that review begins.
+Implementation and technical gates are complete. Per owner direction, this Spec entered `review` together with Specs 01 and 03 for one joint independent evaluation; real Obsidian acceptance remains owned by Spec 03.

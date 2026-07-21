@@ -4,7 +4,7 @@ Activity Map is a local-first Obsidian plugin for measuring trustworthy activity
 
 ## Project Status
 
-The repository contains composed tracking, local persistence, maintenance, hierarchical queries, settings, commands, dockable statistics, file-header status, SVG/JSON export, rebuild, and scoped deletion with deterministic automated tests. The current installable build exposes these capabilities through the full view and file-header popovers. Integrated platform/accessibility evidence and real Obsidian acceptance remain in progress.
+The repository contains composed tracking, local persistence, maintenance, hierarchical queries, settings, commands, dockable statistics, file-header status, SVG/JSON export, rebuild, and scoped deletion. Controlled-clock, fake-adapter integration, accessibility-source, privacy-source, XML, and bundle checks cover the technical candidate. Joint Critic review and real Obsidian desktop/mobile acceptance remain pending.
 
 Treat this as a development build until the complete UI and real Obsidian journeys pass. Follow the [Roadmap](specs/ROADMAP.md) for release acceptance status.
 
@@ -26,6 +26,7 @@ The complete requirements and stable data decisions are documented in:
 - [Product and Data Decisions](specs/constitution/2026-07-21-activity-map-product-and-data.md)
 - [Architecture](ARCHITECTURE.md)
 - [Existing Plugin Research](specs/research/2026-07-21-existing-plugin-landscape-research.md)
+- [v0.1.0 Release Notes](RELEASE_NOTES.md)
 
 ## Development
 
@@ -42,7 +43,9 @@ Install dependencies and run the repository gates:
 npm install
 npm run check
 npm run lint
+npm test -- --run
 npm run build
+git diff --check
 ```
 
 For watch mode:
@@ -52,6 +55,8 @@ npm run dev
 ```
 
 The build writes `main.js` at the repository root. The generated bundle is intentionally ignored and should be attached to releases rather than committed.
+
+Strict Spec validation additionally requires `SPEC_DRIVEN_DELIVERY_DIR` to point at the installed `spec-driven-delivery` skill, then runs `python3 "$SPEC_DRIVEN_DELIVERY_DIR/scripts/validate_specs_workspace.py" . --strict`.
 
 ## Development Installation
 
@@ -71,6 +76,7 @@ Reload Obsidian, disable Restricted Mode if appropriate for the development vaul
 .
 ├── AGENTS.md      Repository-wide engineering and writing rules
 ├── ARCHITECTURE.md Current skeleton and approved v0.1 target architecture
+├── RELEASE_NOTES.md Verified v0.1 capability and acceptance boundary
 ├── docs/          Product requirements and UX contract
 ├── specs/         Constitution, Roadmap, Research, Active Specs, and review evidence
 ├── src/           TypeScript plugin source
