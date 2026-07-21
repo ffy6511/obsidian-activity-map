@@ -7,6 +7,8 @@
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"check": "tsc --noEmit --skipLibCheck",
+		"test": "node --import jiti/register tests/run.ts",
+		"test:unit": "node --import jiti/register tests/run.ts",
 		"lint": "eslint .",
 		"build": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
 		"validate": "npm run check && npm run lint && npm run build",

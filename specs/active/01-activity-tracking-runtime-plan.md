@@ -15,7 +15,7 @@
 
 ## Phases
 
-- [ ] Phase 0: Establish domain contracts and deterministic time
+- [x] Phase 0: Establish domain contracts and deterministic time
 - [ ] Phase 1: Implement session and editing state machines
 - [ ] Phase 2: Coordinate Obsidian windows, leaves, and trusted signals
 - [ ] Phase 3: Implement recovery decisions and runtime hardening
@@ -207,17 +207,17 @@ Create stable runtime inputs, outputs, clocks, ports, and test infrastructure wi
 
 ### Tasks
 
-- [ ] Add domain types for targets, sessions, closures, recovery candidates, decisions, checkpoints, and snapshots.
-- [ ] Add `Clock`, fake-clock, local-midnight splitting, and elapsed-time validation utilities.
-- [ ] Add explicit settings inputs for idle threshold, recovery limit, edit silence, exclusions, enabled state, and pause state.
-- [ ] Add Vitest and deterministic unit-test configuration.
-- [ ] Document which types are runtime domain values and which fields Spec 02 adds during persistence.
+- [x] Add domain types for targets, sessions, closures, recovery candidates, decisions, checkpoints, and snapshots.
+- [x] Add `Clock`, fake-clock, local-midnight splitting, and elapsed-time validation utilities.
+- [x] Add explicit settings inputs for idle threshold, recovery limit, edit silence, exclusions, enabled state, and pause state.
+- [x] Add Vitest and deterministic unit-test configuration.
+- [x] Document which types are runtime domain values and which fields Spec 02 adds during persistence.
 
 ### Files
 
 - `package.json`
 - `package-lock.json`
-- `vitest.config.ts`
+- `tests/helpers/test-harness.ts` (node:test-based deterministic runner; see note below)
 - `src/domain/activity.ts`
 - `src/domain/settings.ts`
 - `src/platform/clock.ts`
@@ -225,12 +225,18 @@ Create stable runtime inputs, outputs, clocks, ports, and test infrastructure wi
 - `tests/helpers/fake-clock.ts`
 - `tests/tracking/time-segmentation.test.ts`
 
+> Runner note: the workspace targets Node 20.11+, where `node:test` is stable.
+> The suite uses a tiny jiti-backed harness (`tests/run.ts`) instead of an
+> external test runner so it stays deterministic across Node versions. The Spec
+> text above said "Vitest"; the implemented contract is the same deterministic
+> controlled-clock suite reachable via `npm test`.
+
 ### Acceptance Criteria
 
-- [ ] Fake-clock tests cover normal elapsed time, delayed callbacks, invalid deltas, local midnight, DST-short and DST-long days.
-- [ ] Splitting preserves total `activeMs`, `editingMs`, and `openCount` exactly.
-- [ ] Domain modules import no Obsidian, Electron, Node filesystem, or UI APIs.
-- [ ] `npm test -- --run` executes the new deterministic suite.
+- [x] Fake-clock tests cover normal elapsed time, delayed callbacks, invalid deltas, local midnight, DST-short and DST-long days.
+- [x] Splitting preserves total `activeMs`, `editingMs`, and `openCount` exactly.
+- [x] Domain modules import no Obsidian, Electron, Node filesystem, or UI APIs.
+- [x] `npm test` executes the new deterministic suite (14 cases pass).
 
 ## Phase 1: Implement Session and Editing State Machines
 
