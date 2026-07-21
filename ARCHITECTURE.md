@@ -15,19 +15,23 @@ Authority links:
 
 ## Current Implementation
 
-Only the plugin foundation is implemented today:
+The tracking, persistence, maintenance, and query modules are implemented and covered by deterministic fixtures. They are not yet composed by the plugin entrypoint, so the installable bundle still opens a placeholder and does not collect activity:
 
 ```text
 src/
-└── main.ts                 # Registers one ItemView, Ribbon action, and command.
-                            # Opens a truthful placeholder; no tracking or data writes.
+├── domain/                 # Implemented activity/settings contracts.
+├── platform/               # Implemented clock and window abstractions.
+├── tracking/               # Implemented attribution runtime and recovery behavior.
+├── data/                   # Implemented local evidence, summaries, and data controls.
+├── query/                  # Implemented date and hierarchical distribution queries.
+└── main.ts                 # Still registers only the placeholder view and entry actions.
 
 styles.css                  # Styles only the placeholder view.
 manifest.json               # Plugin ID activity-map; cross-platform manifest flag.
 main.js                     # Generated build artifact; ignored and never edited directly.
 ```
 
-Everything below is the `v0.1` target and remains subject to the evidence checkboxes in the owning Active Spec.
+The presentation, SVG export, composition root, and real Obsidian journeys remain the `v0.1` target and are subject to the evidence checkboxes in Spec 03.
 
 ## System Overview
 
@@ -256,12 +260,13 @@ closed runtime record
   -> add schemaVersion / recordId / deviceId / fileId / pathAtEvent
   -> enqueue append for exactly one device/date shard
   -> read + rebuild the matching daily summary
-  -> verify replacement is readable
+  -> verify replacement is readable and fingerprint-matches the source record ids
   -> invalidate matching query-cache snapshots
 
 # recordId is the idempotency key for uncertain append retries.
 # One malformed line is isolated and reported; unrelated records still load.
 # Raw retention runs only after the corresponding daily summary is verified.
+# Maintenance operations emit typed per-date progress and explicit partial-failure results.
 ```
 
 Replaceable JSON uses a recoverable `.next`/`.bak` protocol. Mutation is serialized per owned path, while file-registry changes use one global registry queue. A query reads one registry snapshot and one summary-version snapshot so concurrent mutation cannot produce a mixed projection.

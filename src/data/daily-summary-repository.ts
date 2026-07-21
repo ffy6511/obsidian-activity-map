@@ -12,7 +12,7 @@
 import { SafeJsonStore, type JsonFileAdapter } from './safe-json-store';
 import type { NdjsonShardStore } from './ndjson-shard-store';
 import type { PathAdapter } from './paths';
-import { dailySummaryPath } from './paths';
+import { dailySummaryPath, sessionShardPath } from './paths';
 import type { ValidatedEventEnvelope } from './schema';
 
 /** Per-file metrics for one day. */
@@ -29,6 +29,8 @@ export interface DailySummary {
 	localDate: string;
 	generatedAt: string;
 	sourceRecordCount: number;
+	/** Sorted record-id fingerprint proving which raw evidence was aggregated. */
+	sourceFingerprint: string;
 	metricsByFileId: Record<string, DailyFileMetrics>;
 	/** Non-finite values, unknown references, or other source problems. */
 	warnings: DataWarning[];
@@ -72,7 +74,8 @@ export class DailySummaryRepository {
 		localDate: string;
 		nowIso: string;
 	}): Promise<SummaryResult> {
-		const path = dailySummaryPath(this.pathAdapter, args.deviceId, args.localDate);
+		// Rebuild reads the retained raw session shard (not the daily summary).
+		const path = sessionShardPath(this.pathAdapter, args.deviceId, args.localDate);
 		const read = await this.shardStore.read(path);
 		const warnings: DataWarning[] = [...read.diagnostics.map((d) => ({
 			code: d.code,
@@ -85,6 +88,7 @@ export class DailySummaryRepository {
 			localDate: args.localDate,
 			generatedAt: args.nowIso,
 			sourceRecordCount: read.records.length,
+			sourceFingerprint: fingerprintRecords(read.records),
 			metricsByFileId,
 			warnings,
 		};
@@ -105,12 +109,10 @@ export class DailySummaryRepository {
 		localDate: string;
 		summary: DailySummary;
 	}): Promise<void> {
-		const path = dailySummaryPath(this.pathAdapter, args.deviceId, args.localDate);
-		const contents = JSON.stringify(args.summary);
-		await this.fileAdapter.write(path, contents);
-		// Verify the replacement is readable before publishing.
-		const reread = await this.fileAdapter.read(path);
-		if (reread !== contents) {
+		const store = this.storeFor(args);
+		await store.save(args.summary, (value) => JSON.stringify(value));
+		const verified = await this.load(args);
+		if (!verified || verified.sourceFingerprint !== args.summary.sourceFingerprint) {
 			throw new Error('daily-summary-verify-failed');
 		}
 	}
@@ -201,5 +203,24 @@ function validateSummary(raw: unknown): DailySummary {
 	if (obj.schemaVersion !== 1) {
 		throw new Error(`summary-unsupported-schema-${String(obj.schemaVersion)}`);
 	}
+	if (
+		typeof obj.deviceId !== 'string' ||
+		typeof obj.localDate !== 'string' ||
+		typeof obj.generatedAt !== 'string' ||
+		typeof obj.sourceRecordCount !== 'number' ||
+		!Number.isInteger(obj.sourceRecordCount) ||
+		obj.sourceRecordCount < 0 ||
+		typeof obj.sourceFingerprint !== 'string' ||
+		typeof obj.metricsByFileId !== 'object' ||
+		obj.metricsByFileId === null ||
+		!Array.isArray(obj.warnings)
+	) {
+		throw new Error('summary-invalid-fields');
+	}
 	return raw as DailySummary;
+}
+
+/** Stable evidence fingerprint used by retention and deletion drift checks. */
+export function fingerprintRecords(records: readonly ValidatedEventEnvelope[]): string {
+	return records.map((record) => record.recordId).sort().join('|');
 }

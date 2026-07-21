@@ -60,6 +60,7 @@ function summary(
 		localDate,
 		generatedAt: `${localDate}T23:59:59.000Z`,
 		sourceRecordCount: 1,
+		sourceFingerprint: `fixture-${deviceId}-${localDate}`,
 		metricsByFileId,
 		warnings: [],
 	};

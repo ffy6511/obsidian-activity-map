@@ -271,7 +271,7 @@ Implement pure transitions for target changes, idle rollback, editing bursts, pa
 - [x] `editingMs <= activeMs` holds under generated transition sequences.
 - [x] Duplicate recovery decisions and duplicate focus notifications do not duplicate metrics.
 - [x] Automatic-exclusion undo succeeds only before its deadline and never includes the interval without a second explicit decision.
-- [ ] A sink failure produces a degraded snapshot and prevents new uncheckpointed attribution. *(Engine `enterDegraded` is unit-tested; the queue + sink wiring that actually suppresses attribution is exercised in Phase 3.)*
+- [x] A sink failure produces a degraded snapshot and prevents new uncheckpointed attribution. *(The coordinator sink-failure fixture proves the degraded snapshot and suppression of later attribution.)*
 
 ## Phase 2: Coordinate Obsidian Windows, Leaves, and Trusted Signals
 
@@ -352,4 +352,4 @@ Complete delayed-heartbeat handling, restart reconciliation contracts, public st
 
 ## Evaluation Record
 
-No implementation or Critic evaluation has started. Add numbered rounds only after every Phase and technical gate passes and the Spec enters `review`.
+Implementation and technical gates are complete. Per owner direction, independent evaluation is deferred to one joint Specs 01–03 review after the complete `v0.1` vertical slice is implemented; this Spec remains `in-progress` until that review begins.

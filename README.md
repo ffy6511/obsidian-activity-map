@@ -4,7 +4,7 @@ Activity Map is a local-first Obsidian plugin for measuring trustworthy activity
 
 ## Project Status
 
-The repository currently contains the product baseline, an initialized spec-driven delivery workspace, three ordered `v0.1` Active Specs, and a minimal buildable Obsidian plugin foundation. Planning is complete and implementation has not started. The plugin registers an Activity Map view, Ribbon action, and command. Activity tracking, persistence, aggregation, charts, settings, and export are not implemented yet.
+The repository contains implemented tracking, local persistence, maintenance, and hierarchical query modules with deterministic automated tests. These services are not yet composed by the plugin entrypoint: the current installable build still registers only an Activity Map placeholder view, Ribbon action, and command. Charts, settings UI, SVG export, and real Obsidian acceptance remain in progress.
 
 Do not use this foundation build as a time tracker. Follow the [Roadmap](specs/ROADMAP.md) for implementation and acceptance status.
 
@@ -63,7 +63,7 @@ manifest.json
 styles.css
 ```
 
-Reload Obsidian, disable Restricted Mode if appropriate for the development vault, and enable Activity Map under Community plugins. The current foundation opens a truthful placeholder view only.
+Reload Obsidian, disable Restricted Mode if appropriate for the development vault, and enable Activity Map under Community plugins. The current build opens a truthful placeholder view while the implemented services await Spec 03 composition.
 
 ## Repository Structure
 
@@ -80,7 +80,7 @@ Reload Obsidian, disable Restricted Mode if appropriate for the development vaul
 
 ## Privacy
 
-The planned product is local-only and will not include telemetry, accounts, or content upload. It will not store note text or typed strings. The current foundation does not collect or persist any activity data.
+The planned product is local-only and will not include telemetry, accounts, or content upload. It will not store note text or typed strings. The current installable build does not collect or persist activity data because the implemented tracking and storage services are not yet wired into `src/main.ts`.
 
 ## License
 

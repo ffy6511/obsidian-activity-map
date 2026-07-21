@@ -134,13 +134,22 @@ export class NdjsonShardStore {
 	): Promise<{ before: number; after: number }> {
 		const queue = this.queues.get(path) ?? Promise.resolve();
 		const run = queue.then(async () => {
-			const { records } = await this.read(path);
+			const { records, diagnostics } = await this.read(path);
+			// A scoped rewrite cannot prove whether an invalid line belongs to the
+			// target file. Abort so maintenance never silently erases evidence.
+			if (diagnostics.length > 0) {
+				throw new Error('ndjson-rewrite-source-corrupt');
+			}
 			const kept = records.filter(keepPredicate);
 			const contents = kept.map((r) => serializeEnvelopeLine(r).trimEnd()).join('\n');
 			await this.adapter.write(path, contents.length > 0 ? `${contents}\n` : '');
 			// Verify the rewrite by reading back.
 			const verification = await this.read(path);
-			if (verification.records.length !== kept.length) {
+			if (
+				verification.diagnostics.length > 0 ||
+				verification.records.map((record) => record.recordId).join('|') !==
+					kept.map((record) => record.recordId).join('|')
+			) {
 				throw new Error('ndjson-rewrite-verify-failed');
 			}
 			return { before: records.length, after: kept.length };

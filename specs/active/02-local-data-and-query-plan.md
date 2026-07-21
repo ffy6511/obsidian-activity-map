@@ -18,7 +18,7 @@
 - [x] Phase 0: Establish paths, settings, schemas, and adapter contracts
 - [x] Phase 1: Implement file identity, event shards, and checkpoint recovery
 - [x] Phase 2: Implement daily summaries and hierarchical queries
-- [ ] Phase 3: Implement retention, rebuild, export, and scoped deletion
+- [x] Phase 3: Implement retention, rebuild, export, and scoped deletion
 
 ## Background
 
@@ -364,13 +364,13 @@ Complete the backend for local data ownership without exposing destructive opera
 
 ### Tasks
 
-- [ ] Implement safe raw-retention eligibility and per-date cleanup.
-- [ ] Implement date/device aggregate rebuild with unavailable-evidence reporting.
-- [ ] Implement scoped raw JSON export for all, date, and file filters.
-- [ ] Implement read-only deletion planning and drift-checked execution for all, date, and file scopes.
-- [ ] Add interruption tests for retention, rewrite, rebuild, and deletion transactions.
-- [ ] Expose typed progress and warning streams for Spec 03 controls.
-- [ ] Update `ARCHITECTURE.md` when storage ownership, schema flow, query boundaries, or recovery behavior changes during implementation.
+- [x] Implement safe raw-retention eligibility and per-date cleanup.
+- [x] Implement date/device aggregate rebuild with unavailable-evidence reporting.
+- [x] Implement scoped raw JSON export for all, date, and file filters.
+- [x] Implement read-only deletion planning and drift-checked execution for all, date, and file scopes.
+- [x] Add interruption tests for retention, rewrite, rebuild, and deletion transactions.
+- [x] Expose typed progress and warning streams for Spec 03 controls.
+- [x] Update `ARCHITECTURE.md` when storage ownership, schema flow, query boundaries, or recovery behavior changes during implementation.
 
 ### Files
 
@@ -385,11 +385,11 @@ Complete the backend for local data ownership without exposing destructive opera
 
 ### Acceptance Criteria
 
-- [ ] No raw shard is removed until a matching daily summary is persisted and verified readable.
-- [ ] Rebuild reports each date as rebuilt, unchanged, unavailable, or failed without hiding partial results.
-- [ ] Raw export contains tracking metadata and metrics but no note content or typed strings.
-- [ ] Stale deletion plans abort before mutation; injected mid-transaction failures remain recoverable and visible.
-- [ ] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, and strict specs validation pass.
+- [x] No raw shard is removed until a matching daily summary is persisted, fingerprint-matched to retained evidence, and verified readable.
+- [x] Rebuild reports each date as rebuilt, unchanged, unavailable, or failed without hiding partial results.
+- [x] Raw export contains tracking metadata and metrics but no note content or typed strings.
+- [x] Stale deletion plans abort before mutation; injected mid-transaction failures remain recoverable and visible.
+- [x] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, and strict specs validation pass. *(Phase gate: 166 tests passed; type check, lint, build, strict Spec validation, and diff checks passed.)*
 
 ## Risks and Mitigations
 
@@ -404,4 +404,4 @@ Complete the backend for local data ownership without exposing destructive opera
 
 ## Evaluation Record
 
-No implementation or Critic evaluation has started. Add numbered rounds only after every Phase and technical gate passes and the Spec enters `review`.
+Implementation is complete except for the composition-root tasks explicitly owned by Spec 03 Phase 0. Per owner direction, independent evaluation is deferred to one joint Specs 01–03 review after the complete `v0.1` vertical slice is implemented; this Spec remains `in-progress` until that review begins.

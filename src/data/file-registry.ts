@@ -208,6 +208,14 @@ export class FileRegistry {
 		};
 	}
 
+	/** Clear all tracking identities while preserving a valid registry file. */
+	async clear(): Promise<void> {
+		await this.serialize(async () => {
+			this.registry = emptyRegistry();
+			await this.save();
+		});
+	}
+
 	private serialize<T>(task: () => T | Promise<T>): Promise<T> {
 		const run = this.mutationQueue.then(task);
 		// Advance the tail from a settled state so a thrown mutation cannot cascade.
