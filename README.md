@@ -4,7 +4,7 @@ Activity Map is a local-first Obsidian plugin for measuring trustworthy activity
 
 ## Project Status
 
-The repository contains composed tracking, local persistence, maintenance, hierarchical queries, settings, commands, dockable statistics, file-header status, SVG/JSON export, rebuild, and scoped deletion. Controlled-clock, fake-adapter integration, accessibility-source, privacy-source, XML, and bundle checks cover the technical candidate. Joint Critic review and real Obsidian desktop/mobile acceptance remain pending.
+The repository contains composed tracking, local persistence, maintenance, hierarchical queries, settings, commands, dockable statistics, file-header status, SVG/JSON export, rebuild, and scoped deletion. Controlled-clock, fake-adapter integration, accessibility-source, privacy-source, XML, and bundle checks cover the technical candidate. The bounded joint Critic ended after three rounds with three P1 findings; the owner-directed MVP fix batch resolves those findings, while final owner review and real Obsidian desktop/mobile acceptance remain pending.
 
 Treat this as a development build until the complete UI and real Obsidian journeys pass. Follow the [Roadmap](specs/ROADMAP.md) for release acceptance status.
 

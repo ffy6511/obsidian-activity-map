@@ -2,7 +2,7 @@
 
 ## Release Status
 
-`v0.1.0` is a local development candidate. Specs 01–03 have automated implementation evidence; joint Critic review and real Obsidian desktop/mobile acceptance remain required before publication.
+`v0.1.0` is a local development candidate. Specs 01–03 have automated implementation evidence, and the owner-directed MVP batch resolves the three P1 findings left by the bounded joint Critic. Final owner review and real Obsidian desktop/mobile acceptance remain required before publication; no additional Critic verdict was created.
 
 ## Included Capabilities
 

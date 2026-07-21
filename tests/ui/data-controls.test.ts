@@ -17,7 +17,17 @@ function tracking(): TrackingControl {
 }
 
 function plan(): DeletionPlan {
-	return { planId: 'plan-fixed', scope: { kind: 'date', localDate: '2026-07-21' }, affectedPaths: ['data/a'], affectedRecordCount: 3, affectedSummaryCount: 1, createdAt: new Date().toISOString(), sourceFingerprint: 'fixed' };
+	return {
+		planId: 'plan-fixed',
+		scope: { kind: 'date', localDate: '2026-07-21' },
+		affectedPaths: ['data/a'],
+		affectedShards: [{ deviceId: 'dev1', localDate: '2026-07-21', sessionPath: 'data/a', summaryPath: 'data/b' }],
+		affectedRecordCount: 3,
+		affectedSummaryCount: 1,
+		createdAt: new Date().toISOString(),
+		sourceFingerprint: 'fixed',
+		pathFingerprints: { 'data/a': 'fixed' },
+	};
 }
 
 function operations(overrides: Partial<DataOperationPort> = {}): DataOperationPort {

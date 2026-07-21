@@ -53,19 +53,24 @@ export function projectAndGroup(args: {
 		const value = metrics[metric];
 		const entry = registryEntries[fileId];
 		if (!entry) {
-			// Unknown identity (registry missing): treat as deleted with no path.
-			deleted.push({ fileId, path: null, lastKnownPath: '', deleted: true, value });
+			// An unknown identity has no defensible directory membership. Keep it
+			// visible at vault root without leaking it into every drill-down.
+			if (!prefix) {
+				deleted.push({ fileId, path: null, lastKnownPath: '', deleted: true, value });
+			}
 			continue;
 		}
 		const currentPath = entry.currentPath;
 		if (currentPath === null || entry.state === 'deleted') {
-			deleted.push({
-				fileId,
-				path: null,
-				lastKnownPath: entry.lastKnownPath,
-				deleted: true,
-				value,
-			});
+			if (!prefix || isWithinPrefix(entry.lastKnownPath, prefix)) {
+				deleted.push({
+					fileId,
+					path: null,
+					lastKnownPath: entry.lastKnownPath,
+					deleted: true,
+					value,
+				});
+			}
 			continue;
 		}
 		// Only include present files whose current path is under the prefix.
@@ -81,6 +86,10 @@ export function projectAndGroup(args: {
 		});
 	}
 	return { groups: groupPresent(present, prefix), deleted };
+}
+
+function isWithinPrefix(path: string, prefix: string): boolean {
+	return path === prefix || path.startsWith(`${prefix}/`);
 }
 
 /**

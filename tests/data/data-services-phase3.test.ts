@@ -9,9 +9,11 @@ import { RawExportService } from '../../src/data/raw-export-service';
 import { DeletionService } from '../../src/data/deletion-service';
 import { FileRegistry } from '../../src/data/file-registry';
 import { SafeJsonStore } from '../../src/data/safe-json-store';
-import { sessionShardPath } from '../../src/data/paths';
+import { dailySummaryPath, sessionShardPath } from '../../src/data/paths';
 import { FakeDataAdapter } from '../helpers/fake-data-adapter';
 import type { ClosedSessionSegment, RecoveryDecision } from '../../src/domain/activity';
+import { LocalQueryService } from '../../src/query/query-service';
+import { normalizeSettings } from '../../src/domain/settings';
 
 function segment(fileId: string, path: string, localDate: string, activeMs: number): ClosedSessionSegment {
 	return {
@@ -138,6 +140,52 @@ describe('rebuild service', () => {
 		});
 		expect(rebuilt.summary.metricsByFileId.f1?.activeMs).toBe(5_000);
 		expect(rebuilt.summary.warnings.some((warning) => warning.code === 'duplicate-adjustment')).toBeTrue();
+	});
+
+	it('rejects invalid nested metrics, identity, and warning structures', async () => {
+		const s = setup();
+		const ref = { deviceId: 'dev1', localDate: '2026-07-20' };
+		const path = dailySummaryPath(s.pathAdapter, ref.deviceId, ref.localDate);
+		const valid = {
+			schemaVersion: 1,
+			...ref,
+			generatedAt: '2026-07-21T00:00:00.000Z',
+			sourceRecordCount: 1,
+			sourceFingerprint: 'source',
+			metricsByFileId: { f1: { activeMs: 10, editingMs: 5, openCount: 1 } },
+			warnings: [],
+		};
+		for (const invalid of [
+			{ ...valid, metricsByFileId: { f1: { activeMs: -1, editingMs: 0, openCount: 1 } } },
+			{ ...valid, metricsByFileId: { f1: { activeMs: 10, editingMs: 0, openCount: 1.5 } } },
+			{ ...valid, deviceId: 'other-device' },
+			{ ...valid, warnings: [{ code: 'broken' }] },
+		]) {
+			s.adapter.seed(path, JSON.stringify(invalid));
+			const loaded = await s.summaries.loadWithStatus(ref);
+			expect(loaded.status).toBe('corrupt');
+			expect(loaded.warning?.code).toBe('corrupt-daily-summary');
+		}
+	});
+
+	it('surfaces a corrupt daily summary as a rebuild-required query warning', async () => {
+		const s = setup();
+		const ref = { deviceId: 'dev1', localDate: '2026-07-20' };
+		s.adapter.seed(dailySummaryPath(s.pathAdapter, ref.deviceId, ref.localDate), '{broken');
+		const query = new LocalQueryService(
+			fakeInventory([], [ref]),
+			s.summaries,
+			s.registry,
+			() => normalizeSettings({ deviceId: 'dev1' }),
+		);
+		const result = await query.run({
+			metric: 'activeMs',
+			range: { mode: 'day', localDate: ref.localDate },
+			path: '',
+			view: 'children',
+		});
+		expect(result.warnings.some((warning) => warning.code === 'corrupt-daily-summary')).toBeTrue();
+		expect(result.scopeTotal).toBe(0);
 	});
 });
 
@@ -273,12 +321,29 @@ describe('deletion service', () => {
 			nowIso: '2026-07-21T00:00:00.000Z',
 		});
 		expect(plan.affectedRecordCount).toBe(1);
+		expect(plan.affectedShards).toHaveLength(1);
+		expect(Object.keys(plan.pathFingerprints)).toEqual(plan.affectedPaths);
 		const executed = await service.executeDeletion({ plan, nowIso: '2026-07-21T00:00:00.000Z' });
 		expect(executed.outcome).toBe('completed');
 		expect(executed.removedPaths.length).toBeGreaterThan(0);
 		// The shard is gone.
 		const read = await s.shardStore.read(dev1Path(s));
 		expect(read.records).toHaveLength(0);
+	});
+
+	it('aborts without deleting plan-external shards added after preview', async () => {
+		const s = setup();
+		const shards = [{ deviceId: 'dev1', localDate: '2026-07-20' }];
+		await seedShard(s, 'dev1', '2026-07-20', [segment('f1', 'a.md', '2026-07-20', 10_000)]);
+		const inventory = fakeInventory(shards);
+		const service = new DeletionService(inventory, s.shardStore, s.summaries, s.pathAdapter, s.adapter, s.registry);
+		const plan = await service.planDeletion({ scope: { kind: 'all' }, nowIso: '2026-07-21T00:00:00.000Z' });
+		shards.push({ deviceId: 'dev1', localDate: '2026-07-21' });
+		await seedShard(s, 'dev1', '2026-07-21', [segment('f2', 'new.md', '2026-07-21', 5_000)]);
+		const executed = await service.executeDeletion({ plan, nowIso: '2026-07-21T00:01:00.000Z' });
+		expect(executed.outcome).toBe('aborted-drift');
+		expect((await s.shardStore.read(dev1Path(s, '2026-07-20'))).records).toHaveLength(1);
+		expect((await s.shardStore.read(dev1Path(s, '2026-07-21'))).records).toHaveLength(1);
 	});
 
 	it('aborts when the source set drifts between plan and execute', async () => {

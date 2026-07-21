@@ -320,7 +320,9 @@ DistributionResult
 # Paths and labels are escaped before entering SVG markup.
 ```
 
-UI code sends intents to the controller. It cannot append records, rewrite summaries, or delete files directly. Destructive actions execute only the immutable plan returned by the data layer; the plan fingerprints every affected raw, summary-only, checkpoint, and registry path and aborts before mutation when any source changes.
+UI code sends intents to the controller. It cannot append records, rewrite summaries, or delete files directly. Destructive actions execute only the immutable plan returned by the data layer. The plan freezes the selected shard pairs and every affected raw, summary-only, checkpoint, and registry path with per-path content fingerprints. Execution rejects a changed scope before mutation, rechecks each frozen pair immediately before its first write, and never widens deletion from a newly enumerated path.
+
+Daily summaries cross a strict persistence boundary before reaching queries: device/date identity, timestamps, counts, per-file finite non-negative integer metrics, `editingMs <= activeMs`, and warning objects are validated together. Missing summaries contribute no data; invalid summaries are excluded and surface a stable rebuild-required warning instead of silently reducing totals. Deleted identities use `lastKnownPath` for directory membership, while identities with no known path appear only in the vault-root Deleted group.
 
 The header-action manager listens to public workspace lifecycle events, owns one `FileView.addAction()` element per live file view through a weak registry, and removes only those elements on view removal or unload. Status icons and text come from tracking snapshots. Each popover is attached to its trigger's owner document so pop-out windows keep independent focus, pointer, and close behavior. Hover listeners are capability-gated; keyboard focus, Ribbon, commands, and the full view remain usable without hover or when header integration reports a warning.
 
@@ -333,10 +335,11 @@ Before deletion planning, the controller closes the in-flight session and awaits
 ```text
 Invalid settings          -> field-level defaults + visible warning
 Corrupt registry          -> preserve evidence + stop new identity creation
+Corrupt daily summary     -> exclude projection + visible rebuild-required warning
 Malformed NDJSON line     -> isolate line + continue valid records
 Failed JSON replacement   -> recover primary/backup + report affected path
 Checkpoint uncertainty    -> degraded pause; never guess elapsed time
-Stale deletion plan       -> abort before mutation
+Stale deletion plan       -> reject changed scope/path fingerprints before mutation
 Missing export capability -> explain unavailable action; keep viewing functional
 Header-action failure     -> Ribbon/command/full-view fallback
 

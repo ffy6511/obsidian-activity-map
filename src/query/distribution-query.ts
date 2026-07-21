@@ -63,6 +63,7 @@ export function runDistributionQuery(args: {
 	summaries: readonly QuerySummaryInput[];
 	registryEntries: Record<string, FileRegistryEntry>;
 	maxChartItems: number;
+	warnings?: readonly DataWarning[];
 }): DistributionResult {
 	const { query, resolved, summaries, registryEntries, maxChartItems } = args;
 
@@ -95,7 +96,7 @@ export function runDistributionQuery(args: {
 		(query.view === 'children' ? scopeProjection.deleted.reduce((s, d) => s + d.value, 0) : 0);
 
 	// 3. Build detail + chart items.
-	const warnings: DataWarning[] = [];
+	const warnings: DataWarning[] = [...(args.warnings ?? [])];
 	for (const s of summaries) {
 		warnings.push(...s.summary.warnings);
 	}

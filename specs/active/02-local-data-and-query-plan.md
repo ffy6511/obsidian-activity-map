@@ -439,3 +439,11 @@ Complete the backend for local data ownership without exposing destructive opera
 - Deferred findings: all three blocking data/query findings remain unresolved and are not accepted as follow-ups; real desktop/mobile journeys remain Spec 03 Post-Critic Acceptance work.
 - Validation rerun: Critic confirmed `npm run check`, `npm run lint`, `npm test -- --run` (215 passed), `npm run build`, strict specs validation, and `git diff --check` all pass on the clean worktree.
 - Verdict: fail; keep Specs 01–03 in `review` and do not start another automatic Critic.
+
+### Owner-directed post-Critic MVP fix
+
+- Scope: the owner explicitly requested completion of the three remaining P1 findings after the bounded Critic loop; this is an Executor evidence update, not Critic Round 4.
+- Changes: daily-summary loads validate device/date identity, warning records, and finite non-negative integer metrics before queries consume them; corrupt projections emit a stable rebuild-required warning. Deleted metrics are scoped by `lastKnownPath`, with unknown paths visible only at root. Deletion plans retain frozen shard pairs plus per-path fingerprints and reject new, missing, or changed scope paths before mutation.
+- Evidence: focused negative tests cover invalid metrics/open counts/identity/warnings, query diagnostics, deleted history across root and directory scopes, and plan-external shard preservation.
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (220 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); `git diff --check`.
+- Lifecycle: this Spec stays `review`; no new Critic verdict was issued, and real Obsidian acceptance remains Spec 03 work.

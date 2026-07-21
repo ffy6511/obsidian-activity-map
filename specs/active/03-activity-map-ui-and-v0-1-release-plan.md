@@ -423,3 +423,11 @@ Real Obsidian desktop and mobile-viewer journeys require the technical and Criti
 - Deferred findings: the three blocking findings remain unresolved and are not accepted as follow-ups; desktop/mobile journeys remain open Post-Critic Acceptance work.
 - Validation rerun: Critic confirmed `npm run check`, `npm run lint`, `npm test -- --run` (215 passed), `npm run build`, strict specs validation, and `git diff --check` all pass on the clean worktree.
 - Verdict: fail; keep Specs 01–03 and `v0.1` in `review` and do not start another automatic Critic.
+
+### Owner-directed post-Critic MVP fix
+
+- Scope: the owner explicitly requested completion of the three remaining P1 findings after the bounded Critic loop; this is an Executor evidence update, not Critic Round 4.
+- Changes: the UI query result now carries rebuild-required diagnostics for corrupt summaries; directory drill-down no longer includes unrelated Deleted history; destructive controls still execute the retained plan object, whose backend targets and per-path fingerprints are frozen.
+- Evidence: focused data/query/controller fixtures plus the integrated technical journey remain distinct from real Obsidian evidence.
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (220 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); `git diff --check`.
+- Lifecycle: this Spec and `v0.1` stay `review`; no new Critic verdict was issued, and both desktop/mobile Post-Critic Acceptance checkboxes remain open for the owner's final validation.

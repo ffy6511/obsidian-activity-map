@@ -48,6 +48,8 @@ Deliver a local-first Obsidian plugin that measures trustworthy file activity an
 - [ ] Type checking, lint, automated tests, production build, specs validation, and independent Critic evaluation pass.
 - [x] README, PRD, Constitution, settings help, release notes, and installation instructions describe the verified behavior accurately.
 
+The three-round joint Critic budget ended with three P1 findings. An owner-directed MVP fix batch subsequently closed their implementation scope, but no fourth Critic round was started; independent acceptance and real Obsidian journeys remain open.
+
 ### Follow-up TODO
 
 - [ ] `v0.2`: implement trustworthy `typedChars` and separate deletion metrics.

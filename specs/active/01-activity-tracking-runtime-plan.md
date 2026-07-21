@@ -387,3 +387,11 @@ Complete delayed-heartbeat handling, restart reconciliation contracts, public st
 - Deferred findings: the three blocking findings remain unresolved and are not accepted as follow-ups; real desktop/mobile journeys also remain Spec 03 Post-Critic Acceptance work.
 - Validation rerun: Critic confirmed `npm run check`, `npm run lint`, `npm test -- --run` (215 passed), `npm run build`, strict specs validation, and `git diff --check` all pass on the clean worktree.
 - Verdict: fail; keep Specs 01–03 in `review` and do not start another automatic Critic.
+
+### Owner-directed post-Critic MVP fix
+
+- Scope: the owner explicitly requested completion of the three remaining P1 findings after the bounded Critic loop; this is an Executor evidence update, not Critic Round 4.
+- Changes: persisted summaries now reject invalid nested metrics, identity, and warnings with visible rebuild guidance; deleted history follows `lastKnownPath` scope; deletion execution freezes previewed shard pairs and per-path fingerprints.
+- Evidence: focused negative tests cover corrupt summary/query diagnostics, directory-scoped deleted history, unknown-path root behavior, frozen deletion targets, and plan-external shard preservation.
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (220 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); `git diff --check`.
+- Lifecycle: this Spec stays `review`; no new Critic verdict was issued, and Spec 03 desktop/mobile Post-Critic Acceptance remains open.

@@ -49,6 +49,12 @@ export interface SummaryResult {
 	rawUnavailable: boolean;
 }
 
+/** Boundary result that distinguishes absent summaries from corrupt evidence. */
+export type SummaryLoadResult =
+	| { status: 'loaded'; summary: DailySummary; warning: null }
+	| { status: 'missing'; summary: null; warning: null }
+	| { status: 'corrupt'; summary: null; warning: DataWarning };
+
 /**
  * Rebuildable daily-summary store. Construct one per plugin instance.
  */
@@ -119,16 +125,32 @@ export class DailySummaryRepository {
 
 	/** Load a verified daily summary, or null if absent/invalid. */
 	async load(args: { deviceId: string; localDate: string }): Promise<DailySummary | null> {
+		return (await this.loadWithStatus(args)).summary;
+	}
+
+	/**
+	 * Load at the persistence boundary while preserving corrupt-versus-missing
+	 * state so queries can ask the user to rebuild invalid projections.
+	 */
+	async loadWithStatus(args: { deviceId: string; localDate: string }): Promise<SummaryLoadResult> {
 		const path = dailySummaryPath(this.pathAdapter, args.deviceId, args.localDate);
 		try {
 			if (!(await this.fileAdapter.exists(path))) {
-				return null;
+				return { status: 'missing', summary: null, warning: null };
 			}
 			const text = await this.fileAdapter.read(path);
 			const parsed = JSON.parse(text) as unknown;
-			return validateSummary(parsed);
-		} catch {
-			return null;
+			return { status: 'loaded', summary: validateSummary(parsed, args), warning: null };
+		} catch (error) {
+			const reason = error instanceof Error ? error.message : String(error);
+			return {
+				status: 'corrupt',
+				summary: null,
+				warning: {
+					code: 'corrupt-daily-summary',
+					message: `Daily summary ${args.deviceId}/${args.localDate} is invalid and requires rebuild: ${reason}`,
+				},
+			};
 		}
 	}
 
@@ -205,7 +227,10 @@ export function aggregateMetrics(
 }
 
 /** Structural validation of a daily summary. */
-function validateSummary(raw: unknown): DailySummary {
+function validateSummary(
+	raw: unknown,
+	expected: { deviceId: string; localDate: string },
+): DailySummary {
 	if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
 		throw new Error('summary-not-object');
 	}
@@ -227,7 +252,54 @@ function validateSummary(raw: unknown): DailySummary {
 	) {
 		throw new Error('summary-invalid-fields');
 	}
+	if (obj.deviceId !== expected.deviceId || obj.localDate !== expected.localDate) {
+		throw new Error('summary-identity-mismatch');
+	}
+	if (!Number.isFinite(Date.parse(obj.generatedAt))) {
+		throw new Error('summary-invalid-generated-at');
+	}
+	if (Array.isArray(obj.metricsByFileId)) {
+		throw new Error('summary-invalid-metrics-map');
+	}
+	for (const [fileId, metrics] of Object.entries(obj.metricsByFileId as Record<string, unknown>)) {
+		if (fileId.length === 0 || !isDailyFileMetrics(metrics)) {
+			throw new Error(`summary-invalid-metrics-${fileId || 'empty-file-id'}`);
+		}
+	}
+	for (const warning of obj.warnings) {
+		if (
+			typeof warning !== 'object' ||
+			warning === null ||
+			Array.isArray(warning) ||
+			typeof (warning as Record<string, unknown>).code !== 'string' ||
+			(warning as Record<string, unknown>).code === '' ||
+			typeof (warning as Record<string, unknown>).message !== 'string' ||
+			(warning as Record<string, unknown>).message === ''
+		) {
+			throw new Error('summary-invalid-warning');
+		}
+	}
 	return raw as DailySummary;
+}
+
+function isDailyFileMetrics(raw: unknown): raw is DailyFileMetrics {
+	if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return false;
+	const metrics = raw as Record<string, unknown>;
+	return (
+		typeof metrics.activeMs === 'number' &&
+		Number.isFinite(metrics.activeMs) &&
+		Number.isInteger(metrics.activeMs) &&
+		metrics.activeMs >= 0 &&
+		typeof metrics.editingMs === 'number' &&
+		Number.isFinite(metrics.editingMs) &&
+		Number.isInteger(metrics.editingMs) &&
+		metrics.editingMs >= 0 &&
+		metrics.editingMs <= metrics.activeMs &&
+		typeof metrics.openCount === 'number' &&
+		Number.isFinite(metrics.openCount) &&
+		Number.isInteger(metrics.openCount) &&
+		metrics.openCount >= 0
+	);
 }
 
 /** Stable evidence fingerprint used by retention and deletion drift checks. */

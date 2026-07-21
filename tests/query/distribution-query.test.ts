@@ -67,6 +67,36 @@ describe('distribution query directory drill-down', () => {
 		const proj1 = result.detailItems.find((i) => i.kind === 'directory' && i.label === 'proj1');
 		expect(proj1).toBeDefined();
 		expect(proj1?.value).toBe(80_000);
+		expect(result.detailItems.some((item) => item.kind === 'deleted')).toBeFalse();
+	});
+
+	it('includes deleted history only within the selected last-known directory', () => {
+		const archive = run({ path: 'archive', view: 'children', range: { mode: 'day', localDate: '2026-07-14' } });
+		const deleted = archive.detailItems.find((item) => item.kind === 'deleted');
+		expect(deleted?.memberIds).toContain('file-c');
+		expect(deleted?.value).toBe(10_000);
+	});
+
+	it('keeps unknown-path deleted identities at vault root only', () => {
+		const registry = sampleRegistry();
+		const summary = sampleSummaries()[0];
+		if (!summary) throw new Error('summary fixture missing');
+		const withUnknown = {
+			...summary,
+			metricsByFileId: {
+				...summary.metricsByFileId,
+				'unknown-file': { activeMs: 3_000, editingMs: 0, openCount: 1 },
+			},
+		};
+		const query = (path: string) => runDistributionQuery({
+			query: { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-14' }, path, view: 'children' },
+			resolved: resolveRange({ range: { mode: 'day', localDate: '2026-07-14' }, recordedDates: sampleRecordedDates() }),
+			summaries: [{ summary: withUnknown }],
+			registryEntries: registry,
+			maxChartItems: 8,
+		});
+		expect(query('').detailItems.find((item) => item.kind === 'deleted')?.memberIds).toContain('unknown-file');
+		expect(query('projects').detailItems.some((item) => item.kind === 'deleted')).toBeFalse();
 	});
 
 	it('drills into projects/proj1 and shows local files when a sub-directory exists', () => {

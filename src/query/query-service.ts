@@ -2,6 +2,7 @@ import type { DailySummaryRepository } from '../data/daily-summary-repository';
 import type { FileRegistry } from '../data/file-registry';
 import type { ShardInventory } from '../data/retention-service';
 import type { ActivityMapSettings } from '../domain/settings';
+import type { DataWarning } from '../data/daily-summary-repository';
 import { resolveRange } from './date-range';
 import { runDistributionQuery, type DistributionQuery, type DistributionResult } from './distribution-query';
 
@@ -20,10 +21,12 @@ export class LocalQueryService {
 		const resolved = resolveRange({ range: query.range, recordedDates });
 		const contributing = new Set(resolved.dates);
 		const loaded = [];
+		const warnings: DataWarning[] = [];
 		for (const item of available) {
 			if (!contributing.has(item.localDate)) continue;
-			const summary = await this.summaries.load(item);
-			if (summary) loaded.push({ summary });
+			const result = await this.summaries.loadWithStatus(item);
+			if (result.summary) loaded.push({ summary: result.summary });
+			if (result.warning) warnings.push(result.warning);
 		}
 		return runDistributionQuery({
 			query,
@@ -31,6 +34,7 @@ export class LocalQueryService {
 			summaries: loaded,
 			registryEntries: this.registry.snapshot().entries,
 			maxChartItems: this.getSettings().maxChartItems,
+			warnings,
 		});
 	}
 

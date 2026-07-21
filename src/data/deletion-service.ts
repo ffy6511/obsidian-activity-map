@@ -26,16 +26,28 @@ export type DeletionScope =
 	| { kind: 'date'; localDate: string }
 	| { kind: 'file'; fileId: string };
 
+/** Frozen shard pair selected during deletion preview. */
+export interface DeletionShardTarget {
+	deviceId: string;
+	localDate: string;
+	/** Null for retained summary-only history whose raw shard has expired. */
+	sessionPath: string | null;
+	summaryPath: string;
+}
+
 /** Immutable deletion preview returned by planDeletion. */
 export interface DeletionPlan {
 	planId: string;
 	scope: DeletionScope;
 	affectedPaths: string[];
+	affectedShards: DeletionShardTarget[];
 	affectedRecordCount: number;
 	affectedSummaryCount: number;
 	createdAt: string;
 	/** A content hash of the source set, used to detect drift before execution. */
 	sourceFingerprint: string;
+	/** Per-path preview fingerprints checked immediately before mutation. */
+	pathFingerprints: Record<string, string>;
 }
 
 /** Result of executing a plan. */
@@ -78,6 +90,7 @@ export class DeletionService {
 		const sessionShards = await this.inventory.listSessionShards();
 		const summaryShards = await this.inventory.listDailySummaries();
 		const affectedPaths: string[] = [];
+		const affectedShards = new Map<string, DeletionShardTarget>();
 		let affectedRecordCount = 0;
 		let affectedSummaryCount = 0;
 		for (const shard of sessionShards) {
@@ -96,6 +109,12 @@ export class DeletionService {
 			}
 			affectedRecordCount += scopedRecords.length;
 			affectedPaths.push(sessionPath, dailyPath);
+			affectedShards.set(shardKey(shard), {
+				deviceId: shard.deviceId,
+				localDate: shard.localDate,
+				sessionPath,
+				summaryPath: dailyPath,
+			});
 			affectedSummaryCount += 1;
 		}
 		if (scopeFileId === null) {
@@ -106,6 +125,12 @@ export class DeletionService {
 				affectedPaths.push(dailySummaryPath(this.pathAdapter, shard.deviceId, shard.localDate));
 				if (!sessionShards.some((session) => shardKey(session) === shardKey(shard))) {
 					affectedSummaryCount += 1;
+					affectedShards.set(shardKey(shard), {
+						deviceId: shard.deviceId,
+						localDate: shard.localDate,
+						sessionPath: null,
+						summaryPath: dailySummaryPath(this.pathAdapter, shard.deviceId, shard.localDate),
+					});
 				}
 			}
 		}
@@ -113,33 +138,44 @@ export class DeletionService {
 			affectedPaths.push(checkpointPath(this.pathAdapter), filesRegistryPath(this.pathAdapter));
 		}
 		const uniqueAffectedPaths = [...new Set(affectedPaths)].sort();
+		const pathFingerprints = await this.fingerprintPaths(uniqueAffectedPaths);
 		return {
 			planId: newPlanId(),
 			scope: args.scope,
 			affectedPaths: uniqueAffectedPaths,
+			affectedShards: [...affectedShards.values()].sort((a, b) => shardKey(a).localeCompare(shardKey(b))),
 			affectedRecordCount,
 			affectedSummaryCount,
 			createdAt: args.nowIso,
-			sourceFingerprint: await this.fingerprintPaths(uniqueAffectedPaths),
+			sourceFingerprint: fingerprintEntries(pathFingerprints),
+			pathFingerprints,
 		};
 	}
 
 	/** Fingerprint every path the plan may mutate, including summary-only data. */
-	private async fingerprintPaths(paths: readonly string[]): Promise<string> {
-		const entries: string[] = [];
+	private async fingerprintPaths(paths: readonly string[]): Promise<Record<string, string>> {
+		const entries: Record<string, string> = {};
 		for (const path of paths) {
-			if (!(await this.fileAdapter.exists(path))) {
-				entries.push(`${path}:missing`);
-				continue;
-			}
-			try {
-				const contents = await this.fileAdapter.read(path);
-				entries.push(`${path}:${contents.length}:${fingerprintText(contents)}`);
-			} catch {
-				entries.push(`${path}:unreadable`);
-			}
+			entries[path] = await this.fingerprintPath(path);
 		}
-		return entries.join('||');
+		return entries;
+	}
+
+	private async fingerprintPath(path: string): Promise<string> {
+		if (!(await this.fileAdapter.exists(path))) return 'missing';
+		try {
+			const contents = await this.fileAdapter.read(path);
+			return `${contents.length}:${fingerprintText(contents)}`;
+		} catch {
+			return 'unreadable';
+		}
+	}
+
+	private async pathsMatchPlan(plan: DeletionPlan, paths: readonly string[] = plan.affectedPaths): Promise<boolean> {
+		for (const path of paths) {
+			if (await this.fingerprintPath(path) !== plan.pathFingerprints[path]) return false;
+		}
+		return true;
 	}
 
 	/**
@@ -152,9 +188,16 @@ export class DeletionService {
 		nowIso: string;
 		onProgress?: (progress: DataOperationProgress) => void;
 	}): Promise<DeletionResult> {
-		// Re-plan to detect drift against the same scope.
+		// Re-plan once to reject both new scope paths and changed preview paths.
+		// All mutations below iterate the frozen plan targets, never a fresh
+		// inventory, so a later discovery cannot widen the destructive scope.
 		const recheck = await this.planDeletion({ scope: args.plan.scope, nowIso: args.nowIso });
-		if (recheck.sourceFingerprint !== args.plan.sourceFingerprint) {
+		if (
+			recheck.sourceFingerprint !== args.plan.sourceFingerprint ||
+			JSON.stringify(recheck.affectedPaths) !== JSON.stringify(args.plan.affectedPaths) ||
+			JSON.stringify(recheck.affectedShards) !== JSON.stringify(args.plan.affectedShards) ||
+			!(await this.pathsMatchPlan(args.plan))
+		) {
 			return {
 				planId: args.plan.planId,
 				outcome: 'aborted-drift',
@@ -165,81 +208,102 @@ export class DeletionService {
 		}
 		const removedPaths: string[] = [];
 		const errors: DeletionResult['errors'] = [];
-		const sessionShards = await this.inventory.listSessionShards();
-		const summaryShards = await this.inventory.listDailySummaries();
 		const scope = args.plan.scope;
 		const scopeFileId = scope.kind === 'file' ? scope.fileId : null;
-		const scopeDate = scope.kind === 'date' ? scope.localDate : null;
-		for (const [index, shard] of sessionShards.entries()) {
-			if (scopeDate !== null && shard.localDate !== scopeDate) {
-				continue;
-			}
-			const sessionPath = sessionShardPath(this.pathAdapter, shard.deviceId, shard.localDate);
-			const dailyPath = dailySummaryPath(this.pathAdapter, shard.deviceId, shard.localDate);
+		for (const [index, shard] of args.plan.affectedShards.entries()) {
+			const sessionPath = shard.sessionPath;
+			const dailyPath = shard.summaryPath;
 			try {
-			if (scopeFileId !== null) {
-				// File scope: rewrite the shard dropping the file's records. The
-				// predicate keeps every record whose fileId is NOT the target.
-				const targetFileId = scopeFileId;
-				const before = (await this.shardStore.read(sessionPath)).records.length;
-				const rewrite = await this.shardStore.rewrite(
-					sessionPath,
-					(r) => r.fileId !== targetFileId,
-				);
-				if (rewrite.after < before) {
-					removedPaths.push(sessionPath);
+				// Check the complete shard pair immediately before its first write.
+				// If earlier targets already changed, this becomes a visible partial
+				// failure without touching the drifted or any plan-external path.
+				const targetPaths = sessionPath === null ? [dailyPath] : [sessionPath, dailyPath];
+				if (!(await this.pathsMatchPlan(args.plan, targetPaths))) {
+					if (removedPaths.length === 0) {
+						return {
+							planId: args.plan.planId,
+							outcome: 'aborted-drift',
+							removedPaths: [],
+							remainingRecordCount: recheck.affectedRecordCount,
+							errors: [],
+						};
+					}
+					errors.push({ path: sessionPath ?? dailyPath, message: 'deletion-plan-path-drift' });
+					break;
 				}
-				// Rebuild the affected summary from the rewritten shard.
-				const rebuilt = await this.summaries.rebuild({
+				if (scopeFileId !== null && sessionPath !== null) {
+					// File scope rewrites only this previewed shard and then replaces
+					// its derived summary from the surviving raw evidence.
+					const targetFileId = scopeFileId;
+					const before = (await this.shardStore.read(sessionPath)).records.length;
+					const rewrite = await this.shardStore.rewrite(
+						sessionPath,
+						(r) => r.fileId !== targetFileId,
+					);
+					if (rewrite.after < before) {
+						removedPaths.push(sessionPath);
+					}
+					const rebuilt = await this.summaries.rebuild({
 						deviceId: shard.deviceId,
 						localDate: shard.localDate,
 						nowIso: args.nowIso,
 					});
-				if (!rebuilt.rawUnavailable) {
-					await this.summaries.save({
+					if (!rebuilt.rawUnavailable) {
+						await this.summaries.save({
 							deviceId: shard.deviceId,
 							localDate: shard.localDate,
 							summary: rebuilt.summary,
-					});
+						});
+					}
+				} else {
+					// Date/all scope removes exactly the previewed shard pair.
+					if (sessionPath !== null) await this.shardStore.remove(sessionPath);
+					await this.summaries.remove({ deviceId: shard.deviceId, localDate: shard.localDate });
+					if (sessionPath !== null) removedPaths.push(sessionPath);
+					removedPaths.push(dailyPath);
 				}
-			} else {
-				// date/all scope: remove the shard and summary outright.
-				await this.shardStore.remove(sessionPath);
-				await this.summaries.remove({ deviceId: shard.deviceId, localDate: shard.localDate });
-				removedPaths.push(sessionPath, dailyPath);
-			}
 			} catch (error) {
-				errors.push({ path: sessionPath, message: error instanceof Error ? error.message : String(error) });
+				errors.push({
+					path: sessionPath ?? dailyPath,
+					message: error instanceof Error ? error.message : String(error),
+				});
 			}
-			args.onProgress?.({ operation: 'deletion', completed: index + 1, total: sessionShards.length, ...shard });
-		}
-		if (scopeFileId === null) {
-			for (const summary of summaryShards) {
-				if (scopeDate !== null && summary.localDate !== scopeDate) {
-					continue;
-				}
-				const path = dailySummaryPath(this.pathAdapter, summary.deviceId, summary.localDate);
-				if (removedPaths.includes(path)) {
-					continue;
-				}
-				try {
-					await this.summaries.remove(summary);
-					removedPaths.push(path);
-				} catch (error) {
-					errors.push({ path, message: error instanceof Error ? error.message : String(error) });
-				}
-			}
+			args.onProgress?.({
+				operation: 'deletion',
+				completed: index + 1,
+				total: args.plan.affectedShards.length,
+				deviceId: shard.deviceId,
+				localDate: shard.localDate,
+			});
 		}
 		// 'all' also clears the checkpoint and registry files.
-		if (scope.kind === 'all') {
+		if (scope.kind === 'all' && errors.length === 0) {
 			const cp = checkpointPath(this.pathAdapter);
+			const registryPath = filesRegistryPath(this.pathAdapter);
 			try {
+				if (!(await this.pathsMatchPlan(args.plan, [cp, registryPath]))) {
+					return removedPaths.length === 0
+						? {
+								planId: args.plan.planId,
+								outcome: 'aborted-drift',
+								removedPaths: [],
+								remainingRecordCount: recheck.affectedRecordCount,
+								errors: [],
+							}
+						: {
+								planId: args.plan.planId,
+								outcome: 'partial-failure',
+								removedPaths: [...new Set(removedPaths)],
+								remainingRecordCount: recheck.affectedRecordCount,
+								errors: [{ path: cp, message: 'deletion-plan-path-drift' }],
+							};
+				}
 				if (await this.fileAdapter.exists(cp)) {
 					await this.fileAdapter.remove(cp);
 					removedPaths.push(cp);
 				}
 				await this.registry.clear();
-				removedPaths.push(filesRegistryPath(this.pathAdapter));
+				removedPaths.push(registryPath);
 			} catch (error) {
 				errors.push({ path: cp, message: error instanceof Error ? error.message : String(error) });
 			}
@@ -252,6 +316,13 @@ export class DeletionService {
 			errors,
 		};
 	}
+}
+
+function fingerprintEntries(entries: Record<string, string>): string {
+	return Object.entries(entries)
+		.sort(([left], [right]) => left.localeCompare(right))
+		.map(([path, fingerprint]) => `${path}:${fingerprint}`)
+		.join('||');
 }
 
 /** Stable bounded content fingerprint for destructive-plan drift detection. */
