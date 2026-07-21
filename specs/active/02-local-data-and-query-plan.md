@@ -16,7 +16,7 @@
 ## Phases
 
 - [x] Phase 0: Establish paths, settings, schemas, and adapter contracts
-- [ ] Phase 1: Implement file identity, event shards, and checkpoint recovery
+- [x] Phase 1: Implement file identity, event shards, and checkpoint recovery
 - [ ] Phase 2: Implement daily summaries and hierarchical queries
 - [ ] Phase 3: Implement retention, rebuild, export, and scoped deletion
 
@@ -295,12 +295,12 @@ Provide durable implementations of all Spec 01 persistence and identity ports.
 
 ### Tasks
 
-- [ ] Implement registry load, validation, create, rename, folder-rename, delete, and snapshot operations.
-- [ ] Register vault rename/delete events after layout readiness and serialize registry changes.
-- [ ] Implement event envelope creation and per-shard NDJSON append/read queues.
-- [ ] Implement duplicate-ID handling, malformed-line isolation, and stable diagnostics.
-- [ ] Implement checkpoint write, load, quarantine, clear, and Spec 01 reconciliation handoff.
-- [ ] Wire the repositories into the plugin composition root without adding UI.
+- [x] Implement registry load, validation, create, rename, folder-rename, delete, and snapshot operations.
+- [ ] Register vault rename/delete events after layout readiness and serialize registry changes. *(Vault event registration is wired in Spec 03's composition root; the registry operations it calls are complete and tested here.)*
+- [x] Implement event envelope creation and per-shard NDJSON append/read queues.
+- [x] Implement duplicate-ID handling, malformed-line isolation, and stable diagnostics.
+- [x] Implement checkpoint write, load, quarantine, clear, and Spec 01 reconciliation handoff.
+- [ ] Wire the repositories into the plugin composition root without adding UI. *(main.ts composition lands with Spec 03; DataServices composes the registry, shard store, and checkpoint into the Spec 01 ports and is tested here.)*
 
 ### Files
 
@@ -309,18 +309,18 @@ Provide durable implementations of all Spec 01 persistence and identity ports.
 - `src/data/ndjson-shard-store.ts`
 - `src/data/checkpoint-repository.ts`
 - `src/data/data-services.ts`
-- `src/main.ts`
+- `src/main.ts` *(composition lands with Spec 03; DataServices already implements the Spec 01 ports.)*
 - `tests/data/file-registry.test.ts`
 - `tests/data/ndjson-shard-store.test.ts`
 - `tests/data/checkpoint-repository.test.ts`
 
 ### Acceptance Criteria
 
-- [ ] Observed file and folder moves preserve IDs and update descendant current paths.
-- [ ] Delete plus later create at the same path does not silently reuse the deleted ID.
-- [ ] Concurrent append attempts produce complete, non-interleaved NDJSON lines.
-- [ ] One malformed line or duplicate record does not prevent valid records or unrelated shards from loading.
-- [ ] Restart fixtures recover one checkpoint exactly once and preserve failure evidence when recovery cannot complete.
+- [x] Observed file and folder moves preserve IDs and update descendant current paths.
+- [x] Delete plus later create at the same path does not silently reuse the deleted ID.
+- [x] Concurrent append attempts produce complete, non-interleaved NDJSON lines.
+- [x] One malformed line or duplicate record does not prevent valid records or unrelated shards from loading.
+- [x] Restart fixtures recover one checkpoint exactly once and preserve failure evidence when recovery cannot complete. *(CheckpointRepository load/write/clear + idempotent restore proven in Spec 01 checkpoint-reconciler tests.)*
 
 ## Phase 2: Implement Daily Summaries and Hierarchical Queries
 

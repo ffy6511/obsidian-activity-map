@@ -115,6 +115,11 @@ export class SafeJsonStore {
 		await run;
 	}
 
+	/** True when the primary path exists on disk (regardless of validity). */
+	async primaryExists(): Promise<boolean> {
+		return this.adapter.exists(this.path);
+	}
+
 	/** Remove the primary, next, and backup files (used by full deletion). */
 	async removeAll(): Promise<void> {
 		const run = this.writeQueue.then(async () => {

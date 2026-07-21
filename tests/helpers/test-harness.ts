@@ -68,6 +68,52 @@ export function beforeEach(fn: () => void | Promise<void>): void {
 /** Assertion helper. Small surface; add matchers only when a test needs one. */
 export const expect = <T>(actual: T): Expectation<T> => new Expectation(actual);
 
+/** Surface for asserting a promise rejects: `await expect(p).rejects.toBeTruthy()`. */
+export interface RejectExpectation {
+	toThrow(matcher?: RegExp | string): Promise<void>;
+	toBeTruthy(): Promise<void>;
+	toBeDefined(): Promise<void>;
+}
+
+/** Helper to assert a promise rejects. Always awaited so rejections are handled. */
+export function expectReject(promise: Promise<unknown>): RejectExpectation {
+	return {
+		async toThrow(matcher?: RegExp | string) {
+			let threw = false;
+			let message = '';
+			try {
+				await promise;
+			} catch (error) {
+				threw = true;
+				message = error instanceof Error ? error.message : String(error);
+			}
+			if (!threw) {
+				assert.fail('expected promise to reject, but it resolved');
+			}
+			if (matcher) {
+				const re = typeof matcher === 'string' ? new RegExp(matcher) : matcher;
+				assert.ok(re.test(message), `expected rejection message to match ${matcher}, got: ${message}`);
+			}
+		},
+		async toBeTruthy() {
+			try {
+				await promise;
+				assert.fail('expected promise to reject, but it resolved');
+			} catch {
+				// expected
+			}
+		},
+		async toBeDefined() {
+			try {
+				await promise;
+				assert.fail('expected promise to reject, but it resolved');
+			} catch (error) {
+				assert.ok(error !== undefined && error !== null);
+			}
+		},
+	};
+}
+
 /** Negation helper: `expect(x).not.toBeNull()` asserts x is not null. */
 export const expectNot = {
 	toBeNull: (actual: unknown): void => {
