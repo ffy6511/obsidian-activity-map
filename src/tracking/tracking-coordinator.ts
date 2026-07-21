@@ -57,7 +57,7 @@ export interface WorkspaceSource {
 /** Source of trusted DOM activity events for one window. */
 export interface ActivityEventSource {
 	/** Register trusted keyboard/composition/pointer/wheel/touch/focus listeners. */
-	attachActivityListeners(onActivity: (event: { isTrusted?: boolean }) => void): () => void;
+	attachActivityListeners(onActivity: (event: { isTrusted?: boolean; type?: string }) => void): () => void;
 	/** Subscribe to window blur. */
 	onBlur(cb: () => void): () => void;
 }
@@ -83,9 +83,12 @@ export class TrackingCoordinator {
 	private started = false;
 	private stopped = false;
 	private lastSnapshot: TrackingSnapshot | null = null;
+	private restored = false;
+	private settings: ActivityMapSettings;
 
 	constructor(opts: TrackingCoordinatorOptions) {
 		this.opts = opts;
+		this.settings = opts.settings;
 		const callbacks = {
 			onEmit: (e: EngineEmissions) => {
 				// handleEmit enqueues onto the transition queue; the returned
@@ -128,7 +131,9 @@ export class TrackingCoordinator {
 			return;
 		}
 		this.started = true;
-		this.engine.submit({ kind: 'start', sample: this.opts.clock.now() });
+		if (!this.restored) {
+			this.engine.submit({ kind: 'start', sample: this.opts.clock.now() });
+		}
 		this.registerWorkspaceListeners();
 		// Resolve the initial leaf once after start.
 		void this.refreshTarget();
@@ -154,6 +159,7 @@ export class TrackingCoordinator {
 
 	/** Update settings; takes effect on the next transition. */
 	updateSettings(settings: ActivityMapSettings): void {
+		this.settings = settings;
 		this.engine.submit({
 			kind: 'settings',
 			sample: this.opts.clock.now(),
@@ -170,6 +176,11 @@ export class TrackingCoordinator {
 	resume(): void {
 		this.engine.submit({ kind: 'resume', sample: this.opts.clock.now() });
 		void this.refreshTarget();
+	}
+
+	/** Enter a safe degraded pause for a startup or persistence boundary error. */
+	degrade(reason: string): void {
+		this.engine.enterDegraded(reason, this.opts.clock.now());
 	}
 
 	/** Resolve a recovery candidate (user include/exclude intent). */
@@ -193,7 +204,12 @@ export class TrackingCoordinator {
 
 	/** Called by the host's idle timer; confirms elapsed inactivity. */
 	onIdleTimer(): void {
-		this.engine.submit({ kind: 'idle-confirm', sample: this.opts.clock.now() });
+		const sample = this.opts.clock.now();
+		const last = this.lastSnapshot?.lastTrustedActivityAt;
+		if (!last || sample.wallMs - Date.parse(last) < this.settings.idleThresholdMs) {
+			return;
+		}
+		this.engine.submit({ kind: 'idle-confirm', sample });
 		void this.refreshTarget();
 	}
 
@@ -231,6 +247,7 @@ export class TrackingCoordinator {
 		this.unsubs.push(
 			mainSource.attachActivityListeners((event) => {
 				if (isTrustedActivityEvent(event)) {
+					if (event.type === 'focus') void this.refreshTarget();
 					this.engine.submit({ kind: 'activity', sample: this.opts.clock.now() });
 				}
 			}),
@@ -247,6 +264,7 @@ export class TrackingCoordinator {
 		const source = this.opts.attachWindowEvents(winId);
 		const offActivity = source.attachActivityListeners((event) => {
 			if (isTrustedActivityEvent(event)) {
+				if (event.type === 'focus') void this.refreshTarget();
 				this.engine.submit({ kind: 'activity', sample: this.opts.clock.now() });
 			}
 		});
@@ -323,5 +341,6 @@ export class TrackingCoordinator {
 	/** Restore from a checkpoint at startup (applies the same rules as live). */
 	restore(checkpoint: RuntimeCheckpoint): void {
 		this.engine.restore(checkpoint, this.opts.clock.now());
+		this.restored = true;
 	}
 }

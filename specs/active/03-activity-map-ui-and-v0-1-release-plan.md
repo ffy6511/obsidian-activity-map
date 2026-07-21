@@ -15,7 +15,7 @@
 
 ## Phases
 
-- [ ] Phase 0: Compose services, settings, commands, and view state
+- [x] Phase 0: Compose services, settings, commands, and view state
 - [ ] Phase 1: Implement the full statistics view and native SVG chart
 - [ ] Phase 2: Implement file-header status and interactive summary popover
 - [ ] Phase 3: Implement SVG export and local data controls
@@ -212,11 +212,11 @@ Replace placeholder wiring with a lifecycle-safe composition root and presentati
 
 ### Tasks
 
-- [ ] Compose settings, data services, checkpoint reconciliation, tracking runtime, query service, and controller in deterministic startup order.
-- [ ] Implement immutable view state/model, query generation cancellation, warning mapping, and observers.
-- [ ] Preserve the existing Ribbon and command entry while adding pause/resume and date-navigation commands.
-- [ ] Implement the settings tab with validated save-before-apply behavior.
-- [ ] Stop UI intents and flush owned services in deterministic unload order without detaching user-positioned leaves.
+- [x] Compose settings, data services, checkpoint reconciliation, tracking runtime, query service, and controller in deterministic startup order.
+- [x] Implement immutable view state/model, query generation cancellation, warning mapping, and observers.
+- [x] Preserve the existing Ribbon and command entry while adding pause/resume and date-navigation commands.
+- [x] Implement the settings tab with validated save-before-apply behavior.
+- [x] Stop UI intents and flush owned services in deterministic unload order without detaching user-positioned leaves.
 
 ### Files
 
@@ -230,11 +230,11 @@ Replace placeholder wiring with a lifecycle-safe composition root and presentati
 
 ### Acceptance Criteria
 
-- [ ] Startup does not begin tracking before settings, registry, event store, and checkpoint reconciliation complete.
-- [ ] Slow stale query results cannot replace the latest path/range selection.
-- [ ] Failed setting saves do not change effective runtime behavior.
-- [ ] Commands and Ribbon reveal one existing Activity Map view when available.
-- [ ] Unload leaves no active listener, operation, or popover capable of mutating state.
+- [x] Startup does not begin tracking before settings, registry, event store, and checkpoint reconciliation complete.
+- [x] Slow stale query results cannot replace the latest path/range selection.
+- [x] Failed setting saves do not change effective runtime behavior.
+- [x] Commands and Ribbon reveal one existing Activity Map view when available.
+- [x] Unload leaves no active listener, operation, or popover capable of mutating state. *(Controller invalidates pending queries synchronously; coordinator rejects new transitions before asynchronous flush.)*
 
 ## Phase 1: Implement the Full Statistics View and Native SVG Chart
 

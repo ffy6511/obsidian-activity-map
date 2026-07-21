@@ -4,9 +4,9 @@ Activity Map is a local-first Obsidian plugin for measuring trustworthy activity
 
 ## Project Status
 
-The repository contains implemented tracking, local persistence, maintenance, and hierarchical query modules with deterministic automated tests. These services are not yet composed by the plugin entrypoint: the current installable build still registers only an Activity Map placeholder view, Ribbon action, and command. Charts, settings UI, SVG export, and real Obsidian acceptance remain in progress.
+The repository contains composed tracking, local persistence, maintenance, hierarchical queries, settings, commands, and an immutable presentation controller with deterministic automated tests. The current installable build records activity and maintains daily summaries, while its Activity Map view remains a bootstrap status surface. Charts, file-header UI, SVG export, data-control dialogs, and real Obsidian acceptance remain in progress.
 
-Do not use this foundation build as a time tracker. Follow the [Roadmap](specs/ROADMAP.md) for implementation and acceptance status.
+Treat this as a development build until the complete UI and real Obsidian journeys pass. Follow the [Roadmap](specs/ROADMAP.md) for release acceptance status.
 
 ## Product Direction
 
@@ -63,7 +63,7 @@ manifest.json
 styles.css
 ```
 
-Reload Obsidian, disable Restricted Mode if appropriate for the development vault, and enable Activity Map under Community plugins. The current build opens a truthful placeholder view while the implemented services await Spec 03 composition.
+Reload Obsidian, disable Restricted Mode if appropriate for the development vault, and enable Activity Map under Community plugins. The current build begins local tracking after settings and checkpoint recovery, and opens a bootstrap Activity Map status view.
 
 ## Repository Structure
 
@@ -80,7 +80,7 @@ Reload Obsidian, disable Restricted Mode if appropriate for the development vaul
 
 ## Privacy
 
-The planned product is local-only and will not include telemetry, accounts, or content upload. It will not store note text or typed strings. The current installable build does not collect or persist activity data because the implemented tracking and storage services are not yet wired into `src/main.ts`.
+The product is local-only and does not include telemetry, accounts, or content upload. It stores activity metadata and metrics in the plugin data directory without reading note text, selected text, or typed strings.
 
 ## License
 

@@ -22,6 +22,9 @@ function segment(fileId: string, localDate: string, activeMs: number): ClosedSes
 function decision(candidateId: string): RecoveryDecision {
 	return {
 		candidateId,
+		fileId: 'f1',
+		pathAtEvent: 'a.md',
+		intervalStartedAt: '2026-07-20T00:00:00.000Z',
 		kind: 'include',
 		deltaMs: 5_000,
 		reason: 'user-include',

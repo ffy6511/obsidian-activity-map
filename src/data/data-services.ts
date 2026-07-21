@@ -41,16 +41,20 @@ export class DataServices implements TrackingRecordSink, FileIdentityPort {
 		settings: ActivityMapSettings;
 		/** IANA time zone for deriving local dates from wall time. */
 		timeZone?: string;
+		/** Rebuild derived state after a durable shard append. */
+		onShardChanged?: (deviceId: string, localDate: string) => Promise<void>;
 	}) {
 		this.registry = args.registry;
 		this.pathAdapter = args.pathAdapter;
 		this.shardStore = new NdjsonShardStore(args.fileAdapter);
 		this.deviceId = args.settings.deviceId;
 		this.timeZone = args.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+		this.onShardChanged = args.onShardChanged;
 	}
 
 	private readonly registry: FileRegistry;
 	private readonly pathAdapter: PathAdapter;
+	private readonly onShardChanged: ((deviceId: string, localDate: string) => Promise<void>) | undefined;
 
 	/** Update the effective device id after a settings change. */
 	setDeviceId(deviceId: string): void {
@@ -73,36 +77,38 @@ export class DataServices implements TrackingRecordSink, FileIdentityPort {
 			);
 			const path = sessionShardPath(this.pathAdapter, this.deviceId, localDate);
 			await this.shardStore.append(path, envelopes);
+			await this.onShardChanged?.(this.deviceId, localDate);
 		}
 	}
 
 	async appendRecoveryDecision(decision: RecoveryDecision): Promise<void> {
-		// Adjustments are filed under the decision's local date. RecoveryDecision
-		// does not carry fileId/pathAtEvent; the engine stamps the source target
-		// onto the emitted segment, and adjustment envelopes use a neutral
-		// identity here. The candidateId remains the auditable link.
+		// Adjustments stay with the candidate's source file and event-time date;
+		// decision time can be on a later day after a prompt remained pending.
 		const localDate = localDateFor(
-			Date.parse(decision.decidedAt),
+			Date.parse(decision.intervalStartedAt),
 			this.timeZone,
 		);
 		const envelopes = [
 			buildAdjustmentEnvelope(
 				decision,
 				this.deviceId,
-				'unknown-file',
-				'unknown-path',
+				decision.fileId,
+				decision.pathAtEvent,
 				localDate,
 			),
 		];
 		const path = sessionShardPath(this.pathAdapter, this.deviceId, localDate);
 		await this.shardStore.append(path, envelopes);
+		await this.onShardChanged?.(this.deviceId, localDate);
 	}
 
 	// --- FileIdentityPort ----------------------------------------------
 
 	async resolve(file: { path: string }): Promise<{ fileId: string; currentPath: string }> {
 		const nowIso = new Date().toISOString();
-		return this.registry.resolve(file.path, nowIso);
+		const identity = await this.registry.resolve(file.path, nowIso);
+		await this.registry.save();
+		return identity;
 	}
 
 	/** Expose the shard store for query/rebuild/export services (Phase 2/3). */

@@ -1,81 +1,243 @@
-import { ItemView, Plugin, WorkspaceLeaf } from 'obsidian';
+import {
+	FileView,
+	ItemView,
+	Plugin,
+	TFolder,
+	type EventRef,
+	type TAbstractFile,
+	type WorkspaceLeaf,
+} from 'obsidian';
 
-const ACTIVITY_MAP_VIEW_TYPE = 'activity-map-view';
+import { SystemClock, localDateFor } from './platform/clock';
+import { ObsidianDataAdapter, ObsidianShardInventory } from './platform/obsidian-data-adapter';
+import { SettingsRepository } from './data/settings-repository';
+import { SafeJsonStore } from './data/safe-json-store';
+import { checkpointPath, filesRegistryPath } from './data/paths';
+import { FileRegistry } from './data/file-registry';
+import { CheckpointRepository } from './data/checkpoint-repository';
+import { DataServices } from './data/data-services';
+import { DailySummaryRepository } from './data/daily-summary-repository';
+import { ExclusionMatcher } from './data/exclusions';
+import { TrackingCoordinator, type ActivityEventSource, type WorkspaceSource } from './tracking/tracking-coordinator';
+import type { TrackingObserver } from './tracking/ports';
+import type { ResolvedLeaf } from './tracking/target-resolver';
+import { LocalQueryService } from './query/query-service';
+import { ActivityMapController } from './ui/activity-map-controller';
+import { ActivityMapSettingsTab } from './ui/settings-tab';
+import { registerActivityMapCommands } from './ui/commands';
 
-class ActivityMapView extends ItemView {
-	constructor(leaf: WorkspaceLeaf) {
+export const ACTIVITY_MAP_VIEW_TYPE = 'activity-map-view';
+
+class ActivityMapBootstrapView extends ItemView {
+	private unsubscribe: (() => void) | null = null;
+
+	constructor(leaf: WorkspaceLeaf, private readonly controller: ActivityMapController) {
 		super(leaf);
 	}
 
-	getViewType(): string {
-		return ACTIVITY_MAP_VIEW_TYPE;
-	}
-
-	getDisplayText(): string {
-		return 'Activity map';
-	}
-
-	getIcon(): string {
-		return 'chart-pie';
-	}
+	getViewType(): string { return ACTIVITY_MAP_VIEW_TYPE; }
+	getDisplayText(): string { return 'Activity map'; }
+	getIcon(): string { return 'chart-pie'; }
 
 	onOpen(): Promise<void> {
-		this.contentEl.empty();
 		this.contentEl.addClass('activity-map-view');
-
-		const emptyState = this.contentEl.createDiv({
-			cls: 'activity-map-empty-state',
+		this.unsubscribe = this.controller.subscribe((model) => {
+			this.contentEl.empty();
+			const state = this.contentEl.createDiv({ cls: 'activity-map-empty-state' });
+			state.createEl('h2', { text: 'Activity map' });
+			state.createEl('p', { text: `Services ready · ${model.loadState}` });
+			if (model.error) state.createEl('p', { text: model.error });
 		});
-		emptyState.createEl('h2', { text: 'Activity map' });
-		emptyState.createEl('p', {
-			text: 'The plugin foundation is ready. Activity tracking and charts are not implemented yet.',
-		});
-
+		void this.controller.dispatch({ kind: 'refresh' });
 		return Promise.resolve();
 	}
 
 	onClose(): Promise<void> {
+		this.unsubscribe?.();
+		this.unsubscribe = null;
 		this.contentEl.empty();
 		return Promise.resolve();
 	}
 }
 
 export default class ActivityMapPlugin extends Plugin {
-	onload(): void {
-		this.registerView(
-			ACTIVITY_MAP_VIEW_TYPE,
-			(leaf) => new ActivityMapView(leaf),
-		);
+	private controller: ActivityMapController | null = null;
+	private coordinator: TrackingCoordinator | null = null;
+	private readonly windowById = new Map<string, Window>();
+	private readonly leafIds = new WeakMap<WorkspaceLeaf, string>();
+	private nextLeafId = 1;
+	private nextWindowId = 1;
 
-		this.addRibbonIcon('chart-pie', 'Open activity map', () => {
-			void this.activateView();
-		});
+	async onload(): Promise<void> {
+		const clock = new SystemClock();
+		const adapter = new ObsidianDataAdapter(this.app.vault.adapter, this.manifest, this.app.vault.configDir);
+		const settingsRepository = new SettingsRepository(this);
+		let settings = (await settingsRepository.load()).settings;
+		let exclusions = new ExclusionMatcher(adapter, settings.excludedPathGlobs);
 
-		this.addCommand({
-			id: 'open-view',
-			name: 'Open view',
-			callback: () => {
-				void this.activateView();
+		const registry = await FileRegistry.load(new SafeJsonStore(adapter, filesRegistryPath(adapter)));
+		const checkpoint = new CheckpointRepository(new SafeJsonStore(adapter, checkpointPath(adapter)));
+		const inventory = new ObsidianShardInventory(adapter);
+		const observers: TrackingObserver[] = [];
+		const summariesHolder: { value: DailySummaryRepository | null } = { value: null };
+		const dataServices = new DataServices({
+			registry,
+			fileAdapter: adapter,
+			pathAdapter: adapter,
+			settings,
+			onShardChanged: async (deviceId, localDate) => {
+				const repository = summariesHolder.value;
+				if (!repository) return;
+				const rebuilt = await repository.rebuild({ deviceId, localDate, nowIso: new Date().toISOString() });
+				if (!rebuilt.rawUnavailable) await repository.save({ deviceId, localDate, summary: rebuilt.summary });
 			},
 		});
+		const summaries = new DailySummaryRepository({ shardStore: dataServices.getShardStore(), pathAdapter: adapter, fileAdapter: adapter });
+		summariesHolder.value = summaries;
+
+		this.windowById.set('main', window);
+		const workspaceSource = this.createWorkspaceSource();
+		const coordinator = new TrackingCoordinator({
+			settings,
+			clock,
+			sink: dataServices,
+			checkpoint,
+			identity: dataServices,
+			isExcluded: (path) => exclusions.isExcluded(path),
+			workspace: workspaceSource,
+			attachWindowEvents: (windowId) => this.createActivityEventSource(windowId),
+			observers,
+		});
+		this.coordinator = coordinator;
+		const queryService = new LocalQueryService(inventory, summaries, registry, () => settings);
+		const controller = new ActivityMapController(
+			settings,
+			queryService,
+			{
+				update: async (patch) => {
+					const persisted = await settingsRepository.update(patch);
+					settings = persisted;
+					exclusions = new ExclusionMatcher(adapter, persisted.excludedPathGlobs);
+					dataServices.setDeviceId(persisted.deviceId);
+					return persisted;
+				},
+			},
+			coordinator,
+			localDateFor(Date.now(), Intl.DateTimeFormat().resolvedOptions().timeZone),
+		);
+		observers.push(controller);
+		this.controller = controller;
+
+		const loadedCheckpoint = await checkpoint.load();
+		if (loadedCheckpoint.checkpoint) coordinator.restore(loadedCheckpoint.checkpoint);
+		if (loadedCheckpoint.quarantined) coordinator.degrade(loadedCheckpoint.reason ?? 'checkpoint-quarantined');
+		this.registerView(ACTIVITY_MAP_VIEW_TYPE, (leaf) => new ActivityMapBootstrapView(leaf, controller));
+		this.addRibbonIcon('chart-pie', 'Open activity map', () => void this.activateView());
+		registerActivityMapCommands(this, controller, () => this.activateView());
+		this.addSettingTab(new ActivityMapSettingsTab(this.app, this, controller));
+		this.registerVaultIdentityEvents(registry);
+		this.registerPopoutEvents(coordinator);
+
+		const heartbeatMs = 30_000;
+		this.registerInterval(window.setInterval(() => coordinator.onHeartbeat(heartbeatMs), heartbeatMs));
+		this.registerInterval(window.setInterval(() => coordinator.onIdleTimer(), Math.min(30_000, settings.idleThresholdMs)));
+		coordinator.start();
+	}
+
+	onunload(): void {
+		this.controller?.stop();
+		void this.coordinator?.stop();
+		this.windowById.clear();
 	}
 
 	private async activateView(): Promise<void> {
-		let leaf = this.app.workspace.getLeavesOfType(
-			ACTIVITY_MAP_VIEW_TYPE,
-		)[0];
-
+		let leaf = this.app.workspace.getLeavesOfType(ACTIVITY_MAP_VIEW_TYPE)[0];
 		if (!leaf) {
-			leaf =
-				this.app.workspace.getRightLeaf(false) ??
-				this.app.workspace.getLeaf(true);
-
-			await leaf.setViewState({
-				type: ACTIVITY_MAP_VIEW_TYPE,
-				active: true,
-			});
+			leaf = this.app.workspace.getRightLeaf(false) ?? this.app.workspace.getLeaf(true);
+			await leaf.setViewState({ type: ACTIVITY_MAP_VIEW_TYPE, active: true });
 		}
-
 		await this.app.workspace.revealLeaf(leaf);
+	}
+
+	private createWorkspaceSource(): WorkspaceSource {
+		const workspace = this.app.workspace;
+		const subscribe = (ref: EventRef): (() => void) => () => workspace.offref(ref);
+		return {
+			getActiveLeaf: () => this.resolveLeaf(workspace.getMostRecentLeaf()),
+			onActiveLeafChange: (callback) => subscribe(workspace.on('active-leaf-change', callback)),
+			onFileOpen: (callback) => subscribe(workspace.on('file-open', () => {
+				const leaf = this.resolveLeaf(workspace.getMostRecentLeaf());
+				if (leaf) callback(leaf);
+			})),
+			onEditorChange: (callback) => subscribe(workspace.on('editor-change', callback)),
+		};
+	}
+
+	private resolveLeaf(leaf: WorkspaceLeaf | null): ResolvedLeaf | null {
+		if (!leaf) return null;
+		let leafId = this.leafIds.get(leaf);
+		if (!leafId) {
+			leafId = `leaf-${this.nextLeafId++}`;
+			this.leafIds.set(leaf, leafId);
+		}
+		const win = leaf.getContainer().win;
+		let windowId = [...this.windowById].find(([, candidate]) => candidate === win)?.[0];
+		if (!windowId) {
+			windowId = `window-${this.nextWindowId++}`;
+			this.windowById.set(windowId, win);
+		}
+		const file = leaf.view instanceof FileView ? leaf.view.file : null;
+		return { leafId, windowId, file: file ? { path: file.path } : null };
+	}
+
+	private createActivityEventSource(windowId: string): ActivityEventSource {
+		const win = this.windowById.get(windowId) ?? window;
+		return {
+			attachActivityListeners: (callback) => {
+				const events = ['keydown', 'compositionend', 'pointerdown', 'pointermove', 'wheel', 'touchstart', 'focus'] as const;
+				const handler = (event: Event) => callback(event);
+				for (const event of events) win.addEventListener(event, handler, { capture: true, passive: true });
+				return () => {
+					for (const event of events) win.removeEventListener(event, handler, { capture: true });
+				};
+			},
+			onBlur: (callback) => {
+				win.addEventListener('blur', callback);
+				return () => win.removeEventListener('blur', callback);
+			},
+		};
+	}
+
+	private registerPopoutEvents(coordinator: TrackingCoordinator): void {
+		const unsubs = new WeakMap<Window, () => void>();
+		this.registerEvent(this.app.workspace.on('window-open', (_workspaceWindow, win) => {
+			const id = `window-${this.nextWindowId++}`;
+			this.windowById.set(id, win);
+			unsubs.set(win, coordinator.registerWindow(id));
+		}));
+		this.registerEvent(this.app.workspace.on('window-close', (_workspaceWindow, win) => {
+			unsubs.get(win)?.();
+			for (const [id, candidate] of this.windowById) if (candidate === win) this.windowById.delete(id);
+		}));
+	}
+
+	private registerVaultIdentityEvents(registry: FileRegistry): void {
+		this.app.workspace.onLayoutReady(() => {
+			this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
+				void (file instanceof TFolder ? registry.renameFolder(oldPath, file.path) : registry.rename(oldPath, file.path));
+			}));
+			this.registerEvent(this.app.vault.on('delete', (file) => void this.markDeleted(registry, file)));
+		});
+	}
+
+	private async markDeleted(registry: FileRegistry, file: TAbstractFile): Promise<void> {
+		if (!(file instanceof TFolder)) {
+			await registry.delete(file.path);
+			return;
+		}
+		const prefix = `${file.path}/`;
+		for (const path of Object.keys(registry.snapshot().pathIndex)) {
+			if (path === file.path || path.startsWith(prefix)) await registry.delete(path);
+		}
 	}
 }

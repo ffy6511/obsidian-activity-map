@@ -296,11 +296,11 @@ Provide durable implementations of all Spec 01 persistence and identity ports.
 ### Tasks
 
 - [x] Implement registry load, validation, create, rename, folder-rename, delete, and snapshot operations.
-- [ ] Register vault rename/delete events after layout readiness and serialize registry changes. *(Vault event registration is wired in Spec 03's composition root; the registry operations it calls are complete and tested here.)*
+- [x] Register vault rename/delete events after layout readiness and serialize registry changes. *(Spec 03's composition root now wires file and folder rename/delete events to the serialized registry.)*
 - [x] Implement event envelope creation and per-shard NDJSON append/read queues.
 - [x] Implement duplicate-ID handling, malformed-line isolation, and stable diagnostics.
 - [x] Implement checkpoint write, load, quarantine, clear, and Spec 01 reconciliation handoff.
-- [ ] Wire the repositories into the plugin composition root without adding UI. *(main.ts composition lands with Spec 03; DataServices composes the registry, shard store, and checkpoint into the Spec 01 ports and is tested here.)*
+- [x] Wire the repositories into the plugin composition root without adding UI. *(Spec 03 Phase 0 now composes settings, registry, shards, checkpoint recovery, summary refresh, queries, and tracking in startup order.)*
 
 ### Files
 
@@ -404,4 +404,4 @@ Complete the backend for local data ownership without exposing destructive opera
 
 ## Evaluation Record
 
-Implementation is complete except for the composition-root tasks explicitly owned by Spec 03 Phase 0. Per owner direction, independent evaluation is deferred to one joint Specs 01–03 review after the complete `v0.1` vertical slice is implemented; this Spec remains `in-progress` until that review begins.
+Implementation and technical gates are complete. Per owner direction, independent evaluation is deferred to one joint Specs 01–03 review after the complete `v0.1` vertical slice is implemented; this Spec remains `in-progress` until that review begins.

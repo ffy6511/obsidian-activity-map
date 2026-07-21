@@ -1,0 +1,77 @@
+import { describe, expect, expectReject, it } from '../helpers/test-harness';
+
+import { ActivityMapController, type QueryService, type TrackingControl } from '../../src/ui/activity-map-controller';
+import { normalizeSettings } from '../../src/domain/settings';
+import type { DistributionQuery, DistributionResult } from '../../src/query/distribution-query';
+
+function result(query: DistributionQuery, value: number): DistributionResult {
+	return {
+		query,
+		scopeTotal: value,
+		vaultTotal: value,
+		percentOfVault: value > 0 ? 1 : 0,
+		denominatorDays: null,
+		coverage: null,
+		chartItems: value > 0 ? [{ id: 'x', kind: 'file', label: 'x.md', path: 'x.md', value, percentOfScope: 1, memberIds: ['x'] }] : [],
+		detailItems: value > 0 ? [{ id: 'x', kind: 'file', label: 'x.md', path: 'x.md', value, percentOfScope: 1, memberIds: ['x'] }] : [],
+		warnings: [],
+	};
+}
+
+function tracking(): TrackingControl & { updates: number; pauses: number; resumes: number } {
+	return {
+		updates: 0,
+		pauses: 0,
+		resumes: 0,
+		pause() { this.pauses += 1; },
+		resume() { this.resumes += 1; },
+		updateSettings() { this.updates += 1; },
+		async resolveRecovery() { return null; },
+	};
+}
+
+describe('activity map controller', () => {
+	it('ignores a stale slow query after a newer navigation resolves', async () => {
+		const pending: Array<{ query: DistributionQuery; resolve: (value: DistributionResult) => void }> = [];
+		const service: QueryService = {
+			run(query) {
+				return new Promise((resolve) => pending.push({ query, resolve }));
+			},
+		};
+		const settings = normalizeSettings({ deviceId: 'd1' });
+		const controller = new ActivityMapController(settings, service, { update: async () => settings }, tracking(), '2026-07-21');
+		const first = controller.dispatch({ kind: 'refresh' });
+		const second = controller.dispatch({ kind: 'set-path', path: 'projects' });
+		pending[1]?.resolve(result(pending[1].query, 20));
+		await second;
+		pending[0]?.resolve(result(pending[0].query, 10));
+		await first;
+		expect(controller.getViewModel().query.path).toBe('projects');
+		expect(controller.getViewModel().distribution?.scopeTotal).toBe(20);
+	});
+
+	it('applies settings to tracking only after persistence succeeds', async () => {
+		const settings = normalizeSettings({ deviceId: 'd1' });
+		const runtime = tracking();
+		const controller = new ActivityMapController(
+			settings,
+			{ run: async (query) => result(query, 0) },
+			{ update: async () => { throw new Error('save-failed'); } },
+			runtime,
+			'2026-07-21',
+		);
+		await expectReject(controller.dispatch({ kind: 'update-settings', patch: { idleThresholdMs: 60_000 } })).toThrow('save-failed');
+		expect(runtime.updates).toBe(0);
+		expect(controller.getViewModel().settings.idleThresholdMs).toBe(180_000);
+	});
+
+	it('routes pause and resume through one tracking control', async () => {
+		const settings = normalizeSettings({ deviceId: 'd1' });
+		const runtime = tracking();
+		const controller = new ActivityMapController(settings, { run: async (query) => result(query, 0) }, { update: async () => settings }, runtime, '2026-07-21');
+		await controller.dispatch({ kind: 'pause' });
+		await controller.dispatch({ kind: 'resume' });
+		expect(runtime.pauses).toBe(1);
+		expect(runtime.resumes).toBe(1);
+	});
+});

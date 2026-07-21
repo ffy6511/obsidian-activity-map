@@ -27,6 +27,17 @@ export interface Clock {
 	now(): ClockSample;
 }
 
+/** Production wall/monotonic clock backed by standard Web APIs. */
+export class SystemClock implements Clock {
+	now(): ClockSample {
+		return {
+			wallMs: Date.now(),
+			monotonicMs: performance.now(),
+			timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+		};
+	}
+}
+
 /**
  * Elapsed time between two monotonic samples. Negative or non-finite deltas are
  * rejected by callers (the engine reports them without increasing metrics), so

@@ -81,6 +81,10 @@ export type RecoveryDecisionKind = 'include' | 'exclude';
  */
 export interface RecoveryDecision {
 	candidateId: string;
+	/** Source identity is retained so the adjustment never becomes unattributed. */
+	fileId: string;
+	pathAtEvent: string;
+	intervalStartedAt: string;
 	kind: RecoveryDecisionKind;
 	deltaMs: number;
 	reason: string;

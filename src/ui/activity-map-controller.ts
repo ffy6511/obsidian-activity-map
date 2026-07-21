@@ -1,0 +1,142 @@
+import type { TrackingSnapshot } from '../domain/activity';
+import type { ActivityMapSettings } from '../domain/settings';
+import type { TrackingObserver } from '../tracking/ports';
+import type { DistributionQuery, DistributionResult } from '../query/distribution-query';
+import type { MetricKey } from '../query/path-projection';
+import type { RangeMode } from '../query/date-range';
+import { initialViewModel, type ActivityMapViewModel } from './view-model';
+
+export interface QueryService {
+	run(query: DistributionQuery): Promise<DistributionResult>;
+}
+
+export interface SettingsService {
+	update(patch: Partial<ActivityMapSettings>): Promise<ActivityMapSettings>;
+}
+
+export interface TrackingControl {
+	pause(reason?: string): void;
+	resume(): void;
+	updateSettings(settings: ActivityMapSettings): void;
+	resolveRecovery(args: { candidateId: string; kind: 'include' | 'exclude' }): Promise<unknown>;
+}
+
+export type ActivityMapIntent =
+	| { kind: 'refresh' }
+	| { kind: 'set-range'; range: RangeMode }
+	| { kind: 'set-path'; path: string; view?: 'children' | 'local-files' }
+	| { kind: 'set-metric'; metric: MetricKey }
+	| { kind: 'pause' }
+	| { kind: 'resume' }
+	| { kind: 'resolve-recovery'; candidateId: string; decision: 'include' | 'exclude' }
+	| { kind: 'update-settings'; patch: Partial<ActivityMapSettings> };
+
+/** Serializes UI intent effects and rejects stale query generations. */
+export class ActivityMapController implements TrackingObserver {
+	private model: ActivityMapViewModel;
+	private readonly listeners = new Set<(model: ActivityMapViewModel) => void>();
+	private generation = 0;
+	private stopped = false;
+
+	constructor(
+		settings: ActivityMapSettings,
+		private readonly queryService: QueryService,
+		private readonly settingsService: SettingsService,
+		private readonly tracking: TrackingControl,
+		today: string,
+	) {
+		this.model = initialViewModel(settings, today);
+	}
+
+	getViewModel(): ActivityMapViewModel {
+		return this.model;
+	}
+
+	subscribe(listener: (model: ActivityMapViewModel) => void): () => void {
+		if (this.stopped) return () => {};
+		this.listeners.add(listener);
+		listener(this.model);
+		return () => this.listeners.delete(listener);
+	}
+
+	onSnapshot(snapshot: TrackingSnapshot): void {
+		if (this.stopped) return;
+		this.publish({ ...this.model, tracking: snapshot });
+	}
+
+	async dispatch(intent: ActivityMapIntent): Promise<void> {
+		if (this.stopped) return;
+		switch (intent.kind) {
+			case 'pause':
+				this.tracking.pause('user');
+				return;
+			case 'resume':
+				this.tracking.resume();
+				return;
+			case 'resolve-recovery':
+				await this.tracking.resolveRecovery({ candidateId: intent.candidateId, kind: intent.decision });
+				return;
+			case 'update-settings': {
+				// Persistence is the commit point. Runtime behavior changes only after
+				// the repository confirms the new settings are durable.
+				const settings = await this.settingsService.update(intent.patch);
+				this.tracking.updateSettings(settings);
+				this.publish({ ...this.model, settings });
+				await this.refresh();
+				return;
+			}
+			case 'set-range':
+				this.model = { ...this.model, query: { ...this.model.query, range: intent.range } };
+				break;
+			case 'set-path':
+				this.model = {
+					...this.model,
+					query: { ...this.model.query, path: intent.path, view: intent.view ?? 'children' },
+				};
+				break;
+			case 'set-metric':
+				this.model = { ...this.model, query: { ...this.model.query, metric: intent.metric } };
+				break;
+			case 'refresh':
+				break;
+		}
+		await this.refresh();
+	}
+
+	stop(): void {
+		this.stopped = true;
+		this.generation += 1;
+		this.listeners.clear();
+	}
+
+	private async refresh(): Promise<void> {
+		const generation = ++this.generation;
+		const query = this.model.query;
+		this.publish({ ...this.model, loadState: 'loading', error: null, queryGeneration: generation });
+		try {
+			const distribution = await this.queryService.run(query);
+			if (this.stopped || generation !== this.generation) return;
+			this.publish({
+				...this.model,
+				loadState: distribution.detailItems.length === 0 ? 'empty' : 'ready',
+				distribution,
+				warnings: distribution.warnings.map((warning) => warning.message),
+				error: null,
+				queryGeneration: generation,
+			});
+		} catch (error) {
+			if (this.stopped || generation !== this.generation) return;
+			this.publish({
+				...this.model,
+				loadState: 'error',
+				error: error instanceof Error ? error.message : String(error),
+				queryGeneration: generation,
+			});
+		}
+	}
+
+	private publish(model: ActivityMapViewModel): void {
+		this.model = model;
+		for (const listener of this.listeners) listener(model);
+	}
+}

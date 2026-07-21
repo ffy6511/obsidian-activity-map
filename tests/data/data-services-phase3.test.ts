@@ -28,7 +28,7 @@ function segment(fileId: string, path: string, localDate: string, activeMs: numb
 }
 
 function decision(candidateId: string, decidedAt: string): RecoveryDecision {
-	return { candidateId, kind: 'include', deltaMs: 5_000, reason: 'user-include', decidedAt, automatic: false };
+	return { candidateId, fileId: 'f1', pathAtEvent: 'a.md', intervalStartedAt: decidedAt, kind: 'include', deltaMs: 5_000, reason: 'user-include', decidedAt, automatic: false };
 }
 
 /** Fake inventory that returns whatever (deviceId, localDate) pairs it's given. */

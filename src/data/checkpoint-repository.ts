@@ -31,7 +31,12 @@ export class CheckpointRepository implements TrackingCheckpointPort {
 			validateCheckpoint(raw),
 		);
 		if (!result.value) {
-			return { checkpoint: null, quarantined: false };
+			const exists = await this.store.primaryExists();
+			return {
+				checkpoint: null,
+				quarantined: exists,
+				reason: exists ? 'checkpoint-invalid-or-unsupported' : undefined,
+			};
 		}
 		return { checkpoint: result.value, quarantined: false };
 	}

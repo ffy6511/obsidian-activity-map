@@ -117,6 +117,9 @@ export class RecoveryQueue {
 		});
 		const decision: RecoveryDecision = {
 			candidateId: args.candidateId,
+			fileId: candidate.fileId,
+			pathAtEvent: candidate.pathAtEvent,
+			intervalStartedAt: candidate.startedAt,
 			kind: 'exclude',
 			deltaMs: 0,
 			reason: 'auto-exclude-long-or-sleep',
@@ -245,6 +248,9 @@ export class RecoveryQueue {
 		const deltaMs = kind === 'include' ? entry.candidate.gapMs : 0;
 		const decision: RecoveryDecision = {
 			candidateId,
+			fileId: entry.candidate.fileId,
+			pathAtEvent: entry.candidate.pathAtEvent,
+			intervalStartedAt: entry.candidate.startedAt,
 			kind,
 			deltaMs,
 			reason: kind === 'include' ? 'user-include' : 'user-exclude',
