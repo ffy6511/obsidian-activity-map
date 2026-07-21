@@ -1,42 +1,141 @@
+import type { TrackingSnapshot } from '../domain/activity';
+import type { DistributionItem, DistributionResult } from '../query/distribution-query';
+import { buildChartModel } from './components/donut-chart';
+import { liveTodayMs } from './live-today';
+
+export interface HeaderDonutSlice {
+	id: string;
+	ratio: number;
+	color: string;
+}
+
 /** Minimal surface used by the header manager and deterministic tests. */
 export interface HeaderMiniDonutPort {
-	update(ratio: number): void;
+	update(slices: readonly HeaderDonutSlice[]): void;
 }
 
 /**
- * A permanently mounted header donut. Runtime status never replaces these
- * nodes; only a changed, bounded data ratio updates the foreground arc.
+ * A permanently mounted miniature of today's vault-root distribution. Slice
+ * circles are reconciled by stable item ID, so status snapshots never replace
+ * the SVG and unchanged items retain their DOM identity.
  */
 export class HeaderMiniDonut implements HeaderMiniDonutPort {
-	private readonly value: SVGCircleElement;
-	private ratio = Number.NaN;
+	private readonly svg: SVGSVGElement;
+	private readonly nodes = new Map<string, SVGCircleElement>();
+	private signature = '';
 
 	constructor(host: HTMLElement) {
 		host.empty();
-		const svg = host.createSvg('svg');
-		svg.setAttribute('class', 'activity-map-header-donut');
-		svg.setAttribute('viewBox', '0 0 20 20');
-		svg.setAttribute('aria-hidden', 'true');
-		const track = svg.createSvg('circle');
+		this.svg = host.createSvg('svg');
+		this.svg.setAttribute('class', 'activity-map-header-donut');
+		this.svg.setAttribute('viewBox', '0 0 20 20');
+		this.svg.setAttribute('aria-hidden', 'true');
+		const track = this.svg.createSvg('circle');
 		track.setAttribute('class', 'activity-map-header-donut-track');
 		track.setAttribute('cx', '10');
 		track.setAttribute('cy', '10');
 		track.setAttribute('r', '7');
-		this.value = svg.createSvg('circle');
-		this.value.setAttribute('class', 'activity-map-header-donut-value');
-		this.value.setAttribute('cx', '10');
-		this.value.setAttribute('cy', '10');
-		this.value.setAttribute('r', '7');
-		this.value.setAttribute('pathLength', '1');
-		this.update(0);
+		track.setAttribute('pathLength', '1');
 	}
 
-	update(ratio: number): void {
-		const bounded = Number.isFinite(ratio) ? Math.max(0, Math.min(1, ratio)) : 0;
-		const rounded = Math.round(bounded * 10_000) / 10_000;
-		if (rounded === this.ratio) return;
-		this.ratio = rounded;
-		this.value.style.strokeDasharray = `${String(rounded)} 1`;
-		this.value.setAttribute('data-activity-map-ratio', String(rounded));
+	update(slices: readonly HeaderDonutSlice[]): void {
+		const normalized = normalizeSlices(slices);
+		const signature = normalized.map((slice) => `${slice.id}:${slice.ratio}:${slice.color}`).join('|');
+		if (signature === this.signature) return;
+		this.signature = signature;
+
+		const liveIds = new Set(normalized.map((slice) => slice.id));
+		for (const [id, node] of this.nodes) {
+			if (liveIds.has(id)) continue;
+			node.remove();
+			this.nodes.delete(id);
+		}
+
+		let cursor = 0;
+		for (const slice of normalized) {
+			let node = this.nodes.get(slice.id);
+			if (!node) {
+				node = this.svg.createSvg('circle');
+				node.setAttribute('class', 'activity-map-header-donut-slice');
+				node.setAttribute('cx', '10');
+				node.setAttribute('cy', '10');
+				node.setAttribute('r', '7');
+				node.setAttribute('pathLength', '1');
+				node.setAttribute('data-activity-map-slice', slice.id);
+				this.nodes.set(slice.id, node);
+			}
+			node.setAttribute('stroke', slice.color);
+			node.setAttribute('stroke-dasharray', `${String(slice.ratio)} ${String(1 - slice.ratio)}`);
+			node.setAttribute('stroke-dashoffset', String(-cursor));
+			cursor += slice.ratio;
+			this.svg.appendChild(node);
+		}
 	}
+}
+
+/** Builds the same stable-color distribution used by the full donut. */
+export function headerDonutSlices(
+	distribution: DistributionResult | null,
+	snapshot: TrackingSnapshot | null,
+): HeaderDonutSlice[] {
+	if (!distribution) return [];
+	const withLive = addLiveActivity(distribution, snapshot);
+	const model = buildChartModel(withLive);
+	if (model.total <= 0) return [];
+	return model.items.map((item) => ({
+		id: item.id,
+		ratio: item.value / model.total,
+		color: item.color,
+	}));
+}
+
+function addLiveActivity(distribution: DistributionResult, snapshot: TrackingSnapshot | null): DistributionResult {
+	const liveMs = liveTodayMs(snapshot);
+	const target = snapshot?.currentTarget;
+	if (liveMs <= 0 || !target) return distribution;
+
+	const detailItems = distribution.detailItems.map((item) => ({ ...item, memberIds: [...item.memberIds] }));
+	const chartItems = distribution.chartItems.map((item) => ({ ...item, memberIds: [...item.memberIds] }));
+	addToOwningItem(detailItems, target.fileId, target.path, liveMs);
+	addToOwningItem(chartItems, target.fileId, target.path, liveMs);
+	const scopeTotal = distribution.scopeTotal + liveMs;
+	const vaultTotal = distribution.vaultTotal + liveMs;
+	for (const item of [...detailItems, ...chartItems]) item.percentOfScope = scopeTotal > 0 ? item.value / scopeTotal : 0;
+	return {
+		...distribution,
+		scopeTotal,
+		vaultTotal,
+		percentOfVault: vaultTotal > 0 ? scopeTotal / vaultTotal : 0,
+		detailItems,
+		chartItems,
+	};
+}
+
+function addToOwningItem(items: DistributionItem[], fileId: string, path: string, value: number): void {
+	const existing = items.find((item) => item.memberIds.includes(fileId));
+	if (existing) {
+		existing.value += value;
+		return;
+	}
+	const [root, ...rest] = path.split('/').filter(Boolean);
+	if (!root) return;
+	items.push({
+		id: rest.length > 0 ? `dir:${root}` : `file:${fileId}`,
+		kind: rest.length > 0 ? 'directory' : 'file',
+		label: root,
+		path: root,
+		value,
+		percentOfScope: 0,
+		memberIds: [fileId],
+	});
+}
+
+function normalizeSlices(slices: readonly HeaderDonutSlice[]): HeaderDonutSlice[] {
+	const valid = slices.filter((slice) => Number.isFinite(slice.ratio) && slice.ratio > 0);
+	const total = valid.reduce((sum, slice) => sum + slice.ratio, 0);
+	if (total <= 0) return [];
+	return valid.map((slice) => ({
+		...slice,
+		ratio: Math.round((slice.ratio / total) * 10_000) / 10_000,
+	}));
 }

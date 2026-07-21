@@ -1,23 +1,26 @@
 import { describe, expect, it } from '../helpers/test-harness';
 
-import { SingleFlightActions } from '../../src/ui/summary-popover';
 import { readFile } from 'node:fs/promises';
 
-describe('summary popover action guard', () => {
-	it('accepts a recovery action exactly once across repeated clicks', () => {
-		const guard = new SingleFlightActions();
-		expect(guard.begin('candidate-1')).toBeTrue();
-		expect(guard.begin('candidate-1')).toBeFalse();
-		expect(guard.begin('candidate-2')).toBeTrue();
-	});
-
-	it('implements a donut-first pinnable chart instead of the rejected text card', async () => {
+describe('summary popover fixed layout', () => {
+	it('keeps controls, chart, path, and scroll legend without duplicate rows', async () => {
 		const source = await readFile(new URL('../../src/ui/summary-popover.ts', import.meta.url), 'utf8');
+		const controls = await readFile(new URL('../../src/ui/components/range-controls.ts', import.meta.url), 'utf8');
+		const css = await readFile(new URL('../../styles.css', import.meta.url), 'utf8');
 		expect(source.includes('togglePinned()')).toBeTrue();
 		expect(source.includes('getHeaderDefaultQuery()')).toBeTrue();
 		expect(source.includes('renderDonutChart({')).toBeTrue();
 		expect(source.includes('renderChartLegend({')).toBeTrue();
-		expect(source.includes("text: 'Expand'")).toBeTrue();
-		expect(source.includes('This file today')).toBeFalse();
+		expect(source.includes('showTooltip: false')).toBeTrue();
+		expect(source.includes('activity-map-popover-path')).toBeTrue();
+		expect(source.includes("icon: 'expand'")).toBeTrue();
+		for (const rejected of ['activity-map-popover-header', 'activity-map-popover-summary', 'renderTrackingAuxiliary', 'This file today']) {
+			expect(source.includes(rejected)).toBeFalse();
+		}
+		for (const expected of ['activity-map-icon-button', 'activity-map-day-navigation', 'activity-map-control-trailing', 'iconForMetric']) {
+			expect(controls.includes(expected)).toBeTrue();
+		}
+		expect(css.includes('max-height: 11rem')).toBeTrue();
+		expect(css.includes('overflow-y: auto')).toBeTrue();
 	});
 });

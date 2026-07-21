@@ -83,6 +83,11 @@ export class ActivityMapController implements TrackingObserver {
 		};
 	}
 
+	/** Dedicated data read for the persistent header miniature. */
+	getHeaderDistribution(): Promise<DistributionResult> {
+		return this.queryService.run(this.getHeaderDefaultQuery());
+	}
+
 	subscribe(listener: (model: ActivityMapViewModel) => void): () => void {
 		if (this.stopped) return () => {};
 		this.listeners.add(listener);

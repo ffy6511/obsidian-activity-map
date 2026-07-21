@@ -26,16 +26,71 @@
 }
 
 .activity-map-controls {
-	display: grid;
-	grid-template-columns: repeat(3, minmax(0, auto));
+	display: flex;
+	flex-wrap: wrap;
 	gap: var(--size-4-2);
 	align-items: center;
 	margin-bottom: var(--size-4-3);
 }
 
-.activity-map-controls select,
-.activity-map-controls input {
+.activity-map-controls select {
 	min-width: 0;
+}
+
+.activity-map-metric-control {
+	position: relative;
+	display: flex;
+	align-items: center;
+	min-width: 7rem;
+}
+
+.activity-map-metric-control select {
+	width: 100%;
+	padding-inline-start: calc(var(--size-4-6) + var(--size-2-1));
+}
+
+.activity-map-control-icon {
+	position: absolute;
+	inset-inline-start: var(--size-4-2);
+	z-index: 1;
+	display: inline-flex;
+	pointer-events: none;
+}
+
+.activity-map-control-icon svg,
+.activity-map-icon-button svg {
+	width: var(--icon-s);
+	height: var(--icon-s);
+}
+
+.activity-map-range-mode {
+	min-width: 8rem;
+}
+
+.activity-map-day-navigation {
+	position: relative;
+	display: inline-flex;
+	gap: var(--size-2-1);
+}
+
+.activity-map-icon-button {
+	flex: 0 0 var(--input-height);
+	width: var(--input-height);
+	height: var(--input-height);
+	min-width: var(--input-height);
+	padding: 0;
+}
+
+.activity-map-hidden-date {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.activity-map-control-trailing {
+	margin-inline-start: var(--size-4-4);
 }
 
 .activity-map-breadcrumbs {
@@ -225,7 +280,7 @@
 }
 
 .activity-map-header-donut-track,
-.activity-map-header-donut-value {
+.activity-map-header-donut-slice {
 	fill: none;
 	stroke-width: 2.5;
 }
@@ -234,9 +289,8 @@
 	stroke: var(--background-modifier-border-hover);
 }
 
-.activity-map-header-donut-value {
-	stroke: var(--interactive-accent);
-	stroke-linecap: round;
+.activity-map-header-donut-slice {
+	stroke-linecap: butt;
 	transform: rotate(-90deg);
 	transform-origin: 10px 10px;
 }
@@ -282,34 +336,35 @@
 	border-color: var(--interactive-accent);
 }
 
-.activity-map-popover-header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: var(--size-4-2);
-}
-
-.activity-map-popover-header h3 {
-	margin: 0;
+.activity-map-chart-popover {
+	overflow: hidden;
 }
 
 .activity-map-popover .activity-map-controls {
-	grid-template-columns: minmax(7rem, 1fr) minmax(8rem, 1fr) auto auto minmax(8rem, 1fr);
-}
-
-.activity-map-popover-summary {
-	display: grid;
-	grid-template-columns: 1fr auto;
-	gap: var(--size-2-1) var(--size-4-3);
-	align-items: baseline;
-}
-
-.activity-map-popover-summary .activity-map-summary-vault {
-	grid-column: 1 / -1;
+	flex-wrap: nowrap;
+	margin-bottom: 0;
 }
 
 .activity-map-popover-chart .activity-map-donut {
 	width: min(100%, 20rem);
+}
+
+.activity-map-popover-path {
+	padding: var(--size-2-1) var(--size-2-2);
+	overflow: hidden;
+	border-radius: var(--radius-s);
+	background: var(--background-secondary);
+}
+
+.activity-map-popover-path .activity-map-breadcrumbs {
+	min-height: auto;
+}
+
+.activity-map-popover-legend {
+	min-height: 0;
+	max-height: 11rem;
+	overflow-y: auto;
+	overscroll-behavior: contain;
 }
 
 .activity-map-chart-legend {
@@ -345,41 +400,9 @@
 	white-space: nowrap;
 }
 
-.activity-map-popover-auxiliary {
-	padding-top: var(--size-4-2);
-	border-top: 1px solid var(--background-modifier-border);
-	color: var(--text-muted);
-}
-
 .activity-map-popover h3,
 .activity-map-popover p {
 	margin: 0;
-}
-
-.activity-map-popover-status {
-	color: var(--text-muted);
-}
-
-.activity-map-popover-metrics {
-	display: grid;
-	gap: var(--size-2-1);
-	font-variant-numeric: tabular-nums;
-}
-
-.activity-map-recovery-row {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto auto;
-	gap: var(--size-4-2);
-	align-items: center;
-	padding-top: var(--size-4-2);
-	border-top: 1px solid var(--background-modifier-border);
-}
-
-.activity-map-popover-actions {
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: flex-end;
-	gap: var(--size-4-2);
 }
 
 .activity-map-data-controls {
@@ -425,9 +448,12 @@
 }
 
 @container (max-width: 34rem) {
-	.activity-map-controls,
 	.activity-map-body {
 		grid-template-columns: 1fr;
+	}
+
+	.activity-map-controls {
+		align-items: stretch;
 	}
 
 	.activity-map-donut {

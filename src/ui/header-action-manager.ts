@@ -1,10 +1,10 @@
 import type { EventRef, FileView, Workspace, WorkspaceLeaf } from 'obsidian';
 
 import type { ActivityMapController } from './activity-map-controller';
+import type { DistributionResult } from '../query/distribution-query';
 import { statusPresentation } from './status-presentation';
 import { SummaryPopover } from './summary-popover';
-import { HeaderMiniDonut, type HeaderMiniDonutPort } from './header-mini-donut';
-import { liveTodayMs } from './live-today';
+import { HeaderMiniDonut, headerDonutSlices, type HeaderMiniDonutPort } from './header-mini-donut';
 
 interface HeaderEntry {
 	view: FileView;
@@ -12,9 +12,6 @@ interface HeaderEntry {
 	filePath: string;
 	popover: SummaryPopover;
 	miniDonut: HeaderMiniDonutPort;
-	summary: { fileActiveMs: number; vaultActiveMs: number };
-	summaryGeneration: number;
-	summaryLoading: boolean;
 }
 
 export interface HeaderActionDependencies {
@@ -34,6 +31,9 @@ export class HeaderActionManager {
 	private readonly eventRefs: EventRef[] = [];
 	private unsubscribe: (() => void) | null = null;
 	private stopped = false;
+	private headerDistribution: DistributionResult | null = null;
+	private headerGeneration = -1;
+	private headerLoading = false;
 
 	constructor(private readonly dependencies: HeaderActionDependencies) {}
 
@@ -101,7 +101,6 @@ export class HeaderActionManager {
 		popover = new SummaryPopover(
 			action,
 			this.dependencies.controller,
-			filePath,
 			this.dependencies.openView,
 			this.dependencies.openFile,
 		);
@@ -119,9 +118,6 @@ export class HeaderActionManager {
 			filePath,
 			popover,
 			miniDonut,
-			summary: { fileActiveMs: 0, vaultActiveMs: 0 },
-			summaryGeneration: -1,
-			summaryLoading: false,
 		};
 	}
 
@@ -134,30 +130,30 @@ export class HeaderActionManager {
 			entry.action.setAttr('title', presentation.label);
 			entry.action.removeClasses(['is-active', 'is-idle', 'is-pending', 'is-paused', 'is-untrackable', 'is-degraded']);
 			entry.action.addClass(presentation.className);
-			this.updateMiniDonut(entry);
-			this.refreshSummary(entry, model.queryGeneration);
+			entry.miniDonut.update(headerDonutSlices(this.headerDistribution, snapshot));
 		}
+		this.refreshHeaderDistribution(model.queryGeneration);
 	}
 
-	private updateMiniDonut(entry: HeaderEntry): void {
-		const snapshot = this.dependencies.controller.getViewModel().tracking;
-		const fileActiveMs = entry.summary.fileActiveMs + liveTodayMs(snapshot, entry.filePath);
-		const vaultActiveMs = entry.summary.vaultActiveMs + liveTodayMs(snapshot);
-		entry.miniDonut.update(vaultActiveMs > 0 ? fileActiveMs / vaultActiveMs : 0);
-	}
-
-	private refreshSummary(entry: HeaderEntry, generation: number): void {
-		if (entry.summaryLoading || entry.summaryGeneration === generation) return;
-		entry.summaryLoading = true;
-		entry.summaryGeneration = generation;
-		void this.dependencies.controller.getStatusSummary(entry.filePath).then((summary) => {
-			if (!this.entries.has(entry)) return;
-			entry.summary = summary;
-			this.updateMiniDonut(entry);
+	private refreshHeaderDistribution(generation: number): void {
+		if (this.headerLoading || this.headerGeneration === generation) return;
+		this.headerLoading = true;
+		void this.dependencies.controller.getHeaderDistribution().then((distribution) => {
+			if (this.stopped) return;
+			this.headerDistribution = distribution;
+			this.headerGeneration = generation;
+			const snapshot = this.dependencies.controller.getViewModel().tracking;
+			const slices = headerDonutSlices(distribution, snapshot);
+			for (const entry of this.entries) entry.miniDonut.update(slices);
 		}).catch((error: unknown) => {
-			this.dependencies.reportWarning(`Header activity ratio unavailable: ${error instanceof Error ? error.message : String(error)}`);
+			this.headerGeneration = generation;
+			this.headerDistribution = null;
+			for (const entry of this.entries) entry.miniDonut.update([]);
+			this.dependencies.reportWarning(`Header distribution unavailable: ${error instanceof Error ? error.message : String(error)}`);
 		}).finally(() => {
-			entry.summaryLoading = false;
+			this.headerLoading = false;
+			const current = this.dependencies.controller.getViewModel().queryGeneration;
+			if (!this.stopped && current !== this.headerGeneration) this.refreshHeaderDistribution(current);
 		});
 	}
 

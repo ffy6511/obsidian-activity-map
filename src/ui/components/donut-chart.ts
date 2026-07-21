@@ -68,6 +68,7 @@ export function renderDonutChart(args: {
 	distribution: DistributionResult;
 	onActivate: (item: ChartItem) => void;
 	onHighlight?: (item: ChartItem | null) => void;
+	showTooltip?: boolean;
 }): DonutChartHandle {
 	const model = buildChartModel(args.distribution);
 	const svg = args.container.createSvg('svg');
@@ -76,7 +77,7 @@ export function renderDonutChart(args: {
 	svg.setAttribute('role', 'list');
 	svg.setAttribute('aria-label', 'Activity distribution');
 	const paths = new Map<string, SVGPathElement>();
-	const tooltip = args.container.createDiv({
+	const tooltip = args.showTooltip === false ? null : args.container.createDiv({
 		cls: 'activity-map-chart-tooltip',
 		attr: { 'aria-live': 'polite' },
 	});
@@ -85,10 +86,10 @@ export function renderDonutChart(args: {
 			candidate.classList.toggle('is-highlighted', item?.id === id);
 			candidate.classList.toggle('is-dimmed', item !== null && item.id !== id);
 		}
-		if (item) {
+		if (item && tooltip) {
 			tooltip.textContent = `${item.label} · ${formatPercent(item.percentOfScope)} · ${formatMetric(item.value, args.distribution.query.metric, args.distribution.denominatorDays)}`;
 			tooltip.removeAttribute('hidden');
-		} else {
+		} else if (tooltip) {
 			tooltip.textContent = '';
 			tooltip.setAttribute('hidden', '');
 		}
@@ -125,7 +126,7 @@ export function renderDonutChart(args: {
 	center.textContent = formatMetric(model.total, args.distribution.query.metric, args.distribution.denominatorDays);
 	svg.appendChild(center);
 	args.container.appendChild(svg);
-	args.container.appendChild(tooltip);
+	if (tooltip) args.container.appendChild(tooltip);
 	return {
 		highlight(itemId) {
 			highlight(model.items.find((item) => item.id === itemId) ?? null);

@@ -8,7 +8,7 @@
 | Scope | `src/ui/`, `src/export/`, settings UI, plugin composition, v0.1 integration and release evidence |
 | Type | feat |
 | Priority | P0 |
-| Status | in-progress |
+| Status | review |
 | Completed | pending |
 | Dependencies | [Activity Tracking Runtime](01-activity-tracking-runtime-plan.md), [Local Data and Query](02-local-data-and-query-plan.md) |
 | Decisions | [Interface and export](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), [Privacy and network boundary](../constitution/2026-07-21-activity-map-product-and-data.md#privacy-and-network-boundary), [Presentation architecture](../../ARCHITECTURE.md#presentation-and-export), [PRD information architecture](../../docs/PRD.md#信息架构与交互), [PRD release acceptance](../../docs/PRD.md#发布验收) |
@@ -21,7 +21,7 @@
 - [x] Phase 3: Implement SVG export and local data controls
 - [x] Phase 4: Complete automated accessibility, platform integration, and release-candidate evidence
 - [x] Phase 5: Correct the header entry and deliver the interactive donut popover
-- [ ] Phase 6: Simplify the popover layout and render the real header distribution
+- [x] Phase 6: Simplify the popover layout and render the real header distribution
 
 ## Background
 
@@ -31,7 +31,7 @@ The current view is a truthful placeholder. Users need one coherent interface fo
 
 ### Current Behavior
 
-The plugin composes tracking, local data, queries, settings, commands, a dockable hierarchical statistics view, one stable but single-ratio mini donut per eligible file view, a pinnable hierarchical donut popover, standalone SVG/JSON export, rebuild controls, and drift-checked scoped deletion. The owner accepted the chart interaction but rejected the popover's duplicated title, totals, tooltip row, and tracking footer, plus the misleading single blue header arc. Phase 6 applies the approved tldraw layout and actual vault-root distribution before real Obsidian verification.
+The plugin composes tracking, local data, queries, settings, commands, a dockable hierarchical statistics view, one stable multi-slice vault-root miniature per eligible file view, a fixed-layout pinnable hierarchical donut popover, standalone SVG/JSON export, rebuild controls, and drift-checked scoped deletion. The duplicated title, totals, tooltip row, and tracking footer plus the misleading single blue file-share arc have been removed; real Obsidian desktop/mobile verification remains pending.
 
 ### Goals and Non-goals
 
@@ -425,12 +425,12 @@ Apply the owner-approved tldraw layout without transient rows and make the persi
 
 ### Tasks
 
-- [ ] Remove the popover title, duplicate metric/total/vault-share summary, transient chart tooltip row, and ordinary tracking-status footer.
-- [ ] Keep one compact control row; render previous-day, calendar, next-day, and expand as equal icon buttons, with expand visually separated from the date group and the metric icon derived from the selected metric.
-- [ ] Move the current breadcrumb path below the donut, default it to the vault root, and constrain the legend to a fixed-height scroll region.
-- [ ] Add a dedicated today/vault-root distribution read for the Header action and reconcile stable miniature slice nodes using the shared color model, including the current in-flight activity in its owning root slice.
-- [ ] Preserve pin/focus/keyboard/activation behavior and add focused tests for the fixed layout, equal controls, scroll boundary, multi-slice geometry, empty state, and stable SVG ownership.
-- [ ] Synchronize Constitution, PRD, Architecture, Roadmap, README, release notes, and Spec evidence before returning the Spec to `review`.
+- [x] Remove the popover title, duplicate metric/total/vault-share summary, transient chart tooltip row, and ordinary tracking-status footer.
+- [x] Keep one compact control row; render previous-day, calendar, next-day, and expand as equal icon buttons, with expand visually separated from the date group and the metric icon derived from the selected metric.
+- [x] Move the current breadcrumb path below the donut, default it to the vault root, and constrain the legend to a fixed-height scroll region.
+- [x] Add a dedicated today/vault-root distribution read for the Header action and reconcile stable miniature slice nodes using the shared color model, including the current in-flight activity in its owning root slice.
+- [x] Preserve pin/focus/keyboard/activation behavior and add focused tests for the fixed layout, equal controls, scroll boundary, multi-slice geometry, empty state, and stable SVG ownership.
+- [x] Synchronize Constitution, PRD, Architecture, Roadmap, README, release notes, and Spec evidence before returning the Spec to `review`.
 
 ### Files
 
@@ -448,13 +448,13 @@ Apply the owner-approved tldraw layout without transient rows and make the persi
 
 ### Acceptance Criteria
 
-- [ ] Header SVG root identity survives distribution updates; stable slice IDs reuse their nodes, real root items render distinct shared-palette arcs, and zero/error data leaves only the fixed empty ring.
-- [ ] The header distribution includes the current unclosed active interval in the correct root directory or file slice without waiting for persistence.
-- [ ] Popover source and DOM fixtures contain no title bar, duplicate summary, transient chart tooltip, or ordinary tracking footer.
-- [ ] The current path follows the chart, defaults to `Vault`, updates after drill-down, and the legend scrolls within a bounded region without moving surrounding controls or chart.
-- [ ] Previous, calendar, next, and expand controls have one compact size; expand has a group gap and an accessible icon label; metric changes update the metric icon.
-- [ ] Slice pointer/focus changes only highlight the existing chart and legend nodes; pin/unpin, outside/Escape close, focus restoration, drill-down, file activation, and full-view expansion remain available.
-- [ ] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, strict specs validation, repository Markdown links, and `git diff --check` pass.
+- [x] Header SVG root identity survives distribution updates; stable slice IDs reuse their nodes, real root items render distinct shared-palette arcs, and zero/error data leaves only the fixed empty ring.
+- [x] The header distribution includes the current unclosed active interval in the correct root directory or file slice without waiting for persistence.
+- [x] Popover source and DOM fixtures contain no title bar, duplicate summary, transient chart tooltip, or ordinary tracking footer.
+- [x] The current path follows the chart, defaults to `Vault`, updates after drill-down, and the legend scrolls within a bounded region without moving surrounding controls or chart.
+- [x] Previous, calendar, next, and expand controls have one compact size; expand has a group gap and an accessible icon label; metric changes update the metric icon.
+- [x] Slice pointer/focus changes only highlight the existing chart and legend nodes; pin/unpin, outside/Escape close, focus restoration, drill-down, file activation, and full-view expansion remain available.
+- [x] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, strict specs validation, repository Markdown links, and `git diff --check` pass.
 
 ## Risks and Mitigations
 
@@ -526,3 +526,11 @@ Apply the owner-approved tldraw layout without transient rows and make the persi
 - Evidence: focused fixtures prove stable SVG node identity, ratio updates, today-root defaults, shared activation, date navigation, donut-first source boundaries, keyboard labels, and non-color status text. The full automated suite passes 225 tests.
 - Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (225 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); repository Markdown links; `git diff --check`.
 - Lifecycle: Phase 5 is technically complete and this Spec returns to `review`. The previous three-round Critic budget remains exhausted, so this owner-directed correction does not create a fourth Critic verdict; real desktop/mobile Post-Critic Acceptance stays open.
+
+### Owner-directed fixed-layout refinement
+
+- Scope: the owner approved the edited tldraw layout: no title, duplicate summary, transient tooltip row, or ordinary tracking footer; path below the chart; bounded scroll legend; equal date/expand icon sizes with a group gap; and a real multi-slice Header miniature.
+- Executor fixes: the controller exposes a dedicated today/vault-root distribution read; the Header reconciles shared-color slice circles by stable ID and adds the unclosed session to its owning root item. The popover renders a single compact control row, chart without tooltip DOM, current breadcrumbs, and a bounded legend.
+- Evidence: focused tests cover dedicated root queries, stable SVG and slice identity, distinct ratios, live root attribution, empty rings, rejected Popover source regions, metric icons, equal icon classes, expand separation, and the scroll boundary. The full automated suite passes 225 tests.
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (225 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); repository Markdown links; `git diff --check`.
+- Lifecycle: Phase 6 is technically complete and this Spec returns to `review`. No fourth Critic round is created; real desktop/mobile Post-Critic Acceptance stays open.

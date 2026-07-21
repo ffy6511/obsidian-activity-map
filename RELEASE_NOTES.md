@@ -2,14 +2,14 @@
 
 ## Release Status
 
-`v0.1.0` is a local development candidate. The interactive header chart is undergoing a final owner-directed layout correction: duplicate and transient rows are being removed, the legend becomes a bounded scroll list, and the persistent miniature must show the actual vault-root distribution instead of a single blue file-share arc. Final implementation evidence and real Obsidian desktop/mobile acceptance remain required before publication.
+`v0.1.0` is a local development candidate. The interactive header chart now uses the actual today/vault-root distribution, stable shared-color miniature slices, fixed controls/chart/path/list regions, and a bounded scroll legend. Duplicate summaries, transient tooltip rows, and the ordinary tracking footer have been removed from the popover. Real Obsidian desktop/mobile acceptance remains required before publication.
 
 ## Included Capabilities
 
 - Foreground-only file attribution with trusted activity signals, idle clipping, pause/resume, sleep-gap exclusion, recovery decisions, and restart checkpoints.
 - Stable local file identity, per-device/date event shards, verified daily summaries, retention safety, rebuild, raw JSON export, and scoped deletion plans.
 - Selected-day, 7/30/90-day and all-history averages, all-history totals, folder drill-down, local-file detail, “other”, and deleted-file history.
-- Header mini donut and pinnable interactive chart popover are implemented but remain outside the accepted capability set until the Phase 6 multi-slice and fixed-layout correction passes.
+- Stable multi-slice header mini donut, fixed-layout pinnable chart popover, Ribbon/command fallbacks, dockable statistics view, native SVG donut, and complete detail rows.
 - Standalone infographic and chart-only SVG export with escaped metadata and inline colors.
 
 ## Privacy and Platform
