@@ -119,7 +119,10 @@ describe('distribution query directory drill-down', () => {
 		});
 		// Only notes.md is a direct file under proj1.
 		expect(result.detailItems.every((i) => i.kind === 'file')).toBeTrue();
-		expect(result.detailItems.some((i) => i.label === 'projects/proj1/notes.md')).toBeTrue();
+		const notes = result.detailItems.find((i) => i.id === 'file:file-a');
+		expect(notes?.label).toBe('notes.md');
+		expect(notes?.path).toBe('projects/proj1/notes.md');
+		expect(notes?.id).toBe('file:file-a');
 		expect(result.detailItems.some((i) => i.kind === 'directory')).toBeFalse();
 	});
 });

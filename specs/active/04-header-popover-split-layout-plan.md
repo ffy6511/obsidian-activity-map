@@ -15,7 +15,7 @@
 
 ## Phases
 
-- [ ] Phase 0: Display file leaves by basename
+- [x] Phase 0: Display file leaves by basename
 - [ ] Phase 1: Reflow the Popover into a 3:2 chart-and-list layout
 - [ ] Phase 2: Synchronize documentation and complete integration evidence
 
@@ -87,9 +87,9 @@ Remove redundant parent paths from file labels without changing file identity, m
 
 ### Tasks
 
-- [ ] Derive every present file item's `label` from the final segment of its normalized vault-relative path.
-- [ ] Preserve the full path in `DistributionItem.path` and keep directory, virtual-group, and deleted labels unchanged.
-- [ ] Add a focused query test covering a nested file and its unchanged activation path.
+- [x] Derive every present file item's `label` from the final segment of its normalized vault-relative path.
+- [x] Preserve the full path in `DistributionItem.path` and keep directory, virtual-group, and deleted labels unchanged.
+- [x] Add a focused query test covering a nested file and its unchanged activation path.
 
 ### Files
 
@@ -98,10 +98,16 @@ Remove redundant parent paths from file labels without changing file identity, m
 
 ### Acceptance Criteria
 
-- [ ] A nested `projects/research/DPO.md` leaf renders as `DPO.md`.
-- [ ] The same item retains `path: 'projects/research/DPO.md'` and the same stable file ID.
-- [ ] Directory and virtual-group labels remain unchanged.
-- [ ] Focused query tests, type checking, and lint pass.
+- [x] A nested file leaf renders as its basename.
+- [x] The same item retains its full vault-relative path and stable file ID.
+- [x] Directory and virtual-group labels remain unchanged.
+- [x] Query tests, type checking, and lint pass.
+
+### Evidence
+
+- `npm run check` — passed.
+- `npm run lint` — passed.
+- `npm test -- --run` — 231 passed, 0 failed.
 
 ## Phase 1: Reflow the Popover into a 3:2 Chart-and-List Layout
 

@@ -178,11 +178,15 @@ function buildDetailItems(
 		} else {
 			// local-files group: expose each file directly.
 			for (const file of group.files) {
+				const path = file.path;
 				items.push({
 					id: `file:${file.fileId}`,
 					kind: 'file',
-					label: file.path ?? file.fileId,
-					path: file.path,
+					// Breadcrumbs already provide the directory context. Keep the full
+					// path separately so shortening the visible label cannot change
+					// identity, navigation, or the file opened on activation.
+					label: path ? fileBasename(path) : file.fileId,
+					path,
 					value: file.value,
 					percentOfScope: scopeTotal > 0 ? file.value / scopeTotal : 0,
 					memberIds: [file.fileId],
@@ -212,6 +216,12 @@ function buildDetailItems(
 		return a.label.localeCompare(b.label);
 	});
 	return items;
+}
+
+function fileBasename(path: string): string {
+	const normalized = path.replace(/\\/g, '/').replace(/\/+$/g, '');
+	const separator = normalized.lastIndexOf('/');
+	return normalized.slice(separator + 1) || normalized;
 }
 
 /**
