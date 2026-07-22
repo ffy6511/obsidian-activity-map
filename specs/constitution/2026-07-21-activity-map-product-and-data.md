@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | Decision date | 2026-07-21 |
-| Related specs | [Tracking runtime](../active/01-activity-tracking-runtime-plan.md), [Local data and query](../active/02-local-data-and-query-plan.md), [UI and v0.1 release](../active/03-activity-map-ui-and-v0-1-release-plan.md) |
+| Related specs | [Tracking runtime](../active/01-activity-tracking-runtime-plan.md), [Local data and query](../active/02-local-data-and-query-plan.md), [UI and v0.1 release](../active/03-activity-map-ui-and-v0-1-release-plan.md), [Header Popover split layout](../active/04-header-popover-split-layout-plan.md), [Header Popover file grouping](../active/05-header-popover-file-grouping-plan.md) |
 | Product requirements | [Activity Map PRD](../../docs/PRD.md) |
 
 ## Decision Summary
@@ -20,7 +20,7 @@ These requirements affect every release. They belong in a stable decision record
 
 ## User Narrative
 
-A user works across several Obsidian windows and project folders. Activity Map attributes time only to the trackable file in the focused window. When the user walks away, the plugin closes the session at the last trusted interaction. On return, a short uncertain interval can be explicitly included; a long sleep interval stays excluded. The user opens Activity Map, navigates from the vault root into a project, changes from today to a 30-day average, inspects the exact file rows, and exports the current result as SVG. All records remain local and can be exported, rebuilt, or cleared.
+A user works across several Obsidian windows and project folders. Activity Map attributes time only to the trackable file in the focused window. When the user walks away, the plugin closes the session at the last trusted interaction. On return, a short uncertain interval can be explicitly included; a long sleep interval stays excluded. The user opens the file-header donut, navigates from the vault root into a project, changes from today to a 30-day average, inspects the exact file rows, and pauses or resumes tracking from the popover. All records remain local. Export, rebuild, and deletion services remain internal until a later explicit header data modal exposes them.
 
 ## Final Decision
 
@@ -68,24 +68,26 @@ A user works across several Obsidian windows and project folders. Activity Map a
 - Store completed events as per-device, per-local-date NDJSON shards.
 - Store derived daily summaries separately and make them rebuildable from retained raw events.
 - Keep a small checkpoint for an in-flight session so a restart can recover or safely close it.
-- Retain raw session and correction events for 90 days by default. Retain daily summaries until the user clears them.
+- Retain raw session and correction events for 90 days by default. Retain daily summaries until a later data modal offers an explicit clear operation.
 - Delete raw events only after the corresponding aggregate has been durably written and verified readable.
-- Provide raw JSON export, aggregate rebuild, scoped deletion, and full deletion.
+- Retain raw JSON export, aggregate rebuild, scoped deletion, and full deletion as local service capabilities; a later header-modal decision owns their user-facing surface.
 - Device shards may coexist when a user syncs the Obsidian configuration directory. `v0.1` does not silently deduplicate concurrent or duplicated device activity.
 
 ### Interface and Export
 
-- Provide a file-header state action with a focusable interactive popover, plus Ribbon and command fallbacks.
-- Use a dockable `ItemView` as the complete interface. Mobile interaction must not depend on hover.
-- Use a native SVG donut with stable colors, text detail, keyboard navigation, breadcrumbs, and explicit local-versus-vault percentages.
-- Export a full information graphic by default and offer a chart-only SVG. Both outputs embed necessary styles and accessible metadata.
+- Provide a stable file-header chart entry as the only Activity Map interaction entry through public or capability-gated Obsidian APIs. Mobile interaction cannot depend on hover.
+- Keep presentation surfaces on the same immutable distribution/query semantics, stable file identity, and full-path activation contract. UI grouping may change projection only; it cannot change scope totals, vault totals, Deleted history, or raw evidence.
+- Persist the last successful Header Popover path/file grouping choice as a small validated setting. A persistence failure cannot silently establish a new default.
+- Project the current unclosed interval for live presentation only within the trusted idle boundary; presentation updates cannot rewrite persisted evidence.
+- Keep export independent from mounted DOM, escape user-derived strings, and include accessible metadata in standalone SVG output.
+- The [PRD Header Popover section](../../docs/PRD.md#环形图浮层) is the single source for current UI structure, controls, labels, visual hierarchy, and interaction behavior. Active Specs own temporary implementation deltas and acceptance evidence; this Constitution retains only stable product and data boundaries.
 
 ### Privacy and Network Boundary
 
 - Keep settings, event shards, summaries, file registry, and checkpoints in the plugin data area under the vault configuration directory.
 - Do not store note content, selected text, or actual typed strings.
 - Do not add analytics, telemetry, accounts, remote APIs, or data upload in `v0.1`.
-- Treat exported paths and filenames as user-selected local output; disclose their inclusion before export.
+- When the later data modal exposes export, treat exported paths and filenames as user-selected local output and disclose their inclusion before export.
 
 ## Invariants
 
@@ -192,10 +194,22 @@ Rejected because keyboard interaction, accessible semantics, and standalone vect
 - Operating systems report only one focused top-level Obsidian window at a time.
 - A user who enables configuration-directory sync accepts that independent device shards may coexist until explicit reconciliation ships.
 - Ninety days of raw records is sufficient for routine diagnosis and aggregate rebuild; changing this default does not alter event semantics.
-- Header actions can use a public API or degrade to Ribbon and command access without losing core functionality.
+- Header actions use a public API; this header-only surface deliberately provides no global toolbar or command fallback.
 
 ## History
 
 | Date | Change | Reason |
 | --- | --- | --- |
 | 2026-07-21 | Established the initial product, attribution, identity, storage, privacy, UI, and extensibility decisions. | Provide a stable implementation boundary before feature development. |
+| 2026-07-21 | Made the file-header entry a stable data-backed miniature donut and the popover an interactive hierarchical donut rather than a text status card. | Align the primary desktop entry with the Webtime Tracker reference and preserve direct hover, focus, pin, and drill-down interaction. |
+| 2026-07-21 | Simplified the header popover to fixed controls, chart, path, and scrollable legend, and changed the header miniature from a single file-share arc to the actual vault-root distribution. | Remove duplicated information and hover-induced layout movement while making the persistent entry visually truthful to the chart it opens. |
+| 2026-07-21 | Required the open header chart to project the idle-bounded unclosed session in real time and refined path, legend, and control alignment. | Eliminate the persistence/heartbeat lag between the miniature and popover while preserving trusted-time and fixed-layout invariants. |
+| 2026-07-21 | Changed live Popover ticks to update existing chart and legend nodes in place, tightened chart/path/list spacing, normalized date-button gaps, and replaced Expand with pause/resume. | Preserve pointer/focus highlight across real-time updates and keep the compact control row useful without a duplicate full-view entry. |
+| 2026-07-21 | Removed default legend-row fills, centered donut totals, aligned exact values before rightmost percentages, replaced the calendar icon with a visible date, and added consistent interactive affordances. | Improve scan alignment and make every clickable Popover element visually discoverable. |
+| 2026-07-22 | Reflowed the Header Popover result into a `3:2` chart-and-list grid and shortened present file-leaf labels to basenames. | Use horizontal space without adding UI chrome and remove path repetition already supplied by breadcrumbs. |
+| 2026-07-22 | Refined the approved Popover result to a centered `1:1` grid with equal inline padding and a tightly bounded donut. | Balance visible left/right whitespace after real-render tuning while keeping the list height tied to the rendered chart. |
+| 2026-07-22 | Added an explicit path/file grouping choice to distribution queries and placed its Popover toggle before pause/resume. | Let users compare all files in the current path without losing hierarchical navigation, totals, or file identity. |
+| 2026-07-22 | Retuned the final Popover to a centered `2:3` chart/list grid, ellipsized long legend names, and emphasized the centered total with a serif face. | Give file names more usable width without allowing them to overlap numeric columns, while strengthening the chart total hierarchy. |
+| 2026-07-22 | Persisted the Header Popover path/file grouping preference in plugin settings. | Reopening the Popover or restarting the plugin must preserve the user's last successful display choice. |
+| 2026-07-22 | Consolidated current Header Popover UI and interaction detail into the PRD. | Keep Constitution and Architecture focused on stable boundaries and module flow, with one current UX source of truth. |
+| 2026-07-22 | Removed the global left-toolbar icon and command entry; the file-header donut is the sole Activity Map interaction surface. | Keep everyday interaction close to the active note. Export, rebuild, and deletion controls move to a future explicit header modal. |

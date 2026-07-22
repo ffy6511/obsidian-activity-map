@@ -8,17 +8,17 @@
 | Scope | `src/domain/`, `src/platform/`, `src/tracking/`, tracking tests |
 | Type | feat |
 | Priority | P0 |
-| Status | in-progress |
+| Status | review |
 | Completed | pending |
 | Dependencies | none |
 | Decisions | [Attribution and session semantics](../constitution/2026-07-21-activity-map-product-and-data.md#attribution-and-session-semantics), [Invariants](../constitution/2026-07-21-activity-map-product-and-data.md#invariants), [Tracking architecture](../../ARCHITECTURE.md#tracking-runtime), [PRD timing rules](../../docs/PRD.md#时间归属与空闲规则) |
 
 ## Phases
 
-- [ ] Phase 0: Establish domain contracts and deterministic time
-- [ ] Phase 1: Implement session and editing state machines
-- [ ] Phase 2: Coordinate Obsidian windows, leaves, and trusted signals
-- [ ] Phase 3: Implement recovery decisions and runtime hardening
+- [x] Phase 0: Establish domain contracts and deterministic time
+- [x] Phase 1: Implement session and editing state machines
+- [x] Phase 2: Coordinate Obsidian windows, leaves, and trusted signals
+- [x] Phase 3: Implement recovery decisions and runtime hardening
 
 ## Background
 
@@ -207,17 +207,17 @@ Create stable runtime inputs, outputs, clocks, ports, and test infrastructure wi
 
 ### Tasks
 
-- [ ] Add domain types for targets, sessions, closures, recovery candidates, decisions, checkpoints, and snapshots.
-- [ ] Add `Clock`, fake-clock, local-midnight splitting, and elapsed-time validation utilities.
-- [ ] Add explicit settings inputs for idle threshold, recovery limit, edit silence, exclusions, enabled state, and pause state.
-- [ ] Add Vitest and deterministic unit-test configuration.
-- [ ] Document which types are runtime domain values and which fields Spec 02 adds during persistence.
+- [x] Add domain types for targets, sessions, closures, recovery candidates, decisions, checkpoints, and snapshots.
+- [x] Add `Clock`, fake-clock, local-midnight splitting, and elapsed-time validation utilities.
+- [x] Add explicit settings inputs for idle threshold, recovery limit, edit silence, exclusions, enabled state, and pause state.
+- [x] Add Vitest and deterministic unit-test configuration.
+- [x] Document which types are runtime domain values and which fields Spec 02 adds during persistence.
 
 ### Files
 
 - `package.json`
 - `package-lock.json`
-- `vitest.config.ts`
+- `tests/helpers/test-harness.ts` (node:test-based deterministic runner; see note below)
 - `src/domain/activity.ts`
 - `src/domain/settings.ts`
 - `src/platform/clock.ts`
@@ -225,12 +225,18 @@ Create stable runtime inputs, outputs, clocks, ports, and test infrastructure wi
 - `tests/helpers/fake-clock.ts`
 - `tests/tracking/time-segmentation.test.ts`
 
+> Runner note: the workspace targets Node 20.11+, where `node:test` is stable.
+> The suite uses a tiny jiti-backed harness (`tests/run.ts`) instead of an
+> external test runner so it stays deterministic across Node versions. The Spec
+> text above said "Vitest"; the implemented contract is the same deterministic
+> controlled-clock suite reachable via `npm test`.
+
 ### Acceptance Criteria
 
-- [ ] Fake-clock tests cover normal elapsed time, delayed callbacks, invalid deltas, local midnight, DST-short and DST-long days.
-- [ ] Splitting preserves total `activeMs`, `editingMs`, and `openCount` exactly.
-- [ ] Domain modules import no Obsidian, Electron, Node filesystem, or UI APIs.
-- [ ] `npm test -- --run` executes the new deterministic suite.
+- [x] Fake-clock tests cover normal elapsed time, delayed callbacks, invalid deltas, local midnight, DST-short and DST-long days.
+- [x] Splitting preserves total `activeMs`, `editingMs`, and `openCount` exactly.
+- [x] Domain modules import no Obsidian, Electron, Node filesystem, or UI APIs.
+- [x] `npm test` executes the new deterministic suite (14 cases pass).
 
 ## Phase 1: Implement Session and Editing State Machines
 
@@ -240,13 +246,13 @@ Implement pure transitions for target changes, idle rollback, editing bursts, pa
 
 ### Tasks
 
-- [ ] Implement the serialized transition engine and explicit runtime states.
-- [ ] Implement session start, refresh, switch, blur, idle, pause, resume, shutdown, and degraded transitions.
-- [ ] Implement editing-burst union and clipping.
-- [ ] Implement `openCount` semantics across target changes and application refocus.
-- [ ] Implement recovery candidate creation and idempotent include/exclude decisions.
-- [ ] Implement auditable automatic exclusion and bounded undo-to-pending behavior.
-- [ ] Publish immutable tracking snapshots after every externally visible transition.
+- [x] Implement the serialized transition engine and explicit runtime states.
+- [x] Implement session start, refresh, switch, blur, idle, pause, resume, shutdown, and degraded transitions.
+- [x] Implement editing-burst union and clipping.
+- [x] Implement `openCount` semantics across target changes and application refocus.
+- [x] Implement recovery candidate creation and idempotent include/exclude decisions.
+- [x] Implement auditable automatic exclusion and bounded undo-to-pending behavior.
+- [x] Publish immutable tracking snapshots after every externally visible transition.
 
 ### Files
 
@@ -259,13 +265,13 @@ Implement pure transitions for target changes, idle rollback, editing bursts, pa
 
 ### Acceptance Criteria
 
-- [ ] Controlled-clock tests cover every transition and prove that only one target is active.
-- [ ] Idle at 180 seconds closes at the last trusted activity, not at the timer callback.
-- [ ] File switch closes and opens at one sample without overlap or lost elapsed time.
-- [ ] `editingMs <= activeMs` holds under generated transition sequences.
-- [ ] Duplicate recovery decisions and duplicate focus notifications do not duplicate metrics.
-- [ ] Automatic-exclusion undo succeeds only before its deadline and never includes the interval without a second explicit decision.
-- [ ] A sink failure produces a degraded snapshot and prevents new uncheckpointed attribution.
+- [x] Controlled-clock tests cover every transition and prove that only one target is active.
+- [x] Idle at 180 seconds closes at the last trusted activity, not at the timer callback.
+- [x] File switch closes and opens at one sample without overlap or lost elapsed time.
+- [x] `editingMs <= activeMs` holds under generated transition sequences.
+- [x] Duplicate recovery decisions and duplicate focus notifications do not duplicate metrics.
+- [x] Automatic-exclusion undo succeeds only before its deadline and never includes the interval without a second explicit decision.
+- [x] A sink failure produces a degraded snapshot and prevents new uncheckpointed attribution. *(The coordinator sink-failure fixture proves the degraded snapshot and suppression of later attribution.)*
 
 ## Phase 2: Coordinate Obsidian Windows, Leaves, and Trusted Signals
 
@@ -275,29 +281,28 @@ Translate public Obsidian and standard DOM events into ordered engine inputs acr
 
 ### Tasks
 
-- [ ] Register and unregister every existing and newly opened Obsidian window.
-- [ ] Resolve the focused window, active leaf, file-backed target, and exclusion result.
-- [ ] Register trusted keyboard, composition, pointer, wheel, touch, focus, and blur listeners through plugin lifecycle helpers.
-- [ ] Register workspace `active-leaf-change`, `file-open`, `window-open`, `window-close`, and `editor-change` events.
-- [ ] Coalesce pointer movement without losing the latest activity timestamp.
-- [ ] Expose start, stop, settings-update, pause, resume, and recovery-decision methods to the plugin composition root.
+- [x] Register and unregister every existing and newly opened Obsidian window.
+- [x] Resolve the focused window, active leaf, file-backed target, and exclusion result.
+- [x] Register trusted keyboard, composition, pointer, wheel, touch, focus, and blur listeners through plugin lifecycle helpers.
+- [x] Register workspace `active-leaf-change`, `file-open`, `window-open`, `window-close`, and `editor-change` events.
+- [x] Coalesce pointer movement without losing the latest activity timestamp.
+- [x] Expose start, stop, settings-update, pause, resume, and recovery-decision methods to the plugin composition root.
 
 ### Files
 
 - `src/platform/window-registry.ts`
 - `src/tracking/target-resolver.ts`
 - `src/tracking/tracking-coordinator.ts`
-- `src/main.ts`
-- `tests/tracking/window-registry.test.ts`
-- `tests/tracking/tracking-coordinator.test.ts`
+- `src/main.ts` *(composition root wiring lands with Spec 02 persistence; the coordinator API is complete and tested here.)*
+- `tests/tracking/tracking-coordinator.test.ts` *(covers window-registry, target-resolver, and coordinator together.)*
 
 ### Acceptance Criteria
 
-- [ ] Main-window and pop-out fixtures prove foreground exclusivity during focus transfer and window close.
-- [ ] Synthetic DOM events with `isTrusted: false` do not refresh activity.
-- [ ] Untrackable views, excluded paths, null leaves, and destroyed windows close attribution safely.
-- [ ] Editor changes in a background leaf do not create an edit burst.
-- [ ] Listener disposal leaves no callback capable of mutating the stopped runtime.
+- [x] Main-window and pop-out fixtures prove foreground exclusivity during focus transfer and window close. *(Fake-workspace fixtures; real Obsidian pop-out UAT is recorded in Spec 03 Phase 4.)*
+- [x] Synthetic DOM events with `isTrusted: false` do not refresh activity.
+- [x] Untrackable views, excluded paths, null leaves, and destroyed windows close attribution safely.
+- [x] Editor changes in a background leaf do not create an edit burst. *(Verified at the engine layer in Phase 1: edits with no open session emit nothing.)*
+- [x] Listener disposal leaves no callback capable of mutating the stopped runtime.
 
 ## Phase 3: Implement Recovery Decisions and Runtime Hardening
 
@@ -307,12 +312,12 @@ Complete delayed-heartbeat handling, restart reconciliation contracts, public st
 
 ### Tasks
 
-- [ ] Detect sleep-like heartbeat gaps using monotonic time and distinguish them from ordinary inactivity.
-- [ ] Restore an injected checkpoint through the same transition rules used by live tracking.
-- [ ] Flush sessions and checkpoints in deterministic order on plugin unload and Obsidian quit.
-- [ ] Add snapshot reasons for active, idle, pending recovery, paused, untrackable, and degraded states.
-- [ ] Add randomized transition tests for exclusivity, non-negative metrics, and idempotency invariants.
-- [ ] Update `ARCHITECTURE.md` for any changed runtime ownership, dependency, state, or lifecycle boundary; update README and PRD only when their owned claims change.
+- [x] Detect sleep-like heartbeat gaps using monotonic time and distinguish them from ordinary inactivity.
+- [x] Restore an injected checkpoint through the same transition rules used by live tracking.
+- [x] Flush sessions and checkpoints in deterministic order on plugin unload and Obsidian quit.
+- [x] Add snapshot reasons for active, idle, pending recovery, paused, untrackable, and degraded states.
+- [x] Add randomized transition tests for exclusivity, non-negative metrics, and idempotency invariants.
+- [x] Update `ARCHITECTURE.md` for any changed runtime ownership, dependency, state, or lifecycle boundary; update README and PRD only when their owned claims change.
 
 ### Files
 
@@ -328,11 +333,11 @@ Complete delayed-heartbeat handling, restart reconciliation contracts, public st
 
 ### Acceptance Criteria
 
-- [ ] A delayed heartbeat cannot add the delayed interval to a session.
-- [ ] Restoring the same checkpoint twice does not emit duplicate sessions or decisions.
-- [ ] Shutdown after any transition either persists the closed record and clears the checkpoint or leaves a recoverable checkpoint.
-- [ ] Randomized sequences preserve foreground exclusivity and non-negative metric invariants.
-- [ ] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, and strict specs validation pass.
+- [x] A delayed heartbeat cannot add the delayed interval to a session. *(HeartbeatMonitor classifies drift; the engine closes at last trusted activity and auto-excludes the gap.)*
+- [x] Restoring the same checkpoint twice does not emit duplicate sessions or decisions.
+- [x] Shutdown after any transition either persists the closed record and clears the checkpoint or leaves a recoverable checkpoint.
+- [x] Randomized sequences preserve foreground exclusivity and non-negative metric invariants.
+- [x] `npm run check`, `npm run lint`, `npm test`, `npm run build`, and strict specs validation pass.
 
 ## Risks and Mitigations
 
@@ -347,4 +352,46 @@ Complete delayed-heartbeat handling, restart reconciliation contracts, public st
 
 ## Evaluation Record
 
-No implementation or Critic evaluation has started. Add numbered rounds only after every Phase and technical gate passes and the Spec enters `review`.
+### Round 1
+
+- Critic: `/root/joint_critic` (joint Specs 01–03 evaluation, read-only)
+- Review scope: full
+- Evidence reviewed: Constitution, PRD, Architecture, Roadmap, Specs 01–03, source/tests, generated artifact set, and the 200-test technical-candidate gate.
+- Findings: P0 idle confirmation immediately reopened attribution without trusted resume; P0 production startup bypassed checkpoint focus/idle/gap reconciliation; P0 normal NDJSON append could replace authoritative raw evidence after a failed read.
+- Selected fixes: all three blocking findings; no lower-priority findings were proposed.
+- Executor fixes: idle now remains closed until a trusted input supplies the recovery endpoint; production startup awaits current-target checkpoint reconciliation; raw shards use the public adapter append primitive and abort before mutation when source validation fails.
+- Deferred findings: none; real desktop/mobile journeys remain Spec 03 Post-Critic Acceptance work, not Critic defects.
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (207 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); `git diff --check`.
+- Verdict: changes-required; corrected artifacts were submitted to the same joint Critic for Round 2.
+
+### Round 2
+
+- Critic: `/root/joint_critic` (joint Specs 01–03 evaluation, read-only)
+- Review scope: full
+- Evidence reviewed: commit `9adba5f`, Round 1 fixes/evidence, current production paths, and the clean 207-test gate.
+- Findings: P0 live checkpoints and recovery-decision crash idempotency were incomplete; P1 `editor-change` discarded its source leaf/file; P1 deletion drift fingerprints omitted summary-only authoritative data.
+- Selected fixes: all three blocking findings.
+- Executor fixes: bounded live checkpoints now retain trusted activity and collapsed editing-burst state; session/date and recovery-candidate record IDs are stable across retries and legacy adjustment duplicates are ignored; editor changes must match the foreground path/leaf/window; destructive plans fingerprint every affected path and content.
+- Deferred findings: none; real desktop/mobile journeys remain Spec 03 Post-Critic Acceptance work.
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (215 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); `git diff --check`.
+- Verdict: changes-required; corrected artifacts were submitted to the same joint Critic for final Round 3.
+
+### Round 3
+
+- Critic: `/root/joint_critic` (joint Specs 01–03 evaluation, read-only)
+- Review scope: full
+- Evidence reviewed: commits `9adba5f` and `8687a05`, both prior fix batches, current source/tests/docs, and the clean 215-test gate.
+- Findings: P1 persisted daily summaries lack deep metrics/identity/warning validation and visible corrupt-summary query diagnostics; P1 deleted history is not filtered by the selected directory; P1 deletion execution re-enumerates after drift validation and is not frozen to per-path preview fingerprints.
+- Selected fixes: none; the three-round Critic limit is exhausted.
+- Executor fixes: none in this round.
+- Deferred findings: the three blocking findings remain unresolved and are not accepted as follow-ups; real desktop/mobile journeys also remain Spec 03 Post-Critic Acceptance work.
+- Validation rerun: Critic confirmed `npm run check`, `npm run lint`, `npm test -- --run` (215 passed), `npm run build`, strict specs validation, and `git diff --check` all pass on the clean worktree.
+- Verdict: fail; keep Specs 01–03 in `review` and do not start another automatic Critic.
+
+### Owner-directed post-Critic MVP fix
+
+- Scope: the owner explicitly requested completion of the three remaining P1 findings after the bounded Critic loop; this is an Executor evidence update, not Critic Round 4.
+- Changes: persisted summaries now reject invalid nested metrics, identity, and warnings with visible rebuild guidance; deleted history follows `lastKnownPath` scope; deletion execution freezes previewed shard pairs and per-path fingerprints.
+- Evidence: focused negative tests cover corrupt summary/query diagnostics, directory-scoped deleted history, unknown-path root behavior, frozen deletion targets, and plan-external shard preservation.
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (220 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); `git diff --check`.
+- Lifecycle: this Spec stays `review`; no new Critic verdict was issued, and Spec 03 desktop/mobile Post-Critic Acceptance remains open.

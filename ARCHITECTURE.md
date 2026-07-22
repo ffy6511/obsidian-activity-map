@@ -2,7 +2,7 @@
 
 ## Document Status
 
-This document describes the implemented repository skeleton and the approved target architecture for `v0.1`. Target modules are architectural constraints derived from the three Active Specs; their presence here is not implementation evidence.
+This document describes the implemented `v0.1` technical candidate and its remaining real-environment acceptance boundary. Source, automated fixtures, generated artifacts, and real Obsidian journeys remain distinct forms of evidence.
 
 Authority links:
 
@@ -15,19 +15,24 @@ Authority links:
 
 ## Current Implementation
 
-Only the plugin foundation is implemented today:
+The tracking, persistence, maintenance, query, controller, settings, and file-header/popover surfaces are implemented and covered by deterministic fixtures. Export, rebuild, and deletion modules remain tested local data-service boundaries, but the current plugin neither composes nor bundles a user-facing data-operation UI. The installable bundle collects activity, maintains queryable daily summaries, and renders hierarchical native-SVG distributions from the file-header entry; a later header data modal will compose those services.
 
 ```text
 src/
-└── main.ts                 # Registers one ItemView, Ribbon action, and command.
-                            # Opens a truthful placeholder; no tracking or data writes.
+├── domain/                 # Implemented activity/settings contracts.
+├── platform/               # Implemented clock and window abstractions.
+├── tracking/               # Implemented attribution runtime and recovery behavior.
+├── data/                   # Implemented local evidence, summaries, and data-operation services.
+├── query/                  # Implemented date, path-grouped, and file-grouped distribution queries.
+├── ui/                     # Header-only presentation, controller, immutable view model, and settings.
+└── main.ts                 # Composes recovery, tracking, data, query, and bootstrap presentation.
 
-styles.css                  # Styles only the placeholder view.
+styles.css                  # Header popover, chart, detail, theme, focus, and reduced-motion styles.
 manifest.json               # Plugin ID activity-map; cross-platform manifest flag.
 main.js                     # Generated build artifact; ignored and never edited directly.
 ```
 
-Everything below is the `v0.1` target and remains subject to the evidence checkboxes in the owning Active Spec.
+Automated integration, accessibility-source, privacy-source, XML, and generated-artifact checks are implemented. Joint Critic review and real Obsidian desktop/mobile journeys remain subject to the open evidence checkboxes in Spec 03.
 
 ## System Overview
 
@@ -49,14 +54,15 @@ Obsidian public APIs + standard Web APIs
                             │ immutable query results
                             ▼
 ┌────────────────────────── Query Engine ──────────────────────────┐
-│ Calculate date ranges, current-path projections, folder groups, │
-│ vault/scope totals, top items, “other”, and deleted-file rows.  │
+│ Calculate date ranges, current-path projections, path/file      │
+│ groups, vault/scope totals, top items, “other”, and deleted     │
+│ file rows.                                                      │
 └───────────────────────────┬─────────────────────────────────────┘
                             │ ActivityMapViewModel
                             ▼
-┌──────────────────── Presentation and Export ─────────────────────┐
-│ Full ItemView, file-header status, popover, settings, detail     │
-│ list, native SVG donut, JSON/SVG export, and data controls.      │
+┌────────────── Header Presentation and Local Data Services ───────┐
+│ File-header donut, popover, settings, detail list, native SVG    │
+│ model, and unregistered local export/rebuild/deletion services.  │
 └──────────────────────────────────────────────────────────────────┘
 
 # Dependency rule: arrows point toward a consumer of validated output.
@@ -73,7 +79,7 @@ src/
 │
 ├── domain/                         # Pure types and invariants; no Obsidian imports.
 │   ├── activity.ts                 # Sessions, metrics, closures, recovery decisions.
-│   └── settings.ts                 # Validated runtime settings and documented units.
+│   └── settings.ts                 # Validated plugin settings and durable UI preferences.
 │
 ├── platform/                       # Thin wrappers around time/window capabilities.
 │   ├── clock.ts                    # Wall + monotonic samples; injectable in tests.
@@ -84,7 +90,9 @@ src/
 │   ├── activity-engine.ts          # Pure serialized transitions and session invariants.
 │   ├── editing-burst.ts            # Union/clipping of editor activity intervals.
 │   ├── recovery-queue.ts            # Pending decisions and bounded auto-exclusion undo.
+│   ├── transition-queue.ts         # Serializes concurrent callbacks into ordered transitions.
 │   ├── heartbeat-monitor.ts        # Detects delayed callbacks without counting the gap.
+│   ├── checkpoint-reconciler.ts    # Startup replay/quarantine of in-flight checkpoints.
 │   ├── target-resolver.ts          # Focused leaf -> eligible file identity request.
 │   └── tracking-coordinator.ts     # Converts Obsidian/DOM events into engine inputs.
 │
@@ -111,11 +119,10 @@ src/
 │
 ├── ui/                             # Spec 03: Obsidian-owned presentation surfaces.
 │   ├── activity-map-controller.ts  # Intent serialization and immutable view model.
-│   ├── activity-map-view.ts        # Dockable ItemView renderer.
+│   ├── file-hover-preview.ts       # Public Page Preview event and activation gate.
 │   ├── header-action-manager.ts    # Public FileView.addAction lifecycle.
 │   ├── summary-popover.ts          # Owner-document-aware non-modal interaction.
 │   ├── settings-tab.ts             # Validated save-before-apply settings controls.
-│   ├── data-controls.ts            # Export/rebuild/delete progress and warnings.
 │   └── components/                 # Range, breadcrumb, donut, and detail renderers.
 │
 └── export/                         # Spec 03: deterministic standalone artifacts.
@@ -188,14 +195,14 @@ onload
   2. open registry and event stores    # File/device identity exists before attribution.
   3. load and reconcile checkpoint     # Recover once before accepting new events.
   4. start tracking coordinator        # Registers workspace/window/editor/DOM inputs.
-  5. register controller + UI          # UI receives a complete initial snapshot.
+  5. register controller, settings, and header actions
 
 onunload / Obsidian quit
   1. reject new UI intents             # Prevent operations during teardown.
   2. unregister tracking inputs        # Stop new state transitions.
   3. close/flush active session        # Append evidence before clearing checkpoint.
   4. flush data/settings queues        # Resolve owned asynchronous writes.
-  5. remove transient owned DOM        # Keep Obsidian-restorable ItemView placement.
+  5. remove transient owned DOM        # Header-only UI owns no restorable Activity Map leaf.
 ```
 
 Every startup stage can enter a visible degraded state. A persistence failure must stop new unverifiable attribution; the plugin must not silently fall back to in-memory totals.
@@ -225,6 +232,8 @@ idle   --resume---------------------> active(new session + separate recovery can
 
 One callback creates one immutable wall/monotonic clock sample. Wall time owns timestamps and local-date boundaries; monotonic time owns elapsed durations and delayed-heartbeat detection. Closed intervals are split at local midnight only after their final endpoint is known, so idle rollback cannot leave an already persisted fragment.
 
+Trusted activity refreshes a bounded live checkpoint, including collapsed completed-edit duration plus the current burst endpoints. `editor-change` carries its source file/leaf/window through the platform boundary and is accepted only when it matches the unique foreground target.
+
 ## Data Layer and Query Engine
 
 Spec 02 implements local evidence, derived summaries, and read-only product queries.
@@ -252,14 +261,17 @@ Spec 02 implements local evidence, derived summaries, and read-only product quer
 closed runtime record
   -> validate domain values
   -> add schemaVersion / recordId / deviceId / fileId / pathAtEvent
-  -> enqueue append for exactly one device/date shard
+  -> validate the existing shard and enqueue one adapter append for its device/date
   -> read + rebuild the matching daily summary
-  -> verify replacement is readable
+  -> verify replacement is readable and fingerprint-matches the source record ids
   -> invalidate matching query-cache snapshots
 
 # recordId is the idempotency key for uncertain append retries.
+# Session/date and recovery-candidate decision keys remain stable across checkpoint retries.
+# Normal append never replaces a raw shard; unreadable/corrupt sources abort before mutation.
 # One malformed line is isolated and reported; unrelated records still load.
 # Raw retention runs only after the corresponding daily summary is verified.
+# Maintenance operations emit typed per-date progress and explicit partial-failure results.
 ```
 
 Replaceable JSON uses a recoverable `.next`/`.bak` protocol. Mutation is serialized per owned path, while file-registry changes use one global registry queue. A query reads one registry snapshot and one summary-version snapshot so concurrent mutation cannot produce a mixed projection.
@@ -267,60 +279,60 @@ Replaceable JSON uses a recoverable `.next`/`.bak` protocol. Mutation is seriali
 ### Query Path
 
 ```text
-DistributionQuery(metric, range, path, view)
+DistributionQuery(metric, range, path, view, groupBy)
   -> resolve day coverage and average denominator
   -> load verified daily summaries across device shards
   -> join fileId with current path or deleted state
-  -> group by next directory segment or direct local files
+  -> groupBy path: next directory segment or direct local files
+  -> groupBy file: every present descendant file below path
   -> compute scopeTotal + vaultTotal + percentOfVault
   -> sort all details; derive top N + “other” for the chart
   -> return DistributionResult + warnings + coverage
 
 # Daily averages include zero-use natural days after the first recorded date.
+# Grouping changes item presentation, not scopeTotal or vaultTotal.
 # “Other” is a derived query item and never becomes a real path.
 # Valid historical summaries avoid scanning expired raw session files.
 ```
 
 ## Presentation and Export
 
-Spec 03 owns every user-visible surface and consumes immutable controller models.
+This document owns presentation module boundaries and dependency direction. User-visible behavior belongs to the [PRD Header Popover section](docs/PRD.md#环形图浮层), while stable cross-version constraints belong to the [Interface and Export decision](specs/constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export). Active Specs own implementation-local deltas and evidence. Pixel values, spacing, typography choices, and interaction copy do not belong here.
+
+Presentation surfaces consume immutable controller state and return typed intents. They never append evidence, rewrite summaries, or execute destructive storage mutations directly.
 
 ```text
-ActivityMapController
-├── ItemView                       # Range, breadcrumb, totals, chart, details, controls.
-├── file-header action             # Status icon added through public FileView.addAction.
-├── non-modal summary popover      # Hover/focus on desktop; no required hover on mobile.
-├── Ribbon + commands              # Stable fallback when header integration is absent.
-├── settings tab                   # Persist valid values before applying them.
-└── data-operation dialogs         # Preview destructive scope; report progress/failure.
-```
+Query and tracking outputs
+  -> ActivityMapController          # Owns view state, intent routing, and stale-query guards.
+       ├── HeaderActionManager      # Capability-gated file-header entry and unavailable status.
+       ├── SummaryPopover           # Header-scoped query and interaction surface.
+       └── SettingsTab              # Persists validated preferences before durable use.
 
-The native SVG chart and exported SVG share one chart model:
-
-```text
 DistributionResult
-  -> ChartModel                    # Stable items, colors, labels, geometry inputs.
-       ├── DonutChart DOM          # Interactive hover/focus/click representation.
-       └── SvgExporter             # Escaped, styled, standalone serialized artifact.
-
-# Export never snapshots live DOM, so transient tooltips/buttons cannot leak.
-# Every graphical item has equivalent label, percentage, and exact-value text.
-# Paths and labels are escaped before entering SVG markup.
+  -> LiveDistributionProjection     # Pure, idle-bounded presentation projection.
+  -> ChartModel                     # Shared semantic chart representation.
+       ├── DonutChart               # DOM presentation adapter.
+       └── SvgExporter              # Standalone serialization; never snapshots live DOM.
 ```
 
-UI code sends intents to the controller. It cannot append records, rewrite summaries, or delete files directly. Destructive actions execute only the immutable plan returned by the data layer and abort when that plan becomes stale.
+The Header Popover grouping preference crosses the settings port before becoming the default for a newly opened Popover. Grouping remains a query presentation axis: it changes item projection without changing scope or vault totals. Persistence failure rolls back the optimistic preference and invalidates its in-flight query.
+
+Header integration is capability-gated behind `HeaderActionManager` and is the only registered Activity Map interaction entry. The source contains no dockable Activity Map view, command registration, or data-control presentation. A later header-modal Spec will compose the local data services. Export consumes `ChartModel`, escapes user-derived strings, and resolves standalone styles without depending on mounted presentation DOM. Destructive operations remain owned by the data layer and must execute only against immutable validated plans when the future modal introduces its controller boundary.
+
+File rows in the Header Popover register one `defaultMod` hover source and emit Obsidian's public `hover-link` event through `file-hover-preview.ts`. Page Preview owns the native preview lifecycle, so modifier hover never calls the file-opening path or changes the active tracking leaf. Because the native preview is mounted outside the Activity Map DOM, `SummaryPopover` treats the owning leaf's connected `hoverPopover.hoverEl` as a temporary interaction extension: it preserves the source row while the preview is open, excludes preview clicks from outside-click dismissal, and resumes delayed close after Obsidian removes the preview. Direct activation accepts only user-agent-issued primary clicks or the existing keyboard contract; synthetic DOM clicks cannot switch the foreground file. List and donut highlight transitions remain presentation-only and are disabled by the reduced-motion media query.
 
 ## Failure and Privacy Boundaries
 
 ```text
 Invalid settings          -> field-level defaults + visible warning
 Corrupt registry          -> preserve evidence + stop new identity creation
+Corrupt daily summary     -> exclude projection + visible rebuild-required warning
 Malformed NDJSON line     -> isolate line + continue valid records
 Failed JSON replacement   -> recover primary/backup + report affected path
 Checkpoint uncertainty    -> degraded pause; never guess elapsed time
-Stale deletion plan       -> abort before mutation
-Missing export capability -> explain unavailable action; keep viewing functional
-Header-action failure     -> Ribbon/command/full-view fallback
+Stale deletion plan       -> reject changed scope/path fingerprints before mutation
+Future data-modal export failure -> explain unavailable action; keep viewing functional
+Header-action failure     -> visible unavailable warning; no global fallback entry
 
 # No failure path enables telemetry, remote upload, note-content reads,
 # selected-text capture, or storage of actual typed strings.
@@ -335,11 +347,11 @@ unit tests
   └── fixed query models  # Date denominators, paths, “other”, deleted rows.
 
 integration fixtures
-  └── signal -> session -> shard -> summary -> query -> UI/export
+  └── signal -> session -> shard -> summary -> query -> header UI/local services
                             # Stronger than unit tests, still not real Obsidian UAT.
 
 real Obsidian evidence
-  ├── desktop full journey
+  ├── desktop header-only journey
   └── mobile viewer journey
                             # Recorded separately after technical/Critic gates.
 ```
@@ -349,11 +361,12 @@ Automated and real-environment evidence must remain distinguishable in Active Sp
 ## Change Ownership
 
 ```text
-Time/session/window semantics         -> Spec 01 + Tracking Runtime section
-Schema/storage/identity/query changes -> Spec 02 + Data Layer and Query Engine section
-UI/export/platform journey changes    -> Spec 03 + Presentation and Export section
-Stable cross-version boundary changes -> Constitution first, then this document and Specs
-Version outcome or release evidence   -> Roadmap after owning Spec evidence
+Time/session/window semantics             -> Spec 01 + Tracking Runtime section
+Schema/storage/identity/query changes     -> Spec 02 + Data Layer and Query Engine section
+User-visible UI/UX behavior               -> PRD + owning Active Spec
+Presentation/export ownership or flow     -> Presentation and Export section
+Stable cross-version boundary changes     -> Constitution first, then this document and Specs
+Version outcome or release evidence       -> Roadmap after owning Spec evidence
 ```
 
-Update this document in the same change whenever module ownership, dependency direction, startup/shutdown order, persistence flow, query boundary, presentation contract, or platform boundary changes.
+Update this document when module ownership, dependency direction, startup/shutdown order, persistence flow, query boundary, or platform boundary changes. Keep detailed UI behavior and visual tuning in the PRD and owning Active Spec.

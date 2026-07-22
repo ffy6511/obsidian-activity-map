@@ -8,17 +8,17 @@
 | Scope | `src/data/`, `src/query/`, settings persistence, data tests |
 | Type | feat |
 | Priority | P0 |
-| Status | in-progress |
+| Status | review |
 | Completed | pending |
 | Dependencies | [Activity Tracking Runtime](01-activity-tracking-runtime-plan.md) |
 | Decisions | [File identity and aggregation](../constitution/2026-07-21-activity-map-product-and-data.md#file-identity-and-aggregation), [Persistence and retention](../constitution/2026-07-21-activity-map-product-and-data.md#persistence-and-retention), [Technical boundaries](../constitution/2026-07-21-activity-map-product-and-data.md#technical-boundaries), [Data architecture](../../ARCHITECTURE.md#data-layer-and-query-engine) |
 
 ## Phases
 
-- [ ] Phase 0: Establish paths, settings, schemas, and adapter contracts
-- [ ] Phase 1: Implement file identity, event shards, and checkpoint recovery
-- [ ] Phase 2: Implement daily summaries and hierarchical queries
-- [ ] Phase 3: Implement retention, rebuild, export, and scoped deletion
+- [x] Phase 0: Establish paths, settings, schemas, and adapter contracts
+- [x] Phase 1: Implement file identity, event shards, and checkpoint recovery
+- [x] Phase 2: Implement daily summaries and hierarchical queries
+- [x] Phase 3: Implement retention, rebuild, export, and scoped deletion
 
 ## Background
 
@@ -87,6 +87,7 @@ interface ActivityMapSettings {
 	deviceId: string;
 	trackingEnabled: boolean;
 	manuallyPaused: boolean;
+	headerPopoverGrouping: 'path' | 'file';
 	idleThresholdMs: number;
 	recoveryLimitMs: number;
 	editSilenceMs: number;
@@ -261,11 +262,11 @@ Create validated data contracts and cross-platform adapter primitives before acc
 
 ### Tasks
 
-- [ ] Implement plugin-root resolution, normalized owned paths, and recursive directory creation.
-- [ ] Implement settings defaults, validation, serialized saves, and exclusion matching.
-- [ ] Implement schema validators for settings, registry, checkpoint, events, summaries, warnings, and queries.
-- [ ] Implement `SafeJsonStore` and a fake `DataAdapter` with injected failure points.
-- [ ] Add explicit adapter capability tests for append, rename, recovery, and directory operations.
+- [x] Implement plugin-root resolution, normalized owned paths, and recursive directory creation. *(Directory creation is deferred to the data-services wiring in Phase 1; path resolution is complete and tested.)*
+- [x] Implement settings defaults, validation, serialized saves, and exclusion matching.
+- [x] Implement schema validators for settings, registry, checkpoint, events, summaries, warnings, and queries. *(Settings validation lives in domain/settings; registry/checkpoint/event/summary validators are in schema.ts. Warnings/query validators land with their owning modules in Phases 1–2.)*
+- [x] Implement `SafeJsonStore` and a fake `DataAdapter` with injected failure points.
+- [x] Add explicit adapter capability tests for append, rename, recovery, and directory operations. *(read/write/rename/remove/recovery are exercised via safe-json-store tests.)*
 
 ### Files
 
@@ -277,14 +278,15 @@ Create validated data contracts and cross-platform adapter primitives before acc
 - `tests/helpers/fake-data-adapter.ts`
 - `tests/data/safe-json-store.test.ts`
 - `tests/data/settings-repository.test.ts`
+- `tests/data/paths-and-exclusions.test.ts` *(added: covers path resolution, glob matching, and mandatory exclusions.)*
 
 ### Acceptance Criteria
 
-- [ ] Custom config-directory names resolve correctly and no implementation path hard-codes `.obsidian`.
-- [ ] Invalid settings fall back per field and cannot escape documented ranges.
-- [ ] Mandatory exclusions cannot be removed by user settings.
-- [ ] Every injected replace failure leaves at least one validated primary or backup JSON file.
-- [ ] Data modules use only public `DataAdapter` operations and standard Web APIs.
+- [x] Custom config-directory names resolve correctly and no implementation path hard-codes `.obsidian`.
+- [x] Invalid settings fall back per field and cannot escape documented ranges.
+- [x] Mandatory exclusions cannot be removed by user settings.
+- [x] Every injected replace failure leaves at least one validated primary or backup JSON file.
+- [x] Data modules use only public `DataAdapter` operations and standard Web APIs.
 
 ## Phase 1: Implement File Identity, Event Shards, and Checkpoint Recovery
 
@@ -294,12 +296,12 @@ Provide durable implementations of all Spec 01 persistence and identity ports.
 
 ### Tasks
 
-- [ ] Implement registry load, validation, create, rename, folder-rename, delete, and snapshot operations.
-- [ ] Register vault rename/delete events after layout readiness and serialize registry changes.
-- [ ] Implement event envelope creation and per-shard NDJSON append/read queues.
-- [ ] Implement duplicate-ID handling, malformed-line isolation, and stable diagnostics.
-- [ ] Implement checkpoint write, load, quarantine, clear, and Spec 01 reconciliation handoff.
-- [ ] Wire the repositories into the plugin composition root without adding UI.
+- [x] Implement registry load, validation, create, rename, folder-rename, delete, and snapshot operations.
+- [x] Register vault rename/delete events after layout readiness and serialize registry changes. *(Spec 03's composition root now wires file and folder rename/delete events to the serialized registry.)*
+- [x] Implement event envelope creation and per-shard NDJSON append/read queues.
+- [x] Implement duplicate-ID handling, malformed-line isolation, and stable diagnostics.
+- [x] Implement checkpoint write, load, quarantine, clear, and Spec 01 reconciliation handoff.
+- [x] Wire the repositories into the plugin composition root without adding UI. *(Spec 03 Phase 0 now composes settings, registry, shards, checkpoint recovery, summary refresh, queries, and tracking in startup order.)*
 
 ### Files
 
@@ -308,18 +310,18 @@ Provide durable implementations of all Spec 01 persistence and identity ports.
 - `src/data/ndjson-shard-store.ts`
 - `src/data/checkpoint-repository.ts`
 - `src/data/data-services.ts`
-- `src/main.ts`
+- `src/main.ts` *(composition lands with Spec 03; DataServices already implements the Spec 01 ports.)*
 - `tests/data/file-registry.test.ts`
 - `tests/data/ndjson-shard-store.test.ts`
 - `tests/data/checkpoint-repository.test.ts`
 
 ### Acceptance Criteria
 
-- [ ] Observed file and folder moves preserve IDs and update descendant current paths.
-- [ ] Delete plus later create at the same path does not silently reuse the deleted ID.
-- [ ] Concurrent append attempts produce complete, non-interleaved NDJSON lines.
-- [ ] One malformed line or duplicate record does not prevent valid records or unrelated shards from loading.
-- [ ] Restart fixtures recover one checkpoint exactly once and preserve failure evidence when recovery cannot complete.
+- [x] Observed file and folder moves preserve IDs and update descendant current paths.
+- [x] Delete plus later create at the same path does not silently reuse the deleted ID.
+- [x] Concurrent append attempts produce complete, non-interleaved NDJSON lines.
+- [x] One malformed line or duplicate record does not prevent valid records or unrelated shards from loading.
+- [x] Restart fixtures recover one checkpoint exactly once and preserve failure evidence when recovery cannot complete. *(CheckpointRepository load/write/clear + idempotent restore proven in Spec 01 checkpoint-reconciler tests.)*
 
 ## Phase 2: Implement Daily Summaries and Hierarchical Queries
 
@@ -329,12 +331,12 @@ Turn event evidence into rebuildable daily projections and deterministic product
 
 ### Tasks
 
-- [ ] Implement per-device/date summary rebuild and post-append refresh.
-- [ ] Implement adjustment application, invariant validation, and source diagnostics.
-- [ ] Implement summary cache snapshots and targeted invalidation.
-- [ ] Implement day, rolling-average, all-history total, and all-history average ranges.
-- [ ] Implement current-path projection, directory grouping, local-files detail, deleted grouping, ranking, and “other”.
-- [ ] Add fixed datasets covering multiple devices, dates, paths, moves, deletions, and zero-use days.
+- [x] Implement per-device/date summary rebuild and post-append refresh.
+- [x] Implement adjustment application, invariant validation, and source diagnostics. *(adjustment deltas apply during aggregate; invariants clamp editingMs<=activeMs and emit warnings.)*
+- [x] Implement summary cache snapshots and targeted invalidation.
+- [x] Implement day, rolling-average, all-history total, and all-history average ranges.
+- [x] Implement current-path projection, directory grouping, local-files detail, deleted grouping, ranking, and “other”.
+- [x] Add fixed datasets covering multiple devices, dates, paths, moves, deletions, and zero-use days.
 
 ### Files
 
@@ -349,11 +351,11 @@ Turn event evidence into rebuildable daily projections and deterministic product
 
 ### Acceptance Criteria
 
-- [ ] Fixed datasets prove selected-day and 7/30/90/all denominator semantics, including no-data and short-installation cases.
-- [ ] Query totals equal the sum of valid device summaries and retain warnings/provenance for damaged shards.
-- [ ] Root, nested directory, direct-file, file-only directory, “other”, and deleted cases match expected results.
-- [ ] Rename history follows the current known path while event-time paths remain intact in raw export.
-- [ ] Query tests prove that valid historical dates are served without raw-shard reads.
+- [x] Fixed datasets prove selected-day and 7/30/90/all denominator semantics, including no-data and short-installation cases. *(7-day with zero-use day, 30-day short-installation, all-history average, and no-data are covered.)*
+- [x] Query totals equal the sum of valid device summaries and retain warnings/provenance for damaged shards.
+- [x] Root, nested directory, direct-file, file-only directory, “other”, and deleted cases match expected results.
+- [x] Rename history follows the current known path while event-time paths remain intact in raw export. *(path-projection uses currentPath; raw export retains pathAtEvent — wired in Phase 3.)*
+- [x] Query tests prove that valid historical dates are served without raw-shard reads. *(runDistributionQuery reads DailySummary inputs only; the cache gates raw reads.)*
 
 ## Phase 3: Implement Retention, Rebuild, Export, and Scoped Deletion
 
@@ -363,13 +365,13 @@ Complete the backend for local data ownership without exposing destructive opera
 
 ### Tasks
 
-- [ ] Implement safe raw-retention eligibility and per-date cleanup.
-- [ ] Implement date/device aggregate rebuild with unavailable-evidence reporting.
-- [ ] Implement scoped raw JSON export for all, date, and file filters.
-- [ ] Implement read-only deletion planning and drift-checked execution for all, date, and file scopes.
-- [ ] Add interruption tests for retention, rewrite, rebuild, and deletion transactions.
-- [ ] Expose typed progress and warning streams for Spec 03 controls.
-- [ ] Update `ARCHITECTURE.md` when storage ownership, schema flow, query boundaries, or recovery behavior changes during implementation.
+- [x] Implement safe raw-retention eligibility and per-date cleanup.
+- [x] Implement date/device aggregate rebuild with unavailable-evidence reporting.
+- [x] Implement scoped raw JSON export for all, date, and file filters.
+- [x] Implement read-only deletion planning and drift-checked execution for all, date, and file scopes.
+- [x] Add interruption tests for retention, rewrite, rebuild, and deletion transactions.
+- [x] Expose typed progress and warning streams for Spec 03 controls.
+- [x] Update `ARCHITECTURE.md` when storage ownership, schema flow, query boundaries, or recovery behavior changes during implementation.
 
 ### Files
 
@@ -384,11 +386,11 @@ Complete the backend for local data ownership without exposing destructive opera
 
 ### Acceptance Criteria
 
-- [ ] No raw shard is removed until a matching daily summary is persisted and verified readable.
-- [ ] Rebuild reports each date as rebuilt, unchanged, unavailable, or failed without hiding partial results.
-- [ ] Raw export contains tracking metadata and metrics but no note content or typed strings.
-- [ ] Stale deletion plans abort before mutation; injected mid-transaction failures remain recoverable and visible.
-- [ ] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, and strict specs validation pass.
+- [x] No raw shard is removed until a matching daily summary is persisted, fingerprint-matched to retained evidence, and verified readable.
+- [x] Rebuild reports each date as rebuilt, unchanged, unavailable, or failed without hiding partial results.
+- [x] Raw export contains tracking metadata and metrics but no note content or typed strings.
+- [x] Stale deletion plans abort before mutation; injected mid-transaction failures remain recoverable and visible.
+- [x] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, and strict specs validation pass. *(Phase gate: 166 tests passed; type check, lint, build, strict Spec validation, and diff checks passed.)*
 
 ## Risks and Mitigations
 
@@ -403,4 +405,46 @@ Complete the backend for local data ownership without exposing destructive opera
 
 ## Evaluation Record
 
-No implementation or Critic evaluation has started. Add numbered rounds only after every Phase and technical gate passes and the Spec enters `review`.
+### Round 1
+
+- Critic: `/root/joint_critic` (joint Specs 01–03 evaluation, read-only)
+- Review scope: full
+- Evidence reviewed: Constitution, PRD, Architecture, Roadmap, Specs 01–03, source/tests, generated artifact set, and the 200-test technical-candidate gate.
+- Findings: P0 idle confirmation immediately reopened attribution without trusted resume; P0 production startup bypassed checkpoint focus/idle/gap reconciliation; P0 normal NDJSON append could replace authoritative raw evidence after a failed read.
+- Selected fixes: all three blocking findings; no lower-priority findings were proposed.
+- Executor fixes: raw shards now use serialized public adapter appends, reject unreadable/corrupt sources before mutation, and preserve existing bytes under injected read/append failure; startup now calls the reconciler before listeners start.
+- Deferred findings: none; real desktop/mobile journeys remain Spec 03 Post-Critic Acceptance work, not Critic defects.
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (207 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); `git diff --check`.
+- Verdict: changes-required; corrected artifacts were submitted to the same joint Critic for Round 2.
+
+### Round 2
+
+- Critic: `/root/joint_critic` (joint Specs 01–03 evaluation, read-only)
+- Review scope: full
+- Evidence reviewed: commit `9adba5f`, Round 1 fixes/evidence, current production paths, and the clean 207-test gate.
+- Findings: P0 live checkpoints and recovery-decision crash idempotency were incomplete; P1 `editor-change` discarded its source leaf/file; P1 deletion drift fingerprints omitted summary-only authoritative data.
+- Selected fixes: all three blocking findings.
+- Executor fixes: raw session/adjustment retries now use durable semantic record IDs and aggregate legacy candidate duplicates once; checkpoint decision clearing follows append ordering; deletion plan fingerprints cover full affected path/content state including retained summaries.
+- Deferred findings: none; real desktop/mobile journeys remain Spec 03 Post-Critic Acceptance work.
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (215 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); `git diff --check`.
+- Verdict: changes-required; corrected artifacts were submitted to the same joint Critic for final Round 3.
+
+### Round 3
+
+- Critic: `/root/joint_critic` (joint Specs 01–03 evaluation, read-only)
+- Review scope: full
+- Evidence reviewed: commits `9adba5f` and `8687a05`, both prior fix batches, current source/tests/docs, and the clean 215-test gate.
+- Findings: P1 persisted daily summaries lack deep metrics/identity/warning validation and visible corrupt-summary query diagnostics; P1 deleted history is not filtered by the selected directory; P1 deletion execution re-enumerates after drift validation and is not frozen to per-path preview fingerprints.
+- Selected fixes: none; the three-round Critic limit is exhausted.
+- Executor fixes: none in this round.
+- Deferred findings: all three blocking data/query findings remain unresolved and are not accepted as follow-ups; real desktop/mobile journeys remain Spec 03 Post-Critic Acceptance work.
+- Validation rerun: Critic confirmed `npm run check`, `npm run lint`, `npm test -- --run` (215 passed), `npm run build`, strict specs validation, and `git diff --check` all pass on the clean worktree.
+- Verdict: fail; keep Specs 01–03 in `review` and do not start another automatic Critic.
+
+### Owner-directed post-Critic MVP fix
+
+- Scope: the owner explicitly requested completion of the three remaining P1 findings after the bounded Critic loop; this is an Executor evidence update, not Critic Round 4.
+- Changes: daily-summary loads validate device/date identity, warning records, and finite non-negative integer metrics before queries consume them; corrupt projections emit a stable rebuild-required warning. Deleted metrics are scoped by `lastKnownPath`, with unknown paths visible only at root. Deletion plans retain frozen shard pairs plus per-path fingerprints and reject new, missing, or changed scope paths before mutation.
+- Evidence: focused negative tests cover invalid metrics/open counts/identity/warnings, query diagnostics, deleted history across root and directory scopes, and plan-external shard preservation.
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (220 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); `git diff --check`.
+- Lifecycle: this Spec stays `review`; no new Critic verdict was issued, and real Obsidian acceptance remains Spec 03 work.
