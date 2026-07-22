@@ -26,6 +26,7 @@ Deliver a local-first Obsidian plugin that measures trustworthy file activity an
 - [Spec 01 — Activity tracking runtime](active/01-activity-tracking-runtime-plan.md)
 - [Spec 02 — Local data and query](active/02-local-data-and-query-plan.md)
 - [Spec 03 — Activity Map UI and v0.1 release](active/03-activity-map-ui-and-v0-1-release-plan.md)
+- [Spec 04 — Header Popover split layout](active/04-header-popover-split-layout-plan.md)
 
 ### Key Deliverables
 

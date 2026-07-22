@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | Decision date | 2026-07-21 |
-| Related specs | [Tracking runtime](../active/01-activity-tracking-runtime-plan.md), [Local data and query](../active/02-local-data-and-query-plan.md), [UI and v0.1 release](../active/03-activity-map-ui-and-v0-1-release-plan.md) |
+| Related specs | [Tracking runtime](../active/01-activity-tracking-runtime-plan.md), [Local data and query](../active/02-local-data-and-query-plan.md), [UI and v0.1 release](../active/03-activity-map-ui-and-v0-1-release-plan.md), [Header Popover split layout](../active/04-header-popover-split-layout-plan.md) |
 | Product requirements | [Activity Map PRD](../../docs/PRD.md) |
 
 ## Decision Summary
@@ -78,11 +78,12 @@ A user works across several Obsidian windows and project folders. Activity Map a
 - Provide a stable file-header donut action with a focusable interactive chart popover, plus Ribbon and command fallbacks. Hover/focus reveals the chart; action click pins or unpins it; the Popover trailing control pauses or resumes tracking, while Ribbon and command remain the dockable-view entrypoints.
 - Render the header action as a stable miniature of today's vault-root distribution, using the same stable slice identities and colors as the full donut. When data is unavailable, keep the same fixed donut outline instead of showing a synthetic single arc or swapping tracking-state icons.
 - Make the header popover and dockable view share the same query, native SVG donut, legend, range controls, path, and slice activation semantics. The popover defaults to today's vault-root distribution.
-- Keep the header popover structurally stable while a slice is highlighted: controls, donut, current path, and a bounded scrollable legend occupy fixed regions. Do not add a transient tooltip row, duplicate totals, vault-share summary, title bar, or ordinary tracking-status footer.
+- Keep the header popover structurally stable while a slice is highlighted: controls stay above a `3:2` result grid whose left column contains the donut and current path and whose right column contains the bounded scrollable legend. The legend cannot exceed the donut height. Do not add region headings, a transient tooltip row, duplicate totals, vault-share summary, title bar, or ordinary tracking-status footer.
 - Project the current unclosed active interval into both the header miniature and an open popover without waiting for summary persistence. UI-side ticking must stop at the last trusted interaction plus the configured idle threshold and must not rewrite persisted evidence.
 - Present the current path as centered muted context directly below the donut, outside the legend. Popover breadcrumbs remain clickable and promote to underlined primary text on hover/focus. Legend rows have no default background and keep all text muted until pointer/focus or donut highlight promotes the active row to primary text without shifting layout.
 - In selected-day mode, place an equal-width previous/next pair around a clickable `YYYY-MM-DD` date value. Place the pause/resume icon after this date group with a visible gap; icon buttons share compact dimensions and the selected metric may use its own semantic icon.
 - Keep legend values column-aligned as name, exact value, then rightmost percentage. Reserve fixed numeric widths so seconds-only and minute/hour values do not move the percentage column.
+- Display present file leaves by basename in chart and legend text while retaining their full vault-relative path for identity, navigation, and file activation.
 - Use a dockable `ItemView` as the complete interface. Mobile interaction must not depend on hover.
 - Use a native SVG donut with stable colors, text detail, keyboard navigation, breadcrumbs, and explicit local-versus-vault percentages.
 - Export a full information graphic by default and offer a chart-only SVG. Both outputs embed necessary styles and accessible metadata.
@@ -211,3 +212,4 @@ Rejected because keyboard interaction, accessible semantics, and standalone vect
 | 2026-07-21 | Required the open header chart to project the idle-bounded unclosed session in real time and refined path, legend, and control alignment. | Eliminate the persistence/heartbeat lag between the miniature and popover while preserving trusted-time and fixed-layout invariants. |
 | 2026-07-21 | Changed live Popover ticks to update existing chart and legend nodes in place, tightened chart/path/list spacing, normalized date-button gaps, and replaced Expand with pause/resume. | Preserve pointer/focus highlight across real-time updates and keep the compact control row useful without a duplicate full-view entry. |
 | 2026-07-21 | Removed default legend-row fills, centered donut totals, aligned exact values before rightmost percentages, replaced the calendar icon with a visible date, and added consistent interactive affordances. | Improve scan alignment and make every clickable Popover element visually discoverable. |
+| 2026-07-22 | Reflowed the Header Popover result into a `3:2` chart-and-list grid and shortened present file-leaf labels to basenames. | Use horizontal space without adding UI chrome and remove path repetition already supplied by breadcrumbs. |
