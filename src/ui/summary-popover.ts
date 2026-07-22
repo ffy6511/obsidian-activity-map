@@ -205,7 +205,9 @@ export class SummaryPopover {
 		model: ActivityMapViewModel,
 		distribution: import('../query/distribution-query').DistributionResult,
 	): void {
-		const chart = popover.createDiv({ cls: 'activity-map-popover-chart' });
+		const result = popover.createDiv({ cls: 'activity-map-popover-result' });
+		const chartColumn = result.createDiv({ cls: 'activity-map-popover-chart-column' });
+		const chart = chartColumn.createDiv({ cls: 'activity-map-popover-chart' });
 		let legendHandle: ChartLegendHandle | null = null;
 		const chartHandle = renderDonutChart({
 			container: chart,
@@ -214,11 +216,11 @@ export class SummaryPopover {
 			onHighlight: (item) => legendHandle?.highlight(item?.id ?? null),
 			showTooltip: false,
 		});
-		this.renderCurrentPath(popover, model);
+		this.renderCurrentPath(chartColumn, model);
 		const items = this.expandedOther
 			? distribution.detailItems.filter((item) => item.memberIds.some((id) => this.expandedOther?.includes(id)))
 			: distribution.detailItems;
-		const legend = popover.createDiv({ cls: 'activity-map-popover-legend' });
+		const legend = result.createDiv({ cls: 'activity-map-popover-legend' });
 		if (this.expandedOther) {
 			const heading = legend.createDiv({ cls: 'activity-map-detail-heading' });
 			heading.createSpan({ text: 'Other items' });

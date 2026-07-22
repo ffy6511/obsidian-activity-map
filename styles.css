@@ -345,6 +345,9 @@
 }
 
 .activity-map-chart-popover {
+	--activity-map-popover-chart-size: min(20rem, calc(60vw - 2.4rem));
+
+	width: min(48rem, calc(100vw - 1rem));
 	overflow: hidden;
 }
 
@@ -441,8 +444,20 @@
 	margin-inline-start: 0;
 }
 
+.activity-map-popover-result {
+	display: grid;
+	grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+	gap: var(--size-4-4);
+	align-items: start;
+	min-height: 0;
+}
+
+.activity-map-popover-chart-column {
+	min-width: 0;
+}
+
 .activity-map-popover-chart .activity-map-donut {
-	width: min(100%, 20rem);
+	width: min(100%, var(--activity-map-popover-chart-size));
 	margin-bottom: calc(-1 * var(--size-4-5));
 }
 
@@ -475,7 +490,7 @@
 
 .activity-map-popover-legend {
 	min-height: 0;
-	max-height: 11rem;
+	max-height: var(--activity-map-popover-chart-size);
 	overflow-y: auto;
 	overscroll-behavior: contain;
 }

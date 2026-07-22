@@ -16,7 +16,7 @@
 ## Phases
 
 - [x] Phase 0: Display file leaves by basename
-- [ ] Phase 1: Reflow the Popover into a 3:2 chart-and-list layout
+- [x] Phase 1: Reflow the Popover into a 3:2 chart-and-list layout
 - [ ] Phase 2: Synchronize documentation and complete integration evidence
 
 ## Background
@@ -117,12 +117,12 @@ Use the approved horizontal layout while preserving the existing component set a
 
 ### Tasks
 
-- [ ] Add one result-body wrapper around the existing chart/path column and legend.
-- [ ] Use `minmax(0, 3fr) minmax(0, 2fr)` for the result body and widen only the existing chart Popover enough to support the ratio.
-- [ ] Keep the path below the donut inside the left column.
-- [ ] Cap the right legend at the donut height, keep `overflow-y: auto`, and prevent legend growth from increasing the Popover height.
-- [ ] Preserve loading retention, live in-place updates, highlight synchronization, focus restoration, drill-down, and reduced-motion behavior.
-- [ ] Extend focused Popover and accessibility checks without asserting or rendering any new headings.
+- [x] Add one result-body wrapper around the existing chart/path column and legend.
+- [x] Use `minmax(0, 3fr) minmax(0, 2fr)` for the result body and widen only the existing chart Popover enough to support the ratio.
+- [x] Keep the path below the donut inside the left column.
+- [x] Cap the right legend at the donut height, keep `overflow-y: auto`, and prevent legend growth from increasing the Popover height.
+- [x] Preserve loading retention, live in-place updates, highlight synchronization, focus restoration, drill-down, and reduced-motion behavior.
+- [x] Extend focused Popover and accessibility checks without asserting or rendering any new headings.
 
 ### Files
 
@@ -133,11 +133,19 @@ Use the approved horizontal layout while preserving the existing component set a
 
 ### Acceptance Criteria
 
-- [ ] The chart/path column and legend render side by side at a `3:2` ratio.
-- [ ] The legend never exceeds the donut's height and becomes internally scrollable when necessary.
-- [ ] The Popover contains no new title, chart/list caption, summary, tooltip row, or status footer.
-- [ ] Existing query, live ticking, pointer, keyboard, pinning, breadcrumb, and activation tests remain green.
-- [ ] Focused UI tests, type checking, lint, and build pass.
+- [x] The chart/path column and legend render side by side at a `3:2` ratio.
+- [x] The legend never exceeds the donut's height and becomes internally scrollable when necessary.
+- [x] The Popover contains no new title, chart/list caption, summary, tooltip row, or status footer.
+- [x] Existing query, live ticking, pointer, keyboard, pinning, breadcrumb, and activation tests remain green.
+- [x] Focused UI tests, type checking, lint, and build pass.
+
+### Evidence
+
+- `npm run check` — passed.
+- `npm run lint` — passed.
+- `npm test -- --run` — 231 passed, 0 failed.
+- `npm run build` — passed.
+- Obsidian 1.12.7 rendered the widened `3:2` chart/list grid with the path under the donut and no additional region labels. The available root fixture had four rows, so owner UAT retains the long-list scrollbar check.
 
 ## Phase 2: Synchronize Documentation and Complete Integration Evidence
 

@@ -21,6 +21,8 @@ describe('summary popover fixed layout', () => {
 		expect(source.includes("id: 'tracking-toggle'")).toBeTrue();
 		expect(source.includes('}, true);')).toBeTrue();
 		expect(source.includes('activity-map-popover-path')).toBeTrue();
+		expect(source.includes("cls: 'activity-map-popover-result'")).toBeTrue();
+		expect(source.includes("cls: 'activity-map-popover-chart-column'")).toBeTrue();
 		expect(source.includes("icon: paused ? 'play' : 'pause'")).toBeTrue();
 		expect(source.includes('this.renderIfChanged(model, true);')).toBeTrue();
 		expect(source.includes('if (isLiveTodayQuery(model)) this.updateLiveDistribution(model);')).toBeTrue();
@@ -28,7 +30,7 @@ describe('summary popover fixed layout', () => {
 		expect(source.includes('distribution.detailItems.length === 0')).toBeTrue();
 		expect(source.includes('popover.matches(\':hover\')')).toBeTrue();
 		expect(source.includes('openView')).toBeFalse();
-		for (const rejected of ['activity-map-popover-header', 'activity-map-popover-summary', 'renderTrackingAuxiliary', 'This file today']) {
+		for (const rejected of ['activity-map-popover-header', 'activity-map-popover-summary', 'renderTrackingAuxiliary', 'This file today', 'Chart area', 'List area']) {
 			expect(source.includes(rejected)).toBeFalse();
 		}
 		for (const expected of ['activity-map-icon-button', 'activity-map-day-navigation', 'activity-map-control-trailing', 'iconForMetric']) {
@@ -38,7 +40,9 @@ describe('summary popover fixed layout', () => {
 		expect(donut.includes("center.setAttribute('dominant-baseline', 'middle')")).toBeTrue();
 		expect(donut.includes('nextModel.items.some((item) => !paths.has(item.id))')).toBeTrue();
 		expect(legend.includes('update(nextDistribution, nextItems')).toBeTrue();
-		expect(css.includes('max-height: 11rem')).toBeTrue();
+		expect(css.includes('--activity-map-popover-chart-size: min(20rem, calc(60vw - 2.4rem))')).toBeTrue();
+		expect(css.includes('grid-template-columns: minmax(0, 3fr) minmax(0, 2fr)')).toBeTrue();
+		expect(css.includes('max-height: var(--activity-map-popover-chart-size)')).toBeTrue();
 		expect(css.includes('overflow-y: auto')).toBeTrue();
 		expect(css.includes('grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) max-content max-content')).toBeTrue();
 		expect(css.includes("[data-activity-map-id='previous-day']")).toBeTrue();
