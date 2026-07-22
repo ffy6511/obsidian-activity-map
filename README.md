@@ -1,46 +1,69 @@
-# Activity Map
+<p align="center">
+  <img src="docs/assets/activity-map-hero.png" style="width:70%;" alt="Activity Map hero">
+</p>
 
-Activity Map is a local-first Obsidian plugin for measuring trustworthy activity time per file and exploring it through a folder hierarchy.
+<p align="center">
+  Local-first, trustworthy activity insights for your Obsidian vault.
+</p>
 
-## Project Status
+[English](#english) · [简体中文](#简体中文)
 
-The repository contains composed tracking, local persistence, maintenance, hierarchical and recursive-file queries, settings, commands, dockable statistics, SVG/JSON export, rebuild, and scoped deletion. The file-header entry renders the actual today/vault-root distribution as stable miniature slices; its pinnable popover updates trusted live values in place, preserves highlight state, remembers the last successful path/file grouping choice, exposes that toggle before pause/resume and direct date selection, and uses a centered `2:3` donut/list layout with bounded list-only scrolling. Hover and focus smoothly dim sibling list items and donut slices. File rows emit Obsidian's native Page Preview on the configured modifier hover, and the source popover remains mounted while the pointer interacts with that preview. Long file names ellipsize before the fixed numeric columns while retaining the full path for deliberate activation. Controlled-clock, fake-adapter, accessibility-source, privacy-source, XML, and bundle checks cover the technical candidate; final real Obsidian desktop/mobile acceptance remains pending.
+## English
 
-Treat this as a development build until the complete UI and real Obsidian journeys pass. Follow the [Roadmap](specs/ROADMAP.md) for release acceptance status.
+Activity Map is an Obsidian plugin that shows how you spend focused time across the files and folders in your vault.
 
-## Product Direction
+### Features
 
-The planned first release will provide:
+- **Trustworthy per-file activity** — Tracks active time, editing time, and file-open counts for the file currently in focus. Background windows, untrackable views, paused tracking, and confirmed idle time are excluded.
+- **Idle-aware tracking** — Stops a session at the last trusted interaction after an idle period. Short uncertain gaps can be reviewed explicitly; long sleep or lock-screen gaps stay excluded by default.
+- **Explore activity by time and place** — Inspect a selected day, 7/30/90-day daily averages, all-history averages, or all-history totals. Drill from the vault root into folders, or switch to a recursive file-level view for the current path.
+- **Clear visual entry point** — Eligible file headers show a compact donut chart that opens a pinnable summary popover. There is no global toolbar icon or Command Palette entry.
+- **Detailed, accessible charts** — The donut chart and detail list share the same data, support keyboard interaction, retain stable colors, and keep every item available in the list even when smaller chart slices are grouped as “Other”.
+- **Local settings** — Configure excluded paths and timing thresholds. Export, rebuild, and deletion controls will return in a later explicit header data modal.
 
-- foreground-only activity attribution for vault files;
-- idle clipping and explicit recovery corrections;
-- selected-day, rolling daily-average, and all-history queries;
-- hierarchical folder drill-down plus recursive file grouping for the selected path;
-- a stable multi-slice header mini donut, centered `2:3` pinnable chart/list popover with an inline grouping toggle, and dockable full view;
-- local data controls and standalone SVG export;
-- complete desktop behavior and a mobile view path without hover.
+### Install from a GitHub Release
 
-The complete requirements and stable data decisions are documented in:
+Activity Map is not currently listed in the official Obsidian Community Plugins directory. Install it manually from a [GitHub Release](https://github.com/ffy6511/obsidian-activity-map/releases/latest).
 
-- [Product Requirements](docs/PRD.md)
-- [Product and Data Decisions](specs/constitution/2026-07-21-activity-map-product-and-data.md)
-- [Architecture](ARCHITECTURE.md)
-- [Existing Plugin Research](specs/research/2026-07-21-existing-plugin-landscape-research.md)
-- [v0.1.0 Release Notes](RELEASE_NOTES.md)
+1. Download these three release assets:
 
-## Development
+   | File            | Purpose                  |
+   | --------------- | ------------------------ |
+   | `main.js`       | Compiled plugin code     |
+   | `manifest.json` | Obsidian plugin metadata |
+   | `styles.css`    | Plugin styles            |
 
-Contributors and coding agents should read [Repository Instructions](AGENTS.md) and the relevant current/target boundary in [Architecture](ARCHITECTURE.md) before changing source or Specs.
+2. Create this folder in your vault:
 
-Requirements:
+   ```text
+   <vault>/.obsidian/plugins/activity-map/
+   ```
 
-- Node.js 20.11 or newer
-- npm
+   If your vault uses a custom Obsidian configuration directory, replace `.obsidian` with that directory name.
 
-Install dependencies and run the repository gates:
+3. Copy all three downloaded files into that `activity-map` folder.
+4. Reload Obsidian, then enable **Activity Map** under **Settings → Community plugins**. Disable Restricted Mode first if Obsidian asks you to do so.
+
+> Requires Obsidian 1.7.2 or later.
+
+### Local development
+
+Requirements: Node.js 20.11+ and npm.
 
 ```bash
 npm install
+npm run dev
+```
+
+`npm run dev` watches the source and writes `main.js` at the repository root. Copy `main.js`, `manifest.json`, and `styles.css` to your development vault’s `plugins/activity-map/` folder, then reload Obsidian to test the change.
+
+### Release automation
+
+Pushing a semantic-version tag that exactly matches `package.json` and `manifest.json` and is recorded in `versions.json`—for example, `0.1.0`—starts the release workflow. It runs the checks and production build, then creates the GitHub Release with `main.js`, `manifest.json`, and `styles.css` attached. The repository configures `npm version patch|minor|major` to create a no-prefix tag; push it with `git push --follow-tags`.
+
+Run the usual checks before preparing a release:
+
+```bash
 npm run check
 npm run lint
 npm test -- --run
@@ -48,46 +71,86 @@ npm run build
 git diff --check
 ```
 
-For watch mode:
+### Data and privacy
+
+Activity Map is local-first. It does not itself upload, sync, sell, or send your activity data anywhere.
+
+- No account, telemetry, analytics, remote API, or network upload is included.
+- Activity records stay in the plugin data directory inside your vault configuration directory.
+- The plugin stores activity metadata such as file identity, file path at the time of an event, timestamps, durations, and open counts so it can show and rebuild your statistics.
+- It does not read or store note content, selected text, or the actual strings you type.
+
+### License
+
+[MIT](LICENSE)
+
+---
+
+## 简体中文
+
+Activity Map 是一款本地优先的 Obsidian 活动统计插件。它帮助你了解自己在 vault 各文件和目录上的专注投入.
+
+### 功能
+
+- **可信的逐文件活动统计**：记录当前聚焦文件的活动时长、编辑时长和打开/切入次数；后台窗口、不可追踪视图、暂停期间和已确认的空闲时间不会计入。
+- **识别空闲与休眠**：空闲后会在最后一次可信交互时结束 session。较短的未确定间隔可由你明确决定是否补计；休眠、锁屏或长时间间隔默认排除。
+- **按时间与目录查看投入**：支持指定日、7/30/90 天日均、全部历史日均与全部历史总量；可以从 vault 根目录逐层下钻，也可以切换为当前路径下的递归文件视图。
+- **低打扰入口**：符合条件的文件页眉会显示微型环形图，点击可打开并固定统计浮层；不提供全局工具栏图标或命令面板入口。
+- **清晰且可访问的图表**：环形图和明细列表使用同一份数据，支持键盘操作与稳定配色；即使图表把较小项目合并为“其他”，明细列表仍会保留全部项目。
+- **本地设置**：可设置排除路径和时间阈值。导出、重建和删除控制将在后续显式页眉数据 modal 中提供。
+
+### 从 GitHub Release 安装
+
+Activity Map 目前尚未上架 Obsidian 官方插件市场，请从 [GitHub Release](https://github.com/ffy6511/obsidian-activity-map/releases/latest) 手动安装。
+
+1. 下载 Release 中的三个文件：`main.js`、`manifest.json` 和 `styles.css`。
+2. 在 vault 中创建目录：
+
+   ```text
+   <vault>/.obsidian/plugins/activity-map/
+   ```
+
+   如果 vault 使用了自定义 Obsidian 配置目录，请将 `.obsidian` 替换为实际目录名。
+
+3. 将这三个文件全部复制到 `activity-map` 目录。
+4. 重载 Obsidian，在 **设置 → 第三方插件（Community plugins）** 中启用 **Activity Map**。如果 Obsidian 提示，请先关闭受限模式（Restricted Mode）。
+
+> 需要 Obsidian 1.7.2 或更高版本
+
+### 本地开发
+
+环境要求：Node.js 20.11+、npm。
 
 ```bash
+npm install
 npm run dev
 ```
 
-The build writes `main.js` at the repository root. The generated bundle is intentionally ignored and should be attached to releases rather than committed.
+`npm run dev` 会监听源代码并在仓库根目录生成 `main.js`。将 `main.js`、`manifest.json` 和 `styles.css` 复制到开发 vault 的 `plugins/activity-map/` 目录，再重载 Obsidian 即可测试。
 
-Strict Spec validation additionally requires `SPEC_DRIVEN_DELIVERY_DIR` to point at the installed `spec-driven-delivery` skill, then runs `python3 "$SPEC_DRIVEN_DELIVERY_DIR/scripts/validate_specs_workspace.py" . --strict`.
+### 自动发布
 
-## Development Installation
+推送与 `package.json`、`manifest.json` 完全一致且已记录在 `versions.json` 中的语义化版本 tag（例如 `0.1.0`）即可触发发布工作流。它会运行检查和生产构建，再创建 GitHub Release 并上传 `main.js`、`manifest.json` 与 `styles.css`。仓库已配置 `npm version patch|minor|major` 生成无 `v` 前缀的 tag，随后执行 `git push --follow-tags` 即可。
 
-After `npm run build`, copy the following files into `<vault-config-dir>/plugins/activity-map/`:
+准备发布前可运行：
 
-```text
-main.js
-manifest.json
-styles.css
+```bash
+npm run check
+npm run lint
+npm test -- --run
+npm run build
+git diff --check
 ```
 
-Reload Obsidian, disable Restricted Mode if appropriate for the development vault, and enable Activity Map under Community plugins. The current build begins local tracking after settings and checkpoint recovery. Use the Ribbon, command palette, or an eligible file-header status action to open the Activity Map view; export, rebuild, and previewed deletion controls are available inside the full view.
+### 数据与隐私
 
-## Repository Structure
+Activity Map 坚持本地优先：插件自身不会上传、同步、出售或向任何地方发送你的活动数据。
 
-```text
-.
-├── AGENTS.md      Repository-wide engineering and writing rules
-├── ARCHITECTURE.md Current skeleton and approved v0.1 target architecture
-├── RELEASE_NOTES.md Verified v0.1 capability and acceptance boundary
-├── docs/          Product requirements and UX contract
-├── specs/         Constitution, Roadmap, Research, Active Specs, and review evidence
-├── src/           TypeScript plugin source
-├── manifest.json  Obsidian plugin metadata
-└── styles.css     Plugin-owned styles
-```
+- 不包含账号体系、遥测、分析服务、远程 API 或网络上传。
+- 活动记录保存在 vault 配置目录下的插件数据目录中。
+- 为统计与重建数据，插件会保存文件内部身份、事件发生时的文件路径、时间戳、时长和打开次数等活动元数据。
+- 不读取或保存笔记正文、选中文本，也不保存你实际输入的字符串。
 
-## Privacy
-
-The product is local-only and does not include telemetry, accounts, or content upload. It stores activity metadata and metrics in the plugin data directory without reading note text, selected text, or typed strings.
-
-## License
+### 许可证
 
 [MIT](LICENSE)

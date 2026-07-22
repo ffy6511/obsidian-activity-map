@@ -10,7 +10,6 @@
 - [版本路线图](../specs/ROADMAP.md)：定义各版本交付结果和验收状态。
 - [现有插件调研](../specs/research/2026-07-21-existing-plugin-landscape-research.md)：保存竞品、开源实现和技术证据。
 - [项目规范](../AGENTS.md)：定义全仓库代码、注释、文档、验证与数据安全要求。
-- [v0.1.0 发布说明](../RELEASE_NOTES.md)：区分已验证能力、隐私边界与尚未完成的真实环境验收。
 
 ## 文档职责
 

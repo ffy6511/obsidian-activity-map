@@ -1,0 +1,72 @@
+name: Publish release
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Build and publish release assets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the release tag
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify release version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node --input-type=module <<'EOF'
+          import { readFileSync } from 'node:fs';
+
+          const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
+          const tag = process.env.RELEASE_TAG;
+          const packageJson = readJson('package.json');
+          const manifest = readJson('manifest.json');
+          const versions = readJson('versions.json');
+          const semver = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
+
+          if (!semver.test(tag)) throw new Error(`Release tag must be a semantic version without a prefix: ${tag}`);
+          if (packageJson.version !== tag) throw new Error(`package.json version ${packageJson.version} does not match tag ${tag}`);
+          if (manifest.version !== tag) throw new Error(`manifest.json version ${manifest.version} does not match tag ${tag}`);
+          if (versions[tag] !== manifest.minAppVersion) {
+            throw new Error(`versions.json must map ${tag} to minAppVersion ${manifest.minAppVersion}`);
+          }
+          EOF
+
+      - name: Validate and build
+        run: |
+          npm run check
+          npm run lint
+          npm test -- --run
+          npm run build
+
+      - name: Verify release assets
+        run: |
+          test -s main.js
+          test -s manifest.json
+          test -s styles.css
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$RELEASE_TAG" main.js manifest.json styles.css \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Activity Map $RELEASE_TAG" \
+            --generate-notes

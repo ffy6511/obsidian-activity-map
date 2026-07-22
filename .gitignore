@@ -17,3 +17,6 @@ npm-debug.log*
 .DS_Store
 
 COMMIT.md
+
+# Local Codex skills and agent configuration
+.agents/
