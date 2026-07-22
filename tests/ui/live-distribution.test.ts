@@ -74,6 +74,24 @@ describe('live distribution projection', () => {
 		expect(nested.scopeTotal).toBe(10_000);
 	});
 
+	it('creates a visible child item when only the unclosed session has activity', () => {
+		const base = distribution('papers');
+		base.scopeTotal = 0;
+		base.vaultTotal = 0;
+		base.percentOfVault = 0;
+		base.chartItems = [];
+		base.detailItems = [];
+		const projected = withLiveActivity(base, snapshot('papers/live.md'), {
+			nowMs: Date.parse('2026-07-21T10:00:20.000Z'),
+			idleThresholdMs: 180_000,
+			timeZone: 'UTC',
+		});
+		expect(projected.scopeTotal).toBe(20_000);
+		expect(projected.detailItems.map((item) => item.id)).toEqual(['file:live']);
+		expect(projected.chartItems.map((item) => item.id)).toEqual(['file:live']);
+		expect(base.detailItems).toEqual([]);
+	});
+
 	it('leaves historical days and non-time metrics unchanged', () => {
 		const historical = distribution();
 		historical.query.range = { mode: 'day', localDate: '2026-07-20' };

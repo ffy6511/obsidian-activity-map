@@ -592,3 +592,11 @@ Remove the summary/heartbeat lag from the open chart while preserving trusted-ti
 - Executor changes: donut and legend renderers expose identity-checked in-place update handles; the Popover uses them for timer and tracking updates and rebuilds only on structural changes. Fixed time/percentage columns, center-baseline SVG text, an ISO-date picker trigger, current-path activation, uniform cursor/underline affordances, compact spacing, and the shared pause/resume intent complete the Phase 7 refinement.
 - Validation: `npm run check`; `npm run lint`; `npm test -- --run` (230 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); repository Markdown links; `git diff --check`.
 - Lifecycle: this remains Phase 7 owner-directed work. Spec 03 stays in `review`; no Critic round, stage, or commit is created.
+
+### Owner-directed drill-down stability correction
+
+- Scope: the owner reported that a live-only root directory could become empty after drill-down and that path navigation briefly removed the Popover before closing it; the day-range label must read `One Day`.
+- Executor changes: Popover rendering now projects the unclosed session before deciding whether a query is empty, retains the mounted chart while a replacement query loads, rechecks hover/focus before a delayed close, and transitions retained/new chart regions plus compatible SVG geometry. The range selector now labels day mode `One Day` without changing query semantics.
+- Evidence: focused projection coverage reproduces an empty persisted `papers` scope with a visible live child; source/style checks cover retained loading content, guarded close behavior, pending/result transitions, reduced-motion handling, and the updated label. In Obsidian 1.12.7, `One Day` rendered and root → `papers` kept the Popover open at `Vault / papers`, showing its `library` child and total without an intermediate empty state.
+- Validation: `npm run check`; `npm run lint`; `npm test -- --run` (231 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); `git diff --check`.
+- Lifecycle: this remains owner-directed Phase 7 correction work. Spec 03 stays in `review`; no additional Critic round, stage, or commit is created.

@@ -89,7 +89,10 @@ export class SummaryPopover {
 	scheduleClose(): void {
 		if (this.pinned) return;
 		this.cancelClose();
-		this.closeTimer = this.trigger.ownerDocument.defaultView?.setTimeout(() => this.close(false), 180) ?? null;
+		this.closeTimer = this.trigger.ownerDocument.defaultView?.setTimeout(() => {
+			this.closeTimer = null;
+			if (!this.shouldStayOpen()) this.close(false);
+		}, 180) ?? null;
 	}
 
 	cancelClose(): void {
@@ -143,6 +146,13 @@ export class SummaryPopover {
 			return;
 		}
 		this.lastRenderKey = key;
+		// Navigation publishes a loading model before the new query resolves. Keep
+		// the previous chart mounted so removing the clicked slice cannot synthesize
+		// a pointer-leave and close the Popover while the request is in flight.
+		if (!force && model.loadState === 'loading' && this.distributionView) {
+			this.element?.addClass('is-query-pending');
+			return;
+		}
 		this.render(model);
 	}
 
@@ -151,8 +161,15 @@ export class SummaryPopover {
 		if (!popover) return;
 		const focusedId = (popover.ownerDocument.activeElement as HTMLElement | null)?.dataset.activityMapId;
 		popover.empty();
+		popover.removeClass('is-query-pending');
 		this.distributionView = null;
 		const paused = model.tracking?.state === 'paused';
+		const distribution = model.distribution
+			? withLiveActivity(model.distribution, model.tracking, {
+				nowMs: Date.now(),
+				idleThresholdMs: model.settings.idleThresholdMs,
+			})
+			: null;
 
 		renderRangeControls({
 			container: popover,
@@ -172,26 +189,22 @@ export class SummaryPopover {
 			popover.createEl('p', { text: 'Loading activity…', cls: 'activity-map-state', attr: { 'aria-live': 'polite' } });
 		} else if (model.loadState === 'error') {
 			popover.createEl('p', { text: model.error ?? 'Activity query failed.', cls: 'activity-map-state mod-error', attr: { role: 'alert' } });
-		} else if (!model.distribution || model.loadState === 'empty') {
+		} else if (!distribution || distribution.detailItems.length === 0) {
 			popover.createEl('p', { text: 'No activity was recorded for this range.', cls: 'activity-map-state' });
 		} else {
-			this.renderDistribution(popover, model);
+			this.renderDistribution(popover, model, distribution);
 		}
-		if (!model.distribution || model.loadState !== 'ready') this.renderCurrentPath(popover, model);
+		if (!distribution || distribution.detailItems.length === 0) this.renderCurrentPath(popover, model);
 		const css = popover.ownerDocument.defaultView?.CSS;
 		if (focusedId && css) popover.querySelector<HTMLElement>(`[data-activity-map-id="${css.escape(focusedId)}"]`)?.focus();
 		this.position();
 	}
 
-	private renderDistribution(popover: HTMLElement, model: ActivityMapViewModel): void {
-		const distribution = model.distribution
-			? withLiveActivity(model.distribution, model.tracking, {
-				nowMs: Date.now(),
-				idleThresholdMs: model.settings.idleThresholdMs,
-			})
-			: null;
-		if (!distribution) return;
-
+	private renderDistribution(
+		popover: HTMLElement,
+		model: ActivityMapViewModel,
+		distribution: import('../query/distribution-query').DistributionResult,
+	): void {
 		const chart = popover.createDiv({ cls: 'activity-map-popover-chart' });
 		let legendHandle: ChartLegendHandle | null = null;
 		const chartHandle = renderDonutChart({
@@ -257,6 +270,17 @@ export class SummaryPopover {
 		} else if (activation.kind === 'open-file') {
 			void this.openFile(activation.path);
 		}
+	}
+
+	private shouldStayOpen(): boolean {
+		const popover = this.element;
+		if (!popover) return false;
+		const active = this.trigger.ownerDocument.activeElement;
+		return this.pinned ||
+			this.trigger.matches(':hover') ||
+			popover.matches(':hover') ||
+			this.trigger.contains(active) ||
+			popover.contains(active);
 	}
 
 }

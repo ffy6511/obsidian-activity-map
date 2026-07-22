@@ -24,6 +24,9 @@ describe('summary popover fixed layout', () => {
 		expect(source.includes("icon: paused ? 'play' : 'pause'")).toBeTrue();
 		expect(source.includes('this.renderIfChanged(model, true);')).toBeTrue();
 		expect(source.includes('if (isLiveTodayQuery(model)) this.updateLiveDistribution(model);')).toBeTrue();
+		expect(source.includes("model.loadState === 'loading' && this.distributionView")).toBeTrue();
+		expect(source.includes('distribution.detailItems.length === 0')).toBeTrue();
+		expect(source.includes('popover.matches(\':hover\')')).toBeTrue();
 		expect(source.includes('openView')).toBeFalse();
 		for (const rejected of ['activity-map-popover-header', 'activity-map-popover-summary', 'renderTrackingAuxiliary', 'This file today']) {
 			expect(source.includes(rejected)).toBeFalse();
@@ -49,5 +52,8 @@ describe('summary popover fixed layout', () => {
 		expect(css.includes('padding: var(--size-2-1) var(--size-4-3)')).toBeTrue();
 		expect(css.includes('.activity-map-popover-path .activity-map-breadcrumb:disabled')).toBeTrue();
 		expect(css.includes('.activity-map-chart-legend-row:hover .activity-map-chart-legend-label')).toBeTrue();
+		expect(css.includes('.activity-map-chart-popover.is-query-pending')).toBeTrue();
+		expect(css.includes('@keyframes activity-map-query-result-in')).toBeTrue();
+		expect(controls.includes("['day', 'One Day']")).toBeTrue();
 	});
 });

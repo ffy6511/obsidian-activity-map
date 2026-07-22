@@ -169,7 +169,7 @@
 .activity-map-donut path {
 	stroke: var(--background-primary);
 	stroke-width: 2;
-	transition: opacity 120ms ease, transform 120ms ease;
+	transition: d 180ms ease, opacity 120ms ease, transform 120ms ease;
 	transform-origin: center;
 }
 
@@ -346,6 +346,33 @@
 
 .activity-map-chart-popover {
 	overflow: hidden;
+}
+
+.activity-map-chart-popover .activity-map-popover-chart,
+.activity-map-chart-popover .activity-map-popover-path,
+.activity-map-chart-popover .activity-map-popover-legend {
+	transition: opacity 160ms ease, transform 160ms ease;
+	animation: activity-map-query-result-in 160ms ease-out;
+}
+
+.activity-map-chart-popover.is-query-pending .activity-map-popover-chart,
+.activity-map-chart-popover.is-query-pending .activity-map-popover-path,
+.activity-map-chart-popover.is-query-pending .activity-map-popover-legend {
+	opacity: 0.45;
+	transform: scale(0.995);
+	pointer-events: none;
+}
+
+@keyframes activity-map-query-result-in {
+	from {
+		opacity: 0.45;
+		transform: scale(0.995);
+	}
+
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
 }
 
 .activity-map-popover .activity-map-controls {
@@ -587,7 +614,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.activity-map-donut path {
+	.activity-map-donut path,
+	.activity-map-chart-popover .activity-map-popover-chart,
+	.activity-map-chart-popover .activity-map-popover-path,
+	.activity-map-chart-popover .activity-map-popover-legend {
 		transition: none;
+		animation: none;
 	}
 }

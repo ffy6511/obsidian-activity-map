@@ -34,7 +34,7 @@ export function renderRangeControls(args: {
 	});
 
 	const mode = controls.createEl('select', { cls: 'activity-map-range-mode', attr: { 'aria-label': 'Date range', 'data-activity-map-id': 'date-range' } });
-	for (const [value, label] of [['day', 'Selected day'], ['average-7', '7-day average'], ['average-30', '30-day average'], ['average-90', '90-day average'], ['average-all', 'All-history average'], ['all', 'All history']] as const) {
+	for (const [value, label] of [['day', 'One Day'], ['average-7', '7-day average'], ['average-30', '30-day average'], ['average-90', '90-day average'], ['average-all', 'All-history average'], ['all', 'All history']] as const) {
 		mode.createEl('option', { value, text: label });
 	}
 	mode.value = rangeValue(args.range);
