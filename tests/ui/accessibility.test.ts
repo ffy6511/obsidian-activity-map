@@ -29,6 +29,8 @@ describe('automated accessibility and platform presentation checks', () => {
 		expect(popover.includes('this.trigger.focus()')).toBeTrue();
 		expect(popover.includes('togglePinned()')).toBeTrue();
 		expect(popover.includes("'aria-label': 'Activity Map chart'")).toBeTrue();
+		expect(popover.includes("id: 'distribution-grouping-toggle'")).toBeTrue();
+		expect(popover.includes("pressed: model.query.groupBy === 'file'")).toBeTrue();
 		expect(popover.includes("cls: 'activity-map-popover-result'")).toBeTrue();
 		expect(popover.includes('Chart area')).toBeFalse();
 		expect(popover.includes('List area')).toBeFalse();

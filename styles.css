@@ -101,6 +101,12 @@
 	margin-inline-start: var(--size-4-4);
 }
 
+.activity-map-control-actions {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-2);
+}
+
 .activity-map-breadcrumbs {
 	display: flex;
 	align-items: center;
@@ -441,6 +447,7 @@
 }
 
 .activity-map-popover .activity-map-control-trailing {
+	justify-self: end;
 	margin-inline-start: 0;
 }
 

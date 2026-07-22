@@ -7,6 +7,7 @@ export interface RangeTrailingAction {
 	icon: string;
 	label: string;
 	id: string;
+	pressed?: boolean;
 	onActivate(): void;
 }
 
@@ -16,7 +17,7 @@ export function renderRangeControls(args: {
 	range: RangeMode;
 	onMetric: (metric: MetricKey) => void;
 	onRange: (range: RangeMode) => void;
-	trailingAction?: RangeTrailingAction;
+	trailingActions?: readonly RangeTrailingAction[];
 }): void {
 	const controls = args.container.createDiv({ cls: 'activity-map-controls' });
 	const metricControl = controls.createDiv({ cls: 'activity-map-metric-control' });
@@ -78,15 +79,11 @@ export function renderRangeControls(args: {
 		});
 	}
 
-	if (args.trailingAction) {
-		iconButton(
-			controls,
-			args.trailingAction.icon,
-			args.trailingAction.label,
-			args.trailingAction.id,
-			() => args.trailingAction?.onActivate(),
-			'activity-map-control-trailing',
-		);
+	if (args.trailingActions?.length) {
+		const actionGroup = controls.createDiv({ cls: 'activity-map-control-actions activity-map-control-trailing' });
+		for (const action of args.trailingActions) {
+			iconButton(actionGroup, action.icon, action.label, action.id, () => action.onActivate(), '', action.pressed);
+		}
 	}
 }
 
@@ -97,10 +94,15 @@ function iconButton(
 	id: string,
 	onActivate: () => void,
 	extraClass = '',
+	pressed?: boolean,
 ): HTMLButtonElement {
 	const button = container.createEl('button', {
 		cls: `clickable-icon activity-map-icon-button ${extraClass}`.trim(),
-		attr: { 'aria-label': label, 'data-activity-map-id': id },
+		attr: {
+			'aria-label': label,
+			'data-activity-map-id': id,
+			...(pressed === undefined ? {} : { 'aria-pressed': String(pressed) }),
+		},
 	});
 	setIcon(button, icon);
 	button.addEventListener('click', onActivate);

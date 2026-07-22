@@ -16,7 +16,7 @@
 ## Phases
 
 - [x] Phase 0: Add path/file grouping to the distribution query
-- [ ] Phase 1: Add the Header Popover grouping toggle
+- [x] Phase 1: Add the Header Popover grouping toggle
 - [ ] Phase 2: Synchronize documentation and complete integration evidence
 
 ## Background
@@ -158,11 +158,11 @@ Expose the query grouping choice without adding visible chrome or disrupting the
 
 ### Tasks
 
-- [ ] Generalize the trailing control slot into an ordered action group without changing existing consumers.
-- [ ] Render a grouping icon toggle immediately before pause/resume with accessible action text and pressed state.
-- [ ] Preserve grouping across metric, range, date, and breadcrumb changes; reset to path grouping only when a new Header Popover opens.
-- [ ] Preserve loading retention, focus restoration, live updates, highlighting, pinning, Other expansion, and file activation.
-- [ ] Add focused control-order, accessibility, controller, and Popover regression tests.
+- [x] Generalize the trailing control slot into an ordered action group without changing existing consumers.
+- [x] Render a grouping icon toggle immediately before pause/resume with accessible action text and pressed state.
+- [x] Preserve grouping across metric, range, date, and breadcrumb changes; reset to path grouping only when a new Header Popover opens.
+- [x] Preserve loading retention, focus restoration, live updates, highlighting, pinning, Other expansion, and file activation.
+- [x] Add focused control-order, accessibility, controller, and Popover regression tests.
 
 ### Files
 
@@ -175,12 +175,19 @@ Expose the query grouping choice without adding visible chrome or disrupting the
 
 ### Acceptance Criteria
 
-- [ ] The grouping toggle is directly left of pause/resume in the existing control row.
-- [ ] The toggle exposes an accessible label, stable data ID, icon change, and `aria-pressed` state without visible explanatory text.
-- [ ] Activating it switches between hierarchical path slices and flat file slices for the same scope.
-- [ ] Breadcrumb navigation in file grouping preserves file grouping.
-- [ ] Existing controls and Popover interactions remain green under pointer and keyboard tests.
-- [ ] Focused UI, accessibility, type-check, lint, test, and build gates pass.
+- [x] The grouping toggle is directly left of pause/resume in the existing control row.
+- [x] The toggle exposes an accessible label, stable data ID, icon change, and `aria-pressed` state without visible explanatory text.
+- [x] Activating it switches between hierarchical path slices and flat file slices for the same scope.
+- [x] Breadcrumb navigation in file grouping preserves file grouping.
+- [x] Existing controls and Popover interactions remain green under pointer and keyboard tests.
+- [x] Focused UI, accessibility, type-check, lint, test, and build gates pass.
+
+### Evidence
+
+- `npm run check` — passed.
+- `npm run lint` — passed.
+- `npm test -- --run` — passed, 236 tests and 0 failures, including control order, toggle state, and accessibility source contracts.
+- `npm run build` — passed; the production bundle contains the ordered grouping and tracking actions. Real Obsidian interaction remains the explicit Post-Critic Acceptance gate.
 
 ## Phase 2: Synchronize Documentation and Complete Integration Evidence
 

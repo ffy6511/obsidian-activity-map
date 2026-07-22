@@ -177,12 +177,27 @@ export class SummaryPopover {
 			range: model.query.range,
 			onMetric: (metric) => { this.expandedOther = null; void this.controller.dispatch({ kind: 'set-metric', metric }); },
 			onRange: (range) => { this.expandedOther = null; void this.controller.dispatch({ kind: 'set-range', range }); },
-			trailingAction: {
-				icon: paused ? 'play' : 'pause',
-				label: paused ? 'Resume activity tracking' : 'Pause activity tracking',
-				id: 'tracking-toggle',
-				onActivate: () => { void this.controller.dispatch({ kind: paused ? 'resume' : 'pause' }); },
-			},
+			trailingActions: [
+				{
+					icon: model.query.groupBy === 'file' ? 'folder-tree' : 'files',
+					label: model.query.groupBy === 'file' ? 'Group by path' : 'Show all files',
+					id: 'distribution-grouping-toggle',
+					pressed: model.query.groupBy === 'file',
+					onActivate: () => {
+						this.expandedOther = null;
+						void this.controller.dispatch({
+							kind: 'set-grouping',
+							groupBy: model.query.groupBy === 'path' ? 'file' : 'path',
+						});
+					},
+				},
+				{
+					icon: paused ? 'play' : 'pause',
+					label: paused ? 'Resume activity tracking' : 'Pause activity tracking',
+					id: 'tracking-toggle',
+					onActivate: () => { void this.controller.dispatch({ kind: paused ? 'resume' : 'pause' }); },
+				},
+			],
 		});
 
 		if (model.loadState === 'loading') {

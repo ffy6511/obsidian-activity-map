@@ -19,6 +19,11 @@ describe('summary popover fixed layout', () => {
 		expect(source.includes('clearInterval')).toBeTrue();
 		expect(source.includes('updateLiveDistribution')).toBeTrue();
 		expect(source.includes("id: 'tracking-toggle'")).toBeTrue();
+		expect(source.includes("id: 'distribution-grouping-toggle'")).toBeTrue();
+		expect(source.indexOf("id: 'distribution-grouping-toggle'")).toBeLessThan(source.indexOf("id: 'tracking-toggle'"));
+		expect(source.includes("groupBy: model.query.groupBy === 'path' ? 'file' : 'path'")).toBeTrue();
+		expect(source.includes("pressed: model.query.groupBy === 'file'")).toBeTrue();
+		expect(source.includes("model.query.groupBy === 'file' ? 'folder-tree' : 'files'")).toBeTrue();
 		expect(source.includes('}, true);')).toBeTrue();
 		expect(source.includes('activity-map-popover-path')).toBeTrue();
 		expect(source.includes("cls: 'activity-map-popover-result'")).toBeTrue();
@@ -33,7 +38,7 @@ describe('summary popover fixed layout', () => {
 		for (const rejected of ['activity-map-popover-header', 'activity-map-popover-summary', 'renderTrackingAuxiliary', 'This file today', 'Chart area', 'List area']) {
 			expect(source.includes(rejected)).toBeFalse();
 		}
-		for (const expected of ['activity-map-icon-button', 'activity-map-day-navigation', 'activity-map-control-trailing', 'iconForMetric']) {
+		for (const expected of ['activity-map-icon-button', 'activity-map-day-navigation', 'activity-map-control-actions', 'activity-map-control-trailing', 'trailingActions', 'aria-pressed', 'iconForMetric']) {
 			expect(controls.includes(expected)).toBeTrue();
 		}
 		expect(donut.includes('update(nextDistribution)')).toBeTrue();
@@ -55,6 +60,8 @@ describe('summary popover fixed layout', () => {
 		expect(css.includes("[data-activity-map-id='calendar-day']")).toBeTrue();
 		expect(css.includes("[data-activity-map-id='next-day']")).toBeTrue();
 		expect(css.includes('width: calc(10ch + var(--size-4-3))')).toBeTrue();
+		expect(css.includes('.activity-map-control-actions')).toBeTrue();
+		expect(css.includes('justify-self: end')).toBeTrue();
 		expect(css.includes('grid-template-columns: 0.75rem minmax(0, 1fr) 7ch 4ch')).toBeTrue();
 		expect(css.includes('background: transparent !important')).toBeTrue();
 		expect(css.includes('cursor: pointer')).toBeTrue();
