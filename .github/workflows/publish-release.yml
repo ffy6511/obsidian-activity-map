@@ -71,7 +71,32 @@ jobs:
         run: npm run lint
 
       - name: Run tests
-        run: npm test -- --run
+        shell: bash
+        run: |
+          runner_path="$RUNNER_TEMP/activity-map-run-test-file.mjs"
+          cat > "$runner_path" <<'EOF'
+          import path from 'node:path';
+          import { createRequire } from 'node:module';
+          import { pathToFileURL } from 'node:url';
+
+          const [testPath] = process.argv.slice(2);
+          if (!testPath) throw new Error('Expected a test-file path');
+
+          const root = process.cwd();
+          const require = createRequire(path.join(root, 'package.json'));
+          const { createJiti } = require('jiti');
+          const jiti = createJiti(pathToFileURL(path.join(root, 'package.json')).href);
+          await jiti.import(pathToFileURL(path.resolve(root, testPath)).href);
+          const harness = await jiti.import(path.join(root, 'tests/helpers/test-harness.ts'));
+          const result = await harness.runRegisteredTests();
+          console.log(`Tests in ${testPath}: ${result.passed} passed, ${result.failed} failed`);
+          process.exit(result.failed === 0 ? 0 : 1);
+          EOF
+
+          while IFS= read -r test_file; do
+            echo "Running $test_file"
+            timeout --signal=TERM --kill-after=5s 60s node "$runner_path" "$test_file"
+          done < <(find tests -name '*.test.ts' -print | sort)
 
       - name: Build production bundle
         run: npm run build
