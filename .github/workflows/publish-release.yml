@@ -7,9 +7,14 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Existing semantic-version tag to build and publish
+        description: Semantic version to validate; used as the source tag only when publishing
         required: true
         type: string
+      publish_release:
+        description: Create or recover the GitHub Release after validation succeeds
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -20,10 +25,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check out validation source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Check out the release tag
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.release_tag || github.ref }}
+          path: release
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -34,7 +45,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install release dependencies
+        working-directory: release
+        run: npm ci
+
       - name: Verify release version
+        working-directory: release
         env:
           RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
@@ -56,25 +72,68 @@ jobs:
           }
           EOF
 
-      - name: Validate and build
+      - name: Verify validation source matches tagged runtime
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
-          npm run check
-          npm run lint
-          npm test -- --run
-          npm run build
+          git rev-parse --verify "${RELEASE_TAG}^{commit}"
+          git diff --exit-code "$RELEASE_TAG" HEAD -- \
+            esbuild.config.mjs manifest.json package-lock.json package.json src styles.css tsconfig.json versions.json
+
+      - name: Type-check
+        run: npm run check
+
+      - name: Lint
+        # The immutable tag is checked out below the workspace solely for its
+        # production build. Do not lint its duplicate source tree.
+        run: npm run lint -- --ignore-pattern release
+
+      - name: Run tests
+        shell: bash
+        run: |
+          runner_path="$RUNNER_TEMP/activity-map-run-test-file.mjs"
+          cat > "$runner_path" <<'EOF'
+          import path from 'node:path';
+          import { createRequire } from 'node:module';
+          import { pathToFileURL } from 'node:url';
+
+          const [testPath] = process.argv.slice(2);
+          if (!testPath) throw new Error('Expected a test-file path');
+
+          const root = process.cwd();
+          const require = createRequire(path.join(root, 'package.json'));
+          const { createJiti } = require('jiti');
+          const jiti = createJiti(pathToFileURL(path.join(root, 'package.json')).href);
+          await jiti.import(pathToFileURL(path.resolve(root, testPath)).href);
+          const harness = await jiti.import(path.join(root, 'tests/helpers/test-harness.ts'));
+          const result = await harness.runRegisteredTests();
+          console.log(`Tests in ${testPath}: ${result.passed} passed, ${result.failed} failed`);
+          process.exit(result.failed === 0 ? 0 : 1);
+          EOF
+
+          while IFS= read -r test_file; do
+            echo "Running $test_file"
+            timeout --signal=TERM --kill-after=5s 60s node "$runner_path" "$test_file"
+          done < <(find tests -name '*.test.ts' -print | sort)
+
+      - name: Build production bundle
+        working-directory: release
+        run: npm run build
 
       - name: Verify release assets
+        working-directory: release
         run: |
           test -s main.js
           test -s manifest.json
           test -s styles.css
 
       - name: Create GitHub release
+        if: ${{ github.event_name == 'push' || inputs.publish_release }}
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
-          gh release create "$RELEASE_TAG" main.js manifest.json styles.css \
+          gh release create "$RELEASE_TAG" release/main.js release/manifest.json release/styles.css \
             --repo "$GITHUB_REPOSITORY" \
             --title "Activity Map $RELEASE_TAG" \
             --generate-notes
