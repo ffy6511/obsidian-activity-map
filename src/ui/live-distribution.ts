@@ -1,6 +1,6 @@
 import type { TrackingSnapshot } from '../domain/activity';
 import { localDateFor } from '../platform/clock';
-import type { DistributionItem, DistributionResult } from '../query/distribution-query';
+import { buildChartItems, type DistributionItem, type DistributionResult } from '../query/distribution-query';
 import { liveTodayMs } from './live-today';
 
 export interface LiveDistributionOptions {
@@ -38,16 +38,17 @@ export function withLiveActivity(
 
 	const owner = scopeOwner(distribution, target.fileId, target.path);
 	const detailItems = cloneItems(distribution.detailItems);
-	const chartItems = cloneItems(distribution.chartItems);
 	const scopeIncrement = owner ? liveMs : 0;
 	if (owner) {
 		addToOwner(detailItems, owner, target.fileId, liveMs);
-		addToOwner(chartItems, owner, target.fileId, liveMs);
 	}
 	const scopeTotal = distribution.scopeTotal + scopeIncrement;
 	const vaultTotal = distribution.vaultTotal + liveMs;
+	detailItems.sort(compareItems);
 	refreshPercents(detailItems, scopeTotal);
-	refreshPercents(chartItems, scopeTotal);
+	// Rebuild from complete details so a live-only file cannot bypass the same
+	// top-N/Other partition applied by the persisted query.
+	const chartItems = buildChartItems(detailItems, distribution.maxChartItems, scopeTotal);
 	return {
 		...distribution,
 		scopeTotal,
@@ -56,6 +57,11 @@ export function withLiveActivity(
 		detailItems,
 		chartItems,
 	};
+}
+
+function compareItems(a: DistributionItem, b: DistributionItem): number {
+	if (b.value !== a.value) return b.value - a.value;
+	return a.label.localeCompare(b.label);
 }
 
 function cloneItems(items: readonly DistributionItem[]): DistributionItem[] {

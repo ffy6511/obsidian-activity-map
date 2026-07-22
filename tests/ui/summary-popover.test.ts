@@ -21,9 +21,10 @@ describe('summary popover fixed layout', () => {
 		expect(source.includes("id: 'tracking-toggle'")).toBeTrue();
 		expect(source.includes("id: 'distribution-grouping-toggle'")).toBeTrue();
 		expect(source.indexOf("id: 'distribution-grouping-toggle'")).toBeLessThan(source.indexOf("id: 'tracking-toggle'"));
-		expect(source.includes("groupBy: model.query.groupBy === 'path' ? 'file' : 'path'")).toBeTrue();
-		expect(source.includes("pressed: model.query.groupBy === 'file'")).toBeTrue();
-		expect(source.includes("model.query.groupBy === 'file' ? 'folder-tree' : 'files'")).toBeTrue();
+		expect(source.includes("args.getCurrentGrouping() === 'path' ? 'file' : 'path'")).toBeTrue();
+		expect(source.includes("pressed: args.groupBy === 'file'")).toBeTrue();
+		expect(source.includes("args.groupBy === 'file' ? 'folder-tree' : 'files'")).toBeTrue();
+		expect(source.includes('this.controlsView?.updateTrailingAction(this.groupingAction(model))')).toBeTrue();
 		expect(source.includes('}, true);')).toBeTrue();
 		expect(source.includes('activity-map-popover-path')).toBeTrue();
 		expect(source.includes("cls: 'activity-map-popover-result'")).toBeTrue();

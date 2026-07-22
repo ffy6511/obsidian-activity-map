@@ -77,6 +77,7 @@ describe('header action manager', () => {
 	it('adds an unclosed session to its actual vault-root slice', () => {
 		const distribution: DistributionResult = {
 			query: { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-21' }, path: '', view: 'children', groupBy: 'path' },
+			maxChartItems: 8,
 			scopeTotal: 100,
 			vaultTotal: 100,
 			percentOfVault: 1,
@@ -91,7 +92,7 @@ describe('header action manager', () => {
 			sessionStartedAt: '2026-07-21T00:00:00.000Z', lastTrustedActivityAt: '2026-07-21T00:00:10.000Z',
 			pendingRecovery: [], recentDecisions: [], degradedReason: null, sampledAt: '2026-07-21T00:00:10.000Z',
 		});
-		expect(slices.map((slice) => slice.id)).toEqual(['dir:inbox', 'dir:projects']);
+		expect(slices.map((slice) => slice.id)).toEqual(['dir:projects', 'dir:inbox']);
 		expect(slices[1]?.ratio).toBeGreaterThan(0);
 	});
 

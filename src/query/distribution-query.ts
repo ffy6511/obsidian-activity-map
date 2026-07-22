@@ -41,6 +41,7 @@ export interface DistributionItem {
 /** The immutable query result. */
 export interface DistributionResult {
 	query: DistributionQuery;
+	maxChartItems: number;
 	scopeTotal: number;
 	vaultTotal: number;
 	percentOfVault: number;
@@ -116,6 +117,7 @@ export function runDistributionQuery(args: {
 
 	return {
 		query,
+		maxChartItems,
 		scopeTotal,
 		vaultTotal,
 		percentOfVault,
@@ -240,7 +242,8 @@ function fileBasename(path: string): string {
  * Build the chart items: the top `maxChartItems` by value, plus a derived
  * "other" item for the remainder. "other" never becomes a real path.
  */
-function buildChartItems(
+/** Rebuilds the bounded chart partition from a complete detail list. */
+export function buildChartItems(
 	detailItems: DistributionItem[],
 	maxChartItems: number,
 	scopeTotal: number,

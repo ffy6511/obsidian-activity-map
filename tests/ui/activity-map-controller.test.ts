@@ -7,6 +7,7 @@ import type { DistributionQuery, DistributionResult } from '../../src/query/dist
 function result(query: DistributionQuery, value: number): DistributionResult {
 	return {
 		query,
+		maxChartItems: 8,
 		scopeTotal: value,
 		vaultTotal: value,
 		percentOfVault: value > 0 ? 1 : 0,

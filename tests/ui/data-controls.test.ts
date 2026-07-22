@@ -7,7 +7,7 @@ import { normalizeSettings } from '../../src/domain/settings';
 import type { DeletionPlan } from '../../src/data/deletion-service';
 
 function distribution(query: DistributionQuery): DistributionResult {
-	return { query, scopeTotal: 10, vaultTotal: 10, percentOfVault: 1, denominatorDays: null, coverage: null,
+	return { query, maxChartItems: 8, scopeTotal: 10, vaultTotal: 10, percentOfVault: 1, denominatorDays: null, coverage: null,
 		chartItems: [{ id: 'file:a', kind: 'file', label: 'a.md', path: 'a.md', value: 10, percentOfScope: 1, memberIds: ['file-a'] }],
 		detailItems: [{ id: 'file:a', kind: 'file', label: 'a.md', path: 'a.md', value: 10, percentOfScope: 1, memberIds: ['file-a'] }], warnings: [] };
 }

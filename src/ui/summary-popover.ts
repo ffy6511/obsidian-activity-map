@@ -1,12 +1,30 @@
-import type { DistributionItem } from '../query/distribution-query';
+import type { DistributionGrouping, DistributionItem } from '../query/distribution-query';
 import type { ActivityMapController } from './activity-map-controller';
 import type { ActivityMapViewModel } from './view-model';
 import { distributionActivation } from './distribution-activation';
 import { renderBreadcrumbs } from './components/breadcrumbs';
 import { renderChartLegend, type ChartLegendHandle } from './components/chart-legend';
 import { renderDonutChart, type ChartItem } from './components/donut-chart';
-import { renderRangeControls } from './components/range-controls';
+import { renderRangeControls, type RangeControlsHandle, type RangeTrailingAction } from './components/range-controls';
 import { withLiveActivity } from './live-distribution';
+
+export function createDistributionGroupingAction(args: {
+	groupBy: DistributionGrouping;
+	getCurrentGrouping(): DistributionGrouping;
+	onBeforeActivate(): void;
+	onGrouping(groupBy: DistributionGrouping): void;
+}): RangeTrailingAction {
+	return {
+		icon: args.groupBy === 'file' ? 'folder-tree' : 'files',
+		label: args.groupBy === 'file' ? 'Group by path' : 'Show all files',
+		id: 'distribution-grouping-toggle',
+		pressed: args.groupBy === 'file',
+		onActivate: () => {
+			args.onBeforeActivate();
+			args.onGrouping(args.getCurrentGrouping() === 'path' ? 'file' : 'path');
+		},
+	};
+}
 
 /** Interactive, pinnable header chart sharing the controller's query state. */
 export class SummaryPopover {
@@ -19,6 +37,7 @@ export class SummaryPopover {
 	private expandedOther: string[] | null = null;
 	private lastRenderKey = '';
 	private distributionView: { update(distribution: import('../query/distribution-query').DistributionResult): boolean } | null = null;
+	private controlsView: RangeControlsHandle | null = null;
 
 	constructor(
 		private readonly trigger: HTMLElement,
@@ -114,6 +133,7 @@ export class SummaryPopover {
 		this.expandedOther = null;
 		this.lastRenderKey = '';
 		this.distributionView = null;
+		this.controlsView = null;
 		this.trigger.removeClass('is-pinned');
 		this.trigger.setAttr('aria-expanded', 'false');
 		this.trigger.setAttr('aria-pressed', 'false');
@@ -151,6 +171,7 @@ export class SummaryPopover {
 		// a pointer-leave and close the Popover while the request is in flight.
 		if (!force && model.loadState === 'loading' && this.distributionView) {
 			this.element?.addClass('is-query-pending');
+			this.controlsView?.updateTrailingAction(this.groupingAction(model));
 			return;
 		}
 		this.render(model);
@@ -171,26 +192,14 @@ export class SummaryPopover {
 			})
 			: null;
 
-		renderRangeControls({
+		this.controlsView = renderRangeControls({
 			container: popover,
 			metric: model.query.metric,
 			range: model.query.range,
 			onMetric: (metric) => { this.expandedOther = null; void this.controller.dispatch({ kind: 'set-metric', metric }); },
 			onRange: (range) => { this.expandedOther = null; void this.controller.dispatch({ kind: 'set-range', range }); },
 			trailingActions: [
-				{
-					icon: model.query.groupBy === 'file' ? 'folder-tree' : 'files',
-					label: model.query.groupBy === 'file' ? 'Group by path' : 'Show all files',
-					id: 'distribution-grouping-toggle',
-					pressed: model.query.groupBy === 'file',
-					onActivate: () => {
-						this.expandedOther = null;
-						void this.controller.dispatch({
-							kind: 'set-grouping',
-							groupBy: model.query.groupBy === 'path' ? 'file' : 'path',
-						});
-					},
-				},
+				this.groupingAction(model),
 				{
 					icon: paused ? 'play' : 'pause',
 					label: paused ? 'Resume activity tracking' : 'Pause activity tracking',
@@ -213,6 +222,15 @@ export class SummaryPopover {
 		const css = popover.ownerDocument.defaultView?.CSS;
 		if (focusedId && css) popover.querySelector<HTMLElement>(`[data-activity-map-id="${css.escape(focusedId)}"]`)?.focus();
 		this.position();
+	}
+
+	private groupingAction(model: ActivityMapViewModel): RangeTrailingAction {
+		return createDistributionGroupingAction({
+			groupBy: model.query.groupBy,
+			getCurrentGrouping: () => this.controller.getViewModel().query.groupBy,
+			onBeforeActivate: () => { this.expandedOther = null; },
+			onGrouping: (groupBy) => { void this.controller.dispatch({ kind: 'set-grouping', groupBy }); },
+		});
 	}
 
 	private renderDistribution(

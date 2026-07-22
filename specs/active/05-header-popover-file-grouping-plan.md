@@ -242,4 +242,18 @@ Align public behavior and architecture with the implemented grouping contract an
 
 ## Evaluation Record
 
-No Critic round has started. All implementation Phases and technical gates are complete; the Spec is in review pending independent evaluation and Post-Critic Acceptance.
+### Round 1
+
+- Critic: `spec05_critic` (independent read-only evaluator).
+- Review scope: full implementation, tests, documentation, and Post-Critic Acceptance readiness.
+- Evidence reviewed: Spec 05, commits `b8baf5e` through `03cea25`, implementation and test sources, and the recorded 236-test technical gate evidence.
+- Findings:
+  1. P1 blocking — live-only file items could be appended outside the persisted query's top-N/Other partition, allowing the chart to exceed its configured bound.
+  2. P1 blocking — loading retention kept the original toggle callback and stale accessibility/icon state, so a second activation during a pending query could not reliably switch back.
+  3. P1 blocking — toggle acceptance relied on source-string assertions rather than a standards-based DOM behavior test covering order, state, focus-preserving updates, and consecutive activation.
+  4. P2 blocking — equal-value file items with the same basename lacked a final stable path/ID tie-break, so persisted and live projections could order them differently.
+- Selected fixes: findings 1–3, the three highest-priority blocking findings permitted in this round.
+- Executor fixes: exposed the query chart bound and shared top-N/Other builder with live projection; rebuilt live chart items from the complete sorted detail list; added an in-place trailing-action update handle whose activation reads current controller grouping; added a `linkedom` DOM harness and consecutive pending-toggle behavior coverage.
+- Deferred findings: finding 4 is unselected in this round and must be re-ranked by the same Critic in Round 2 before any fix.
+- Validation rerun: `npm run check`, `npm run lint`, `npm test -- --run` (239 passed, 0 failed), `npm run build`, strict specs validation (0 errors, 0 warnings), and `git diff --check` all passed.
+- Verdict: changes-required.

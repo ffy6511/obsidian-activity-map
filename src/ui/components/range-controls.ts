@@ -11,6 +11,11 @@ export interface RangeTrailingAction {
 	onActivate(): void;
 }
 
+export interface RangeControlsHandle {
+	/** Updates an existing action without replacing its focused DOM node. */
+	updateTrailingAction(action: RangeTrailingAction): boolean;
+}
+
 export function renderRangeControls(args: {
 	container: HTMLElement;
 	metric: MetricKey;
@@ -18,11 +23,14 @@ export function renderRangeControls(args: {
 	onMetric: (metric: MetricKey) => void;
 	onRange: (range: RangeMode) => void;
 	trailingActions?: readonly RangeTrailingAction[];
-}): void {
+	renderIcon?: (container: HTMLElement, icon: string) => void;
+}): RangeControlsHandle {
 	const controls = args.container.createDiv({ cls: 'activity-map-controls' });
+	const actionButtons = new Map<string, HTMLButtonElement>();
+	const renderIcon = args.renderIcon ?? setIcon;
 	const metricControl = controls.createDiv({ cls: 'activity-map-metric-control' });
 	const metricIcon = metricControl.createSpan({ cls: 'activity-map-control-icon', attr: { 'aria-hidden': 'true' } });
-	setIcon(metricIcon, iconForMetric(args.metric));
+	renderIcon(metricIcon, iconForMetric(args.metric));
 	const metric = metricControl.createEl('select', { attr: { 'aria-label': 'Metric', 'data-activity-map-id': 'metric' } });
 	for (const [value, label] of [['activeMs', 'Activity'], ['editingMs', 'Editing'], ['openCount', 'Open count']] as const) {
 		metric.createEl('option', { value, text: label });
@@ -30,7 +38,7 @@ export function renderRangeControls(args: {
 	metric.value = args.metric;
 	metric.addEventListener('change', () => {
 		const selected = metric.value as MetricKey;
-		setIcon(metricIcon, iconForMetric(selected));
+		renderIcon(metricIcon, iconForMetric(selected));
 		args.onMetric(selected);
 	});
 
@@ -82,9 +90,20 @@ export function renderRangeControls(args: {
 	if (args.trailingActions?.length) {
 		const actionGroup = controls.createDiv({ cls: 'activity-map-control-actions activity-map-control-trailing' });
 		for (const action of args.trailingActions) {
-			iconButton(actionGroup, action.icon, action.label, action.id, () => action.onActivate(), '', action.pressed);
+			actionButtons.set(action.id, iconButton(actionGroup, action.icon, action.label, action.id, () => action.onActivate(), '', action.pressed, renderIcon));
 		}
 	}
+	return {
+		updateTrailingAction(action) {
+			const button = actionButtons.get(action.id);
+			if (!button) return false;
+			renderIcon(button, action.icon);
+			button.setAttribute('aria-label', action.label);
+			if (action.pressed === undefined) button.removeAttribute('aria-pressed');
+			else button.setAttribute('aria-pressed', String(action.pressed));
+			return true;
+		},
+	};
 }
 
 function iconButton(
@@ -95,6 +114,7 @@ function iconButton(
 	onActivate: () => void,
 	extraClass = '',
 	pressed?: boolean,
+	renderIcon: (container: HTMLElement, icon: string) => void = setIcon,
 ): HTMLButtonElement {
 	const button = container.createEl('button', {
 		cls: `clickable-icon activity-map-icon-button ${extraClass}`.trim(),
@@ -104,7 +124,7 @@ function iconButton(
 			...(pressed === undefined ? {} : { 'aria-pressed': String(pressed) }),
 		},
 	});
-	setIcon(button, icon);
+	renderIcon(button, icon);
 	button.addEventListener('click', onActivate);
 	return button;
 }

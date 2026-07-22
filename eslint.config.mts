@@ -46,6 +46,8 @@ export default defineConfig(
 			'obsidianmd/no-nodejs-modules': 'off',
 			'obsidianmd/rule-custom-message': 'off',
 			'obsidianmd/prefer-window-timers': 'off',
+			'obsidianmd/no-global-this': 'off',
+			'obsidianmd/prefer-create-el': 'off',
 			'no-console': 'off',
 			'no-unsanitized/method': 'off',
 		},
