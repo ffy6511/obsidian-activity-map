@@ -1,7 +1,7 @@
 import type { TrackingSnapshot } from '../domain/activity';
 import type { ActivityMapSettings } from '../domain/settings';
 import type { TrackingObserver } from '../tracking/ports';
-import type { DistributionQuery, DistributionResult } from '../query/distribution-query';
+import type { DistributionGrouping, DistributionQuery, DistributionResult } from '../query/distribution-query';
 import type { MetricKey } from '../query/path-projection';
 import type { RangeMode } from '../query/date-range';
 import { initialViewModel, type ActivityMapViewModel } from './view-model';
@@ -34,6 +34,7 @@ export type ActivityMapIntent =
 	| { kind: 'refresh' }
 	| { kind: 'set-range'; range: RangeMode }
 	| { kind: 'set-path'; path: string; view?: 'children' | 'local-files' }
+	| { kind: 'set-grouping'; groupBy: DistributionGrouping }
 	| { kind: 'set-metric'; metric: MetricKey }
 	| { kind: 'set-query'; query: DistributionQuery }
 	| { kind: 'pause' }
@@ -80,6 +81,7 @@ export class ActivityMapController implements TrackingObserver {
 			range: { mode: 'day', localDate: this.today },
 			path: '',
 			view: 'children',
+			groupBy: 'path',
 		};
 	}
 
@@ -163,6 +165,12 @@ export class ActivityMapController implements TrackingObserver {
 				this.model = {
 					...this.model,
 					query: { ...this.model.query, path: intent.path, view: intent.view ?? 'children' },
+				};
+				break;
+			case 'set-grouping':
+				this.model = {
+					...this.model,
+					query: { ...this.model.query, groupBy: intent.groupBy, view: 'children' },
 				};
 				break;
 			case 'set-metric':

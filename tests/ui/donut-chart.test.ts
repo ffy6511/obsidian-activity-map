@@ -11,7 +11,7 @@ function item(id: string, kind: DistributionItem['kind'], value: number, memberI
 
 function distribution(chartItems: DistributionItem[], detailItems = chartItems): DistributionResult {
 	return {
-		query: { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-21' }, path: '', view: 'children' },
+		query: { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-21' }, path: '', view: 'children', groupBy: 'path' },
 		scopeTotal: 100,
 		vaultTotal: 100,
 		percentOfVault: 1,

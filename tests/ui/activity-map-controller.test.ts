@@ -42,9 +42,39 @@ describe('activity map controller', () => {
 			range: { mode: 'day', localDate: '2026-07-21' },
 			path: '',
 			view: 'children',
+			groupBy: 'path',
 		});
 		await controller.getHeaderDistribution();
 		expect(requested).toEqual(controller.getHeaderDefaultQuery());
+	});
+
+	it('switches grouping without changing scope controls and normalizes the view', async () => {
+		const settings = normalizeSettings({ deviceId: 'd1' });
+		const controller = new ActivityMapController(
+			settings,
+			{ run: async (query) => result(query, 0) },
+			{ update: async () => settings },
+			tracking(),
+			'2026-07-21',
+		);
+		await controller.dispatch({
+			kind: 'set-query',
+			query: {
+				metric: 'editingMs',
+				range: { mode: 'all' },
+				path: 'projects',
+				view: 'local-files',
+				groupBy: 'path',
+			},
+		});
+		await controller.dispatch({ kind: 'set-grouping', groupBy: 'file' });
+		expect(controller.getViewModel().query).toEqual({
+			metric: 'editingMs',
+			range: { mode: 'all' },
+			path: 'projects',
+			view: 'children',
+			groupBy: 'file',
+		});
 	});
 
 	it('ignores a stale slow query after a newer navigation resolves', async () => {

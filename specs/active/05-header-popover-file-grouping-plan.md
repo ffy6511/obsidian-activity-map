@@ -15,7 +15,7 @@
 
 ## Phases
 
-- [ ] Phase 0: Add path/file grouping to the distribution query
+- [x] Phase 0: Add path/file grouping to the distribution query
 - [ ] Phase 1: Add the Header Popover grouping toggle
 - [ ] Phase 2: Synchronize documentation and complete integration evidence
 
@@ -121,10 +121,10 @@ Make both grouping modes deterministic query results with identical scope accoun
 
 ### Tasks
 
-- [ ] Add the required `groupBy` field to query contracts, defaults, cache keys, fixtures, and query history.
-- [ ] Flatten every present descendant file under the selected path in file grouping while preserving Deleted and Other semantics.
-- [ ] Update live distribution ownership so a live descendant contributes to its file item in file grouping.
-- [ ] Add focused tests for root and nested scopes, equal totals, basename/full-path identity, deleted history, cache separation, and live-only files.
+- [x] Add the required `groupBy` field to query contracts, defaults, cache keys, fixtures, and query history.
+- [x] Flatten every present descendant file under the selected path in file grouping while preserving Deleted and Other semantics.
+- [x] Update live distribution ownership so a live descendant contributes to its file item in file grouping.
+- [x] Add focused tests for root and nested scopes, equal totals, basename/full-path identity, deleted history, cache separation, and live-only files.
 
 ### Files
 
@@ -137,12 +137,18 @@ Make both grouping modes deterministic query results with identical scope accoun
 
 ### Acceptance Criteria
 
-- [ ] Path grouping remains byte-for-behavior compatible with the current query output.
-- [ ] File grouping returns all present descendant files as detail items, sorted by the existing value/label rule.
-- [ ] Both modes report equal scope/vault totals for the same path, metric, and range.
-- [ ] File items keep basename labels, stable IDs, full paths, and existing activation semantics.
-- [ ] Deleted activity remains non-activatable and visible through the existing Deleted item.
-- [ ] Focused query, cache, live projection, controller, type-check, and lint gates pass.
+- [x] Path grouping remains byte-for-behavior compatible with the current query output.
+- [x] File grouping returns all present descendant files as detail items, sorted by the existing value/label rule.
+- [x] Both modes report equal scope/vault totals for the same path, metric, and range.
+- [x] File items keep basename labels, stable IDs, full paths, and existing activation semantics.
+- [x] Deleted activity remains non-activatable and visible through the existing Deleted item.
+- [x] Focused query, cache, live projection, controller, type-check, and lint gates pass.
+
+### Evidence
+
+- `npm run check` — passed.
+- `npm run lint` — passed.
+- `npm test -- --run` — passed, 236 tests and 0 failures, including new query grouping, cache separation, live projection, and controller cases.
 
 ## Phase 1: Add the Header Popover Grouping Toggle
 

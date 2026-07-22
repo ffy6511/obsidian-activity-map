@@ -91,12 +91,12 @@ describe('v0.1 integrated local journey', () => {
 		];
 		const selectedDay: RangeMode = { mode: 'day', localDate: '2026-07-21' };
 		for (const range of ranges) {
-			const result = await query.run({ metric: 'activeMs', range, path: '', view: 'children' });
+			const result = await query.run({ metric: 'activeMs', range, path: '', view: 'children', groupBy: 'path' });
 			expect(result.scopeTotal).toBe(90_000);
 		}
-		const root = await query.run({ metric: 'activeMs', range: selectedDay, path: '', view: 'children' });
+		const root = await query.run({ metric: 'activeMs', range: selectedDay, path: '', view: 'children', groupBy: 'path' });
 		expect(root.detailItems.some((item) => item.kind === 'directory' && item.label === 'notes')).toBeTrue();
-		const files = await query.run({ metric: 'activeMs', range: selectedDay, path: 'notes', view: 'children' });
+		const files = await query.run({ metric: 'activeMs', range: selectedDay, path: 'notes', view: 'children', groupBy: 'path' });
 		expect(files.detailItems[0]?.path).toBe('notes/a.md');
 
 		for (const mode of ['infographic', 'chart-only'] as const) {
@@ -115,7 +115,7 @@ describe('v0.1 integrated local journey', () => {
 		const deleted = await deletion.executeDeletion({ plan: deletionPlan, nowIso: '2026-07-21T11:00:01.000Z' });
 		expect(deleted.planId).toBe(deletionPlan.planId);
 		expect(deleted.outcome).toBe('completed');
-		expect((await query.run({ metric: 'activeMs', range: selectedDay, path: '', view: 'children' })).scopeTotal).toBe(0);
+		expect((await query.run({ metric: 'activeMs', range: selectedDay, path: '', view: 'children', groupBy: 'path' })).scopeTotal).toBe(0);
 		await coordinator.stop();
 	});
 });

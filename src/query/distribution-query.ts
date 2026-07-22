@@ -15,12 +15,16 @@ import type { MetricKey, ProjectedFile } from './path-projection';
 import { projectAndGroup } from './path-projection';
 import type { RangeMode, ResolvedRange } from './date-range';
 
+/** How items inside the selected path scope are presented. */
+export type DistributionGrouping = 'path' | 'file';
+
 /** A query request from the UI. */
 export interface DistributionQuery {
 	metric: MetricKey;
 	range: RangeMode;
 	path: string;
 	view: 'children' | 'local-files';
+	groupBy: DistributionGrouping;
 }
 
 /** One item in the distribution result (chart or detail). */
@@ -158,39 +162,29 @@ function buildDetailItems(
 ): DistributionItem[] {
 	const items: DistributionItem[] = [];
 	const view = query.view;
-	for (const group of projection.groups) {
-		// In local-files view, only the local-files group is exposed.
-		if (view === 'local-files' && group.kind !== 'local-files') {
-			continue;
-		}
-		if (group.kind === 'directory') {
-			const dirPath = group.directoryPath ?? '';
-			const label = group.segment ?? dirPath;
-			items.push({
-				id: `dir:${dirPath}`,
-				kind: 'directory',
-				label,
-				path: dirPath,
-				value: group.total,
-				percentOfScope: scopeTotal > 0 ? group.total / scopeTotal : 0,
-				memberIds: group.files.map((f) => f.fileId),
-			});
-		} else {
-			// local-files group: expose each file directly.
-			for (const file of group.files) {
-				const path = file.path;
+	if (query.groupBy === 'file') {
+		for (const group of projection.groups) appendFileItems(items, group.files, scopeTotal);
+	} else {
+		for (const group of projection.groups) {
+			// In local-files view, only the local-files group is exposed.
+			if (view === 'local-files' && group.kind !== 'local-files') {
+				continue;
+			}
+			if (group.kind === 'directory') {
+				const dirPath = group.directoryPath ?? '';
+				const label = group.segment ?? dirPath;
 				items.push({
-					id: `file:${file.fileId}`,
-					kind: 'file',
-					// Breadcrumbs already provide the directory context. Keep the full
-					// path separately so shortening the visible label cannot change
-					// identity, navigation, or the file opened on activation.
-					label: path ? fileBasename(path) : file.fileId,
-					path,
-					value: file.value,
-					percentOfScope: scopeTotal > 0 ? file.value / scopeTotal : 0,
-					memberIds: [file.fileId],
+					id: `dir:${dirPath}`,
+					kind: 'directory',
+					label,
+					path: dirPath,
+					value: group.total,
+					percentOfScope: scopeTotal > 0 ? group.total / scopeTotal : 0,
+					memberIds: group.files.map((f) => f.fileId),
 				});
+			} else {
+				// local-files group: expose each file directly.
+				appendFileItems(items, group.files, scopeTotal);
 			}
 		}
 	}
@@ -216,6 +210,24 @@ function buildDetailItems(
 		return a.label.localeCompare(b.label);
 	});
 	return items;
+}
+
+function appendFileItems(items: DistributionItem[], files: readonly ProjectedFile[], scopeTotal: number): void {
+	for (const file of files) {
+		const path = file.path;
+		items.push({
+			id: `file:${file.fileId}`,
+			kind: 'file',
+			// Breadcrumbs already provide the directory context. Keep the full
+			// path separately so shortening the visible label cannot change
+			// identity, navigation, or the file opened on activation.
+			label: path ? fileBasename(path) : file.fileId,
+			path,
+			value: file.value,
+			percentOfScope: scopeTotal > 0 ? file.value / scopeTotal : 0,
+			memberIds: [file.fileId],
+		});
+	}
 }
 
 function fileBasename(path: string): string {

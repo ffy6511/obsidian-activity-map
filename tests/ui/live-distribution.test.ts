@@ -4,9 +4,13 @@ import type { TrackingSnapshot } from '../../src/domain/activity';
 import type { DistributionResult } from '../../src/query/distribution-query';
 import { withLiveActivity } from '../../src/ui/live-distribution';
 
-function distribution(path = '', view: 'children' | 'local-files' = 'children'): DistributionResult {
+function distribution(
+	path = '',
+	view: 'children' | 'local-files' = 'children',
+	groupBy: 'path' | 'file' = 'path',
+): DistributionResult {
 	return {
-		query: { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-21' }, path, view },
+		query: { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-21' }, path, view, groupBy },
 		scopeTotal: 10_000,
 		vaultTotal: 20_000,
 		percentOfVault: 0.5,
@@ -40,6 +44,29 @@ describe('live distribution projection', () => {
 		expect(second.scopeTotal - first.scopeTotal).toBe(1_000);
 		expect((second.detailItems[0]?.value ?? 0) - (first.detailItems[0]?.value ?? 0)).toBe(1_000);
 		expect(base.scopeTotal).toBe(10_000);
+	});
+
+	it('creates a concrete descendant file item in file grouping', () => {
+		const base = distribution('projects', 'children', 'file');
+		base.scopeTotal = 0;
+		base.vaultTotal = 0;
+		base.percentOfVault = 0;
+		base.chartItems = [];
+		base.detailItems = [];
+		const projected = withLiveActivity(base, snapshot('projects/nested/live.md'), {
+			nowMs: Date.parse('2026-07-21T10:00:20.000Z'),
+			idleThresholdMs: 180_000,
+			timeZone: 'UTC',
+		});
+		expect(projected.detailItems).toEqual([{
+			id: 'file:live',
+			kind: 'file',
+			label: 'live.md',
+			path: 'projects/nested/live.md',
+			value: 20_000,
+			percentOfScope: 1,
+			memberIds: ['live'],
+		}]);
 	});
 
 	it('clips UI-side growth at the trusted idle boundary', () => {

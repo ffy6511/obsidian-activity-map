@@ -183,6 +183,7 @@ describe('rebuild service', () => {
 			range: { mode: 'day', localDate: ref.localDate },
 			path: '',
 			view: 'children',
+			groupBy: 'path',
 		});
 		expect(result.warnings.some((warning) => warning.code === 'corrupt-daily-summary')).toBeTrue();
 		expect(result.scopeTotal).toBe(0);

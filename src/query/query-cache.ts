@@ -14,7 +14,7 @@ import type { DistributionResult } from './distribution-query';
 import type { DistributionQuery } from './distribution-query';
 import type { DailySummary } from '../data/daily-summary-repository';
 
-/** A cache key capturing metric/range/path/view. */
+/** A cache key capturing metric/range/path/view/grouping. */
 export function queryKey(query: DistributionQuery): string {
 	const range =
 		query.range.mode === 'day'
@@ -22,7 +22,7 @@ export function queryKey(query: DistributionQuery): string {
 			: query.range.mode === 'average'
 				? `avg:${String(query.range.days)}:${query.range.today}`
 				: 'all';
-	return `${query.metric}|${range}|${query.path}|${query.view}`;
+	return `${query.metric}|${range}|${query.path}|${query.view}|${query.groupBy}`;
 }
 
 /** Snapshot cache keyed by summary path. Invalidated by date or registry change. */

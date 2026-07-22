@@ -76,7 +76,7 @@ describe('header action manager', () => {
 
 	it('adds an unclosed session to its actual vault-root slice', () => {
 		const distribution: DistributionResult = {
-			query: { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-21' }, path: '', view: 'children' },
+			query: { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-21' }, path: '', view: 'children', groupBy: 'path' },
 			scopeTotal: 100,
 			vaultTotal: 100,
 			percentOfVault: 1,

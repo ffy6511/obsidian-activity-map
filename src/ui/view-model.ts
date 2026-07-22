@@ -33,6 +33,7 @@ export function initialViewModel(settings: ActivityMapSettings, today: string): 
 			range: { mode: 'day', localDate: today },
 			path: '',
 			view: 'children',
+			groupBy: 'path',
 		},
 		distribution: null,
 		tracking: null,

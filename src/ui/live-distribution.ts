@@ -73,6 +73,14 @@ function scopeOwner(
 	const relative = filePath.slice(prefix.length);
 	const segments = relative.split('/').filter(Boolean);
 	if (segments.length === 0) return null;
+	if (distribution.query.groupBy === 'file') {
+		return {
+			id: `file:${fileId}`,
+			kind: 'file',
+			label: segments[segments.length - 1] as string,
+			path: filePath,
+		};
+	}
 	if (distribution.query.view === 'local-files' && segments.length !== 1) return null;
 	if (segments.length === 1) {
 		return { id: `file:${fileId}`, kind: 'file', label: relative, path: filePath };

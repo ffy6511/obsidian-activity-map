@@ -8,6 +8,7 @@ import { sampleRegistry, sampleSummaries, sampleRecordedDates } from '../fixture
 function run(args: {
 	path: string;
 	view: 'children' | 'local-files';
+	groupBy?: 'path' | 'file';
 	metric?: 'activeMs' | 'editingMs' | 'openCount';
 	range?:
 		| { mode: 'day'; localDate: string }
@@ -20,6 +21,7 @@ function run(args: {
 		range: args.range ?? { mode: 'day', localDate: '2026-07-14' },
 		path: args.path,
 		view: args.view,
+		groupBy: args.groupBy ?? 'path',
 	};
 	const resolved = resolveRange({
 		range: query.range,
@@ -89,7 +91,7 @@ describe('distribution query directory drill-down', () => {
 			},
 		};
 		const query = (path: string) => runDistributionQuery({
-			query: { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-14' }, path, view: 'children' },
+			query: { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-14' }, path, view: 'children', groupBy: 'path' },
 			resolved: resolveRange({ range: { mode: 'day', localDate: '2026-07-14' }, recordedDates: sampleRecordedDates() }),
 			summaries: [{ summary: withUnknown }],
 			registryEntries: registry,
@@ -124,6 +126,61 @@ describe('distribution query directory drill-down', () => {
 		expect(notes?.path).toBe('projects/proj1/notes.md');
 		expect(notes?.id).toBe('file:file-a');
 		expect(result.detailItems.some((i) => i.kind === 'directory')).toBeFalse();
+	});
+});
+
+describe('distribution query file grouping', () => {
+	it('flattens every present descendant file at the vault root', () => {
+		const result = run({
+			path: '',
+			view: 'children',
+			groupBy: 'file',
+			range: { mode: 'day', localDate: '2026-07-14' },
+		});
+		expect(result.detailItems.some((item) => item.kind === 'directory')).toBeFalse();
+		expect(result.detailItems.find((item) => item.id === 'file:file-a')).toEqual({
+			id: 'file:file-a',
+			kind: 'file',
+			label: 'notes.md',
+			path: 'projects/proj1/notes.md',
+			value: 60_000,
+			percentOfScope: 60_000 / 95_000,
+			memberIds: ['file-a'],
+		});
+		expect(result.detailItems.find((item) => item.id === 'file:file-b')?.label).toBe('deep.md');
+	});
+
+	it('limits flattened files to the selected path without changing totals', () => {
+		const pathResult = run({
+			path: 'projects',
+			view: 'children',
+			groupBy: 'path',
+			range: { mode: 'day', localDate: '2026-07-14' },
+		});
+		const fileResult = run({
+			path: 'projects',
+			view: 'children',
+			groupBy: 'file',
+			range: { mode: 'day', localDate: '2026-07-14' },
+		});
+		expect(fileResult.detailItems.filter((item) => item.kind === 'file').map((item) => item.id)).toEqual([
+			'file:file-a',
+			'file:file-b',
+		]);
+		expect(fileResult.scopeTotal).toBe(pathResult.scopeTotal);
+		expect(fileResult.vaultTotal).toBe(pathResult.vaultTotal);
+	});
+
+	it('retains deleted history and the existing top-N Other fold', () => {
+		const result = run({
+			path: '',
+			view: 'children',
+			groupBy: 'file',
+			range: { mode: 'all' },
+			maxChartItems: 2,
+		});
+		expect(result.detailItems.find((item) => item.kind === 'deleted')?.memberIds).toContain('file-c');
+		expect(result.chartItems.some((item) => item.kind === 'other')).toBeTrue();
 	});
 });
 
@@ -197,6 +254,7 @@ describe('query cache', () => {
 			range: { mode: 'day' as const, localDate: '2026-07-14' },
 			path: '',
 			view: 'children' as const,
+			groupBy: 'path' as const,
 		};
 		const result = run({ path: '', view: 'children', range: { mode: 'day', localDate: '2026-07-14' } });
 		expect(cache.getQuery(query)).toBeNull();
@@ -212,8 +270,10 @@ describe('query cache', () => {
 			range: { mode: 'day' as const, localDate: '2026-07-14' },
 			path: '',
 			view: 'children' as const,
+			groupBy: 'path' as const,
 		};
 		expect(queryKey(q)).toBe(queryKey({ ...q }));
+		expect(queryKey(q)).not.toBe(queryKey({ ...q, groupBy: 'file' }));
 	});
 
 	it('invalidateRegistry drops cached queries', () => {
@@ -223,6 +283,7 @@ describe('query cache', () => {
 			range: { mode: 'all' as const },
 			path: '',
 			view: 'children' as const,
+			groupBy: 'path' as const,
 		};
 		const result = run({ path: '', view: 'children', range: { mode: 'all' } });
 		cache.putQuery(query, result);

@@ -13,7 +13,7 @@ function distribution(label = 'Projects'): DistributionResult {
 		percentOfScope: 0.25, memberIds: ['file-b'],
 	};
 	return {
-		query: { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-21' }, path: 'work/projects', view: 'children' },
+		query: { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-21' }, path: 'work/projects', view: 'children', groupBy: 'path' },
 		scopeTotal: 120_000, vaultTotal: 150_000, percentOfVault: 0.8, denominatorDays: null,
 		coverage: { firstDate: '2026-07-20', lastDate: '2026-07-21' }, chartItems: [item, other], detailItems: [item, other], warnings: [],
 	};

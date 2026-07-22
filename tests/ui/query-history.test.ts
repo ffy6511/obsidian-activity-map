@@ -4,7 +4,7 @@ import type { DistributionQuery } from '../../src/query/distribution-query';
 import { QueryHistory } from '../../src/ui/query-history';
 
 function query(path: string): DistributionQuery {
-	return { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-21' }, path, view: 'children' };
+	return { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-21' }, path, view: 'children', groupBy: 'path' };
 }
 
 describe('per-view query history', () => {
