@@ -57,20 +57,6 @@ npm run dev
 
 `npm run dev` watches the source and writes `main.js` at the repository root. Copy `main.js`, `manifest.json`, and `styles.css` to your development vault’s `plugins/activity-map/` folder, then reload Obsidian to test the change.
 
-### Release automation
-
-Pushing a semantic-version tag that exactly matches `package.json` and `manifest.json` and is recorded in `versions.json`—for example, `0.1.0`—starts the release workflow. It runs the checks and production build, then creates the GitHub Release with `main.js`, `manifest.json`, and `styles.css` attached. The repository configures `npm version patch|minor|major` to create a no-prefix tag; push it with `git push --follow-tags`.
-
-Run the usual checks before preparing a release:
-
-```bash
-npm run check
-npm run lint
-npm test -- --run
-npm run build
-git diff --check
-```
-
 ### Data and privacy
 
 Activity Map is local-first. It does not itself upload, sync, sell, or send your activity data anywhere.
@@ -127,20 +113,6 @@ npm run dev
 ```
 
 `npm run dev` 会监听源代码并在仓库根目录生成 `main.js`。将 `main.js`、`manifest.json` 和 `styles.css` 复制到开发 vault 的 `plugins/activity-map/` 目录，再重载 Obsidian 即可测试。
-
-### 自动发布
-
-推送与 `package.json`、`manifest.json` 完全一致且已记录在 `versions.json` 中的语义化版本 tag（例如 `0.1.0`）即可触发发布工作流。它会运行检查和生产构建，再创建 GitHub Release 并上传 `main.js`、`manifest.json` 与 `styles.css`。仓库已配置 `npm version patch|minor|major` 生成无 `v` 前缀的 tag，随后执行 `git push --follow-tags` 即可。
-
-准备发布前可运行：
-
-```bash
-npm run check
-npm run lint
-npm test -- --run
-npm run build
-git diff --check
-```
 
 ### 数据与隐私
 
