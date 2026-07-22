@@ -3,12 +3,12 @@
 </p>
 
 <p align="center">
-  Local-first, trustworthy activity insights for your Obsidian vault.
+  <span style="display: inline-block; padding-bottom: 8px;">Local-first, trustworthy activity insights for your Obsidian vault.</span>
   <br />
-  <a href="https://github.com/ffy6511/obsidian-activity-map/stargazers"><img src="https://img.shields.io/github/stars/ffy6511/obsidian-activity-map?style=flat&logo=github&label=Stars" alt="GitHub stars" /></a>
-  <a href="https://github.com/ffy6511/obsidian-activity-map/releases"><img src="https://img.shields.io/github/downloads/ffy6511/obsidian-activity-map/total?style=flat&logo=github&label=Downloads" alt="GitHub downloads" /></a>
-  <a href="https://github.com/ffy6511/obsidian-activity-map/releases/latest"><img src="https://img.shields.io/github/v/release/ffy6511/obsidian-activity-map?display_name=tag&style=flat&logo=github&label=Release" alt="Latest release" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/ffy6511/obsidian-activity-map?style=flat&label=License" alt="License" /></a>
+  <a href="https://github.com/ffy6511/obsidian-activity-map/stargazers"><img src="https://img.shields.io/github/stars/ffy6511/obsidian-activity-map?style=flat&logo=github&label=Stars&cacheSeconds=300&v=public" alt="GitHub stars" /></a>
+  <a href="https://github.com/ffy6511/obsidian-activity-map/releases"><img src="https://img.shields.io/github/downloads/ffy6511/obsidian-activity-map/total?style=flat&logo=github&label=Downloads&cacheSeconds=300&v=public" alt="GitHub downloads" /></a>
+  <a href="https://github.com/ffy6511/obsidian-activity-map/releases/latest"><img src="https://img.shields.io/github/v/release/ffy6511/obsidian-activity-map?display_name=tag&style=flat&logo=github&label=Release&cacheSeconds=300&v=public" alt="Latest release" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/ffy6511/obsidian-activity-map?style=flat&label=License&cacheSeconds=300&v=public" alt="License" /></a>
 </p>
 
 <table>
