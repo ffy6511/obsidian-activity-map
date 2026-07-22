@@ -46,7 +46,7 @@
 
 .activity-map-metric-control select {
 	width: 100%;
-	padding-inline-start: calc(var(--size-4-6) + var(--size-2-1));
+	padding-inline-start: calc(var(--size-4-6) + var(--size-2-2));
 }
 
 .activity-map-control-icon {
@@ -207,6 +207,10 @@
 	pointer-events: none;
 }
 
+.activity-map-chart-popover .activity-map-donut-total {
+	font-family: Georgia, 'Times New Roman', serif;
+}
+
 .activity-map-detail-list {
 	display: flex;
 	flex-direction: column;
@@ -351,7 +355,7 @@
 }
 
 .activity-map-chart-popover {
-	--activity-map-popover-chart-size: min(16.5rem, calc(50vw - 2rem));
+	--activity-map-popover-chart-size: min(13.2rem, calc(40vw - 2.5rem));
 
 	width: min(40rem, calc(100vw - 1rem));
 	overflow: hidden;
@@ -454,7 +458,7 @@
 .activity-map-popover-result {
 	box-sizing: border-box;
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
 	gap: var(--size-4-4);
 	align-items: start;
 	width: min(100%, 36rem);
@@ -546,6 +550,13 @@
 .activity-map-chart-legend-percent,
 .activity-map-chart-legend-value {
 	color: var(--text-muted);
+}
+
+.activity-map-chart-legend-label {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .activity-map-chart-legend-row:hover .activity-map-chart-legend-label,
