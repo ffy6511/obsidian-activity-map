@@ -109,6 +109,7 @@ export class HeaderActionManager {
 				targetEl,
 				filePath: path,
 			}),
+			() => view.leaf.hoverPopover?.hoverEl ?? null,
 		);
 		const ownerWindow = action.ownerDocument.defaultView;
 		const supportsHover = ownerWindow?.matchMedia?.('(hover: hover) and (pointer: fine)').matches === true;

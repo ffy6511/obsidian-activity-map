@@ -57,6 +57,7 @@ export class SummaryPopover {
 		private readonly controller: ActivityMapController,
 		private readonly openFile: (filePath: string) => Promise<void>,
 		private readonly previewFile?: (event: MouseEvent, targetEl: HTMLElement, filePath: string) => void,
+		private readonly getNativePreview?: () => HTMLElement | null,
 	) {}
 
 	open(): void {
@@ -88,7 +89,14 @@ export class SummaryPopover {
 		this.outsideHandler = (event) => {
 			const target = event.target;
 			const OwnerNode = doc.defaultView?.Node;
-			if (OwnerNode && target instanceof OwnerNode && !popover.contains(target) && !this.trigger.contains(target)) {
+			const nativePreview = this.nativePreview();
+			if (
+				OwnerNode &&
+				target instanceof OwnerNode &&
+				!popover.contains(target) &&
+				!this.trigger.contains(target) &&
+				!nativePreview?.contains(target)
+			) {
 				this.close(false);
 			}
 		};
@@ -124,7 +132,13 @@ export class SummaryPopover {
 		this.cancelClose();
 		this.closeTimer = this.trigger.ownerDocument.defaultView?.setTimeout(() => {
 			this.closeTimer = null;
-			if (!this.shouldStayOpen()) this.close(false);
+			if (!this.shouldStayOpen()) {
+				this.close(false);
+			} else if (!this.pinned && this.nativePreview()) {
+				// Page Preview is mounted outside this Popover. Recheck after its own
+				// hover lifecycle finishes so the source row remains connected meanwhile.
+				this.scheduleClose();
+			}
 		}, 180) ?? null;
 	}
 
@@ -330,11 +344,18 @@ export class SummaryPopover {
 		const popover = this.element;
 		if (!popover) return false;
 		const active = this.trigger.ownerDocument.activeElement;
+		const nativePreview = this.nativePreview();
 		return this.pinned ||
 			this.trigger.matches(':hover') ||
 			popover.matches(':hover') ||
 			this.trigger.contains(active) ||
-			popover.contains(active);
+			popover.contains(active) ||
+			nativePreview !== null;
+	}
+
+	private nativePreview(): HTMLElement | null {
+		const preview = this.getNativePreview?.() ?? null;
+		return preview?.isConnected ? preview : null;
 	}
 
 }
