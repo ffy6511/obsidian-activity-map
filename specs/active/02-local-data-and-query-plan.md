@@ -87,6 +87,7 @@ interface ActivityMapSettings {
 	deviceId: string;
 	trackingEnabled: boolean;
 	manuallyPaused: boolean;
+	headerPopoverGrouping: 'path' | 'file';
 	idleThresholdMs: number;
 	recoveryLimitMs: number;
 	editSilenceMs: number;

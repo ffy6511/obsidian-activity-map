@@ -31,6 +31,7 @@ describe('settings repository load', () => {
 		const { settings, deviceIdAssigned } = await repo.load();
 		expect(settings.idleThresholdMs).toBe(DEFAULT_SETTINGS.idleThresholdMs);
 		expect(settings.trackingEnabled).toBeTrue();
+		expect(settings.headerPopoverGrouping).toBe('path');
 		expect(deviceIdAssigned).toBeTrue();
 		expect(settings.deviceId).toBeDefined();
 	});
@@ -53,12 +54,14 @@ describe('settings repository load', () => {
 			idleThresholdMs: 5, // below the 30s minimum
 			editSilenceMs: 999_999, // above the 120s maximum
 			averageWindowDays: 'bogus',
+			headerPopoverGrouping: 'bogus',
 		};
 		const repo = new SettingsRepository(store);
 		const { settings } = await repo.load();
 		expect(settings.idleThresholdMs).toBe(DEFAULT_SETTINGS.idleThresholdMs);
 		expect(settings.editSilenceMs).toBe(DEFAULT_SETTINGS.editSilenceMs);
 		expect(settings.averageWindowDays).toBe(DEFAULT_SETTINGS.averageWindowDays);
+		expect(settings.headerPopoverGrouping).toBe('path');
 	});
 });
 
@@ -74,6 +77,15 @@ describe('settings repository update', () => {
 		const repo2 = new SettingsRepository(store);
 		const reloaded = await repo2.load();
 		expect(reloaded.settings.idleThresholdMs).toBe(60_000);
+	});
+
+	it('persists the Header Popover grouping preference across repository reloads', async () => {
+		const store = memoryStore();
+		const repo = new SettingsRepository(store);
+		await repo.load();
+		await repo.update({ headerPopoverGrouping: 'file' });
+		const reloaded = await new SettingsRepository(store).load();
+		expect(reloaded.settings.headerPopoverGrouping).toBe('file');
 	});
 
 	it('a failed save leaves the previous effective value', async () => {

@@ -54,6 +54,7 @@ export class ActivityMapController implements TrackingObserver {
 	private model: ActivityMapViewModel;
 	private readonly listeners = new Set<(model: ActivityMapViewModel) => void>();
 	private generation = 0;
+	private groupingRevision = 0;
 	private stopped = false;
 	private today: string;
 	private resumeAfterDeletion = false;
@@ -81,7 +82,7 @@ export class ActivityMapController implements TrackingObserver {
 			range: { mode: 'day', localDate: this.today },
 			path: '',
 			view: 'children',
-			groupBy: 'path',
+			groupBy: this.model.settings.headerPopoverGrouping,
 		};
 	}
 
@@ -168,11 +169,8 @@ export class ActivityMapController implements TrackingObserver {
 				};
 				break;
 			case 'set-grouping':
-				this.model = {
-					...this.model,
-					query: { ...this.model.query, groupBy: intent.groupBy, view: 'children' },
-				};
-				break;
+				await this.setGrouping(intent.groupBy);
+				return;
 			case 'set-metric':
 				this.model = { ...this.model, query: { ...this.model.query, metric: intent.metric } };
 				break;
@@ -214,6 +212,36 @@ export class ActivityMapController implements TrackingObserver {
 				error: error instanceof Error ? error.message : String(error),
 				queryGeneration: generation,
 			});
+		}
+	}
+
+	private async setGrouping(groupBy: DistributionGrouping): Promise<void> {
+		const revision = ++this.groupingRevision;
+		const previousQuery = this.model.query;
+		const previousSettings = this.model.settings;
+		this.model = {
+			...this.model,
+			query: { ...this.model.query, groupBy, view: 'children' },
+			settings: { ...this.model.settings, headerPopoverGrouping: groupBy },
+		};
+		const refresh = this.refresh();
+		try {
+			const settings = await this.settingsService.update({ headerPopoverGrouping: groupBy });
+			if (revision === this.groupingRevision) this.model = { ...this.model, settings };
+			await refresh;
+		} catch (error) {
+			if (revision === this.groupingRevision) {
+				// Invalidate the optimistic query so a late result cannot restore a
+				// grouping preference that failed its persistence commit point.
+				this.generation += 1;
+				this.publish({
+					...this.model,
+					query: previousQuery,
+					settings: previousSettings,
+					loadState: 'error',
+					error: error instanceof Error ? error.message : String(error),
+				});
+			}
 		}
 	}
 

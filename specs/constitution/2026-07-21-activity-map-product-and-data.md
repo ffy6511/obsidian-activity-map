@@ -75,19 +75,12 @@ A user works across several Obsidian windows and project folders. Activity Map a
 
 ### Interface and Export
 
-- Provide a stable file-header donut action with a focusable interactive chart popover, plus Ribbon and command fallbacks. Hover/focus reveals the chart; action click pins or unpins it; the Popover trailing control pauses or resumes tracking, while Ribbon and command remain the dockable-view entrypoints.
-- Render the header action as a stable miniature of today's vault-root distribution, using the same stable slice identities and colors as the full donut. When data is unavailable, keep the same fixed donut outline instead of showing a synthetic single arc or swapping tracking-state icons.
-- Make the header popover and dockable view share the same query, native SVG donut, legend, range controls, path, and slice activation semantics. The popover defaults to today's vault-root distribution.
-- Give distribution queries an explicit path/file grouping axis. Path grouping remains the default and preserves hierarchical children/local-files behavior. File grouping recursively exposes present files under the selected breadcrumb path while retaining the same scope/vault totals, Deleted history, top-N/Other fold, basename labels, stable identities, and full-path activation. The grouping choice is presentation state, not persisted settings.
-- Keep the header popover structurally stable while a slice is highlighted: controls stay above a centered `2:3` chart/list result grid with equal inline padding; its left column contains a tightly bounded donut and current path, and its right column contains the bounded scrollable legend. The legend cannot exceed the rendered donut height. Long legend names truncate with an ellipsis before the fixed exact-value and percentage columns. Do not add region headings, a transient tooltip row, duplicate totals, vault-share summary, title bar, or ordinary tracking-status footer.
-- Project the current unclosed active interval into both the header miniature and an open popover without waiting for summary persistence. UI-side ticking must stop at the last trusted interaction plus the configured idle threshold and must not rewrite persisted evidence.
-- Present the current path as centered muted context directly below the donut, outside the legend. Popover breadcrumbs remain clickable and promote to underlined primary text on hover/focus. Legend rows have no default background and keep all text muted until pointer/focus or donut highlight promotes the active row to primary text without shifting layout.
-- In selected-day mode, place an equal-width previous/next pair around a clickable `YYYY-MM-DD` date value. Place the pause/resume icon after this date group with a visible gap; icon buttons share compact dimensions and the selected metric may use its own semantic icon with visible spacing before its label.
-- Keep legend values column-aligned as name, exact value, then rightmost percentage. Reserve fixed numeric widths so seconds-only and minute/hour values do not move the percentage column.
-- Display present file leaves by basename in chart and legend text while retaining their full vault-relative path for identity, navigation, and file activation.
-- Use a dockable `ItemView` as the complete interface. Mobile interaction must not depend on hover.
-- Use a native SVG donut with stable colors, text detail, keyboard navigation, breadcrumbs, and explicit local-versus-vault percentages.
-- Export a full information graphic by default and offer a chart-only SVG. Both outputs embed necessary styles and accessible metadata.
+- Provide a stable file-header chart entry, a dockable complete interface, and Ribbon/command fallbacks through public or capability-gated Obsidian APIs. Mobile and fallback interaction cannot depend on hover.
+- Keep presentation surfaces on the same immutable distribution/query semantics, stable file identity, and full-path activation contract. UI grouping may change projection only; it cannot change scope totals, vault totals, Deleted history, or raw evidence.
+- Persist the last successful Header Popover path/file grouping choice as a small validated setting. A persistence failure cannot silently establish a new default.
+- Project the current unclosed interval for live presentation only within the trusted idle boundary; presentation updates cannot rewrite persisted evidence.
+- Keep export independent from mounted DOM, escape user-derived strings, and include accessible metadata in standalone SVG output.
+- The [PRD Header Popover section](../../docs/PRD.md#环形图浮层) is the single source for current UI structure, controls, labels, visual hierarchy, and interaction behavior. Active Specs own temporary implementation deltas and acceptance evidence; this Constitution retains only stable product and data boundaries.
 
 ### Privacy and Network Boundary
 
@@ -217,3 +210,5 @@ Rejected because keyboard interaction, accessible semantics, and standalone vect
 | 2026-07-22 | Refined the approved Popover result to a centered `1:1` grid with equal inline padding and a tightly bounded donut. | Balance visible left/right whitespace after real-render tuning while keeping the list height tied to the rendered chart. |
 | 2026-07-22 | Added an explicit path/file grouping choice to distribution queries and placed its Popover toggle before pause/resume. | Let users compare all files in the current path without losing hierarchical navigation, totals, or file identity. |
 | 2026-07-22 | Retuned the final Popover to a centered `2:3` chart/list grid, ellipsized long legend names, and emphasized the centered total with a serif face. | Give file names more usable width without allowing them to overlap numeric columns, while strengthening the chart total hierarchy. |
+| 2026-07-22 | Persisted the Header Popover path/file grouping preference in plugin settings. | Reopening the Popover or restarting the plugin must preserve the user's last successful display choice. |
+| 2026-07-22 | Consolidated current Header Popover UI and interaction detail into the PRD. | Keep Constitution and Architecture focused on stable boundaries and module flow, with one current UX source of truth. |

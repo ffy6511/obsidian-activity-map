@@ -51,10 +51,11 @@ describe('activity map controller', () => {
 
 	it('switches grouping without changing scope controls and normalizes the view', async () => {
 		const settings = normalizeSettings({ deviceId: 'd1' });
+		let persisted = settings;
 		const controller = new ActivityMapController(
 			settings,
 			{ run: async (query) => result(query, 0) },
-			{ update: async () => settings },
+			{ update: async (patch) => { persisted = normalizeSettings({ ...persisted, ...patch }); return persisted; } },
 			tracking(),
 			'2026-07-21',
 		);
@@ -76,6 +77,26 @@ describe('activity map controller', () => {
 			view: 'children',
 			groupBy: 'file',
 		});
+		expect(persisted.headerPopoverGrouping).toBe('file');
+		expect(controller.getHeaderDefaultQuery().groupBy).toBe('file');
+		const reopened = new ActivityMapController(persisted, { run: async (query) => result(query, 0) }, { update: async () => persisted }, tracking(), '2026-07-21');
+		expect(reopened.getHeaderDefaultQuery().groupBy).toBe('file');
+	});
+
+	it('rolls back an optimistic grouping when preference persistence fails', async () => {
+		const settings = normalizeSettings({ deviceId: 'd1' });
+		const controller = new ActivityMapController(
+			settings,
+			{ run: async (query) => result(query, 0) },
+			{ update: async () => { throw new Error('save-failed'); } },
+			tracking(),
+			'2026-07-21',
+		);
+		await controller.dispatch({ kind: 'set-grouping', groupBy: 'file' });
+		expect(controller.getViewModel().query.groupBy).toBe('path');
+		expect(controller.getViewModel().settings.headerPopoverGrouping).toBe('path');
+		expect(controller.getViewModel().loadState).toBe('error');
+		expect(controller.getViewModel().error).toBe('save-failed');
 	});
 
 	it('ignores a stale slow query after a newer navigation resolves', async () => {

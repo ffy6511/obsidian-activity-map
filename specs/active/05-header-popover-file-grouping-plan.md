@@ -33,16 +33,16 @@ The Header Popover always groups activity by the next path segment. Users can dr
 
 Goals:
 
-- Add an explicit query grouping axis with `path` as the unchanged default and `file` as the new alternative.
+- Add an explicit query grouping axis with `path` as the first-run default and `file` as the alternative.
 - In file grouping, recursively expose every present file under the current breadcrumb path as an independent detail item before the existing top-N/Other chart fold.
 - Preserve the same scope total, vault total, date range, metric, selected path, basename labels, stable file IDs, and full-path activation across grouping changes.
 - Place one icon toggle immediately left of pause/resume in the existing Header Popover control row.
 - Keep breadcrumbs usable as the scope selector while file grouping is active.
+- Persist the last successful grouping choice and restore it when the Header Popover reopens or the plugin restarts.
 
 Non-goals:
 
-- Persist the grouping choice in plugin settings or across a newly opened Header Popover.
-- Change the dockable view layout, tracking, persistence, export schema, sorting, palette, top-N threshold, or Other expansion behavior.
+- Change the dockable view layout, tracking, activity-data persistence, export schema, sorting, palette, top-N threshold, or Other expansion behavior.
 - Render new headings, status text, summaries, or a second control row.
 
 ### Key Insight
@@ -78,12 +78,14 @@ interface DistributionQuery {
 
 ```text
 Open Header Popover
-  -> default query groupBy = path
+  -> read saved headerPopoverGrouping (first-run fallback = path)
   -> render grouping toggle before pause/resume
 
 Activate toggle
   -> clear expanded Other state
   -> dispatch set-grouping(path | file)
+  -> optimistically update the current query
+  -> persist headerPopoverGrouping through SettingsRepository
   -> normalize view to children
   -> run ordinary generation-guarded query
   -> retain metric, range, path, pin state, and focus contract
@@ -110,7 +112,8 @@ merged per-file metrics + registry snapshot
 
 - The toggle uses the existing loading-retention and stale-generation rules; a slow previous mode cannot replace a newer result.
 - A query error keeps the selected grouping in the view model and uses the existing Popover error state.
-- A newly opened Header Popover always starts in path grouping.
+- A newly opened Header Popover uses the last successfully persisted grouping; installations without the setting start in path grouping.
+- A settings write failure rolls back the optimistic grouping and invalidates its in-flight query.
 - File grouping never converts a missing/deleted identity into an activatable present file.
 
 ## Phase 0: Add Path/File Grouping to the Distribution Query
@@ -160,7 +163,8 @@ Expose the query grouping choice without adding visible chrome or disrupting the
 
 - [x] Generalize the trailing control slot into an ordered action group without changing existing consumers.
 - [x] Render a grouping icon toggle immediately before pause/resume with accessible action text and pressed state.
-- [x] Preserve grouping across metric, range, date, and breadcrumb changes; reset to path grouping only when a new Header Popover opens.
+- [x] Preserve grouping across metric, range, date, breadcrumb, Popover reopen, and plugin restart boundaries.
+- [x] Persist the last successful grouping through the settings repository and roll back the optimistic choice when persistence fails.
 - [x] Preserve loading retention, focus restoration, live updates, highlighting, pinning, Other expansion, and file activation.
 - [x] Add focused control-order, accessibility, controller, and Popover regression tests.
 
@@ -179,6 +183,7 @@ Expose the query grouping choice without adding visible chrome or disrupting the
 - [x] The toggle exposes an accessible label, stable data ID, icon change, and `aria-pressed` state without visible explanatory text.
 - [x] Activating it switches between hierarchical path slices and flat file slices for the same scope.
 - [x] Breadcrumb navigation in file grouping preserves file grouping.
+- [x] Reopening the Popover and reconstructing the controller restore the persisted grouping; invalid or absent settings fall back to path.
 - [x] Existing controls and Popover interactions remain green under pointer and keyboard tests.
 - [x] Focused UI, accessibility, type-check, lint, test, and build gates pass.
 
@@ -237,7 +242,7 @@ Align public behavior and architecture with the implemented grouping contract an
 
 ## Post-Critic Acceptance
 
-- [ ] In real Obsidian, the owner toggles a vault-root Popover containing nested files from path to file grouping and confirms the chart/list change without Popover movement or a second control row.
+- [ ] In real Obsidian, the owner toggles a vault-root Popover containing nested files from path to file grouping, closes and reopens it, and confirms the file grouping and chart/list remain without Popover movement or a second control row.
 - [ ] The owner navigates a breadcrumb while file grouping is active, confirms the new scope remains file-grouped, and activates a basename-only row to open its unchanged full path.
 
 ## Evaluation Record
@@ -285,3 +290,10 @@ Align public behavior and architecture with the implemented grouping contract an
 - Verdict: pass.
 
 The three-round Critic budget is exhausted. The Spec remains in `review` only for the two unchecked Owner journeys in Post-Critic Acceptance; successful UAT is recorded without starting a fourth Critic round. Any substantive UAT defect keeps the Spec in `review` and is reported against the exhausted review budget.
+
+### Post-Critic Owner Correction
+
+- Scope: the owner identified that reopening the Header Popover reset grouping to path. The corrected contract persists `headerPopoverGrouping` in plugin settings, restores it for new Popovers and plugin restarts, and rolls back an optimistic toggle if the settings write fails.
+- Tests: settings normalization/reload and controller reopen/failure cases cover the durable preference without changing query totals, file identity, or grouping semantics.
+- Documentation: Constitution and PRD own the user-visible persistence rule; Architecture retains only the settings-port and controller-flow boundary.
+- Lifecycle: the three-round Critic budget remains exhausted. This correction keeps the Spec in `review`; no fourth Critic round is started, and the updated reopen journey remains part of Owner acceptance.

@@ -1,5 +1,5 @@
 /**
- * Validated runtime settings for the tracking runtime.
+ * Validated plugin settings for tracking and durable UI preferences.
  *
  * Units are milliseconds internally so all time math shares one unit. The UI
  * formats to seconds for display. This module owns defaults, documented ranges,
@@ -11,7 +11,7 @@
 export type AverageWindowDays = 7 | 30 | 90 | 'all';
 
 /**
- * Runtime-validated settings. Persisted JSON is normalized through
+ * Runtime-validated plugin settings. Persisted JSON is normalized through
  * {@link normalizeSettings} before this type is ever constructed.
  */
 export interface ActivityMapSettings {
@@ -19,6 +19,7 @@ export interface ActivityMapSettings {
 	deviceId: string;
 	trackingEnabled: boolean;
 	manuallyPaused: boolean;
+	headerPopoverGrouping: 'path' | 'file';
 	idleThresholdMs: number;
 	recoveryLimitMs: number;
 	editSilenceMs: number;
@@ -36,6 +37,7 @@ export const DEFAULT_SETTINGS: ActivityMapSettings = {
 	deviceId: '',
 	trackingEnabled: true,
 	manuallyPaused: false,
+	headerPopoverGrouping: 'path',
 	// 180 s — PRD default idle threshold; adjustable 30–1800 s.
 	idleThresholdMs: 180_000,
 	// 30 min — gaps up to here surface a pending include/exclude decision.
@@ -92,6 +94,10 @@ export function normalizeSettings(input: unknown): ActivityMapSettings {
 			typeof source.manuallyPaused === 'boolean'
 				? source.manuallyPaused
 				: DEFAULT_SETTINGS.manuallyPaused,
+		headerPopoverGrouping:
+			source.headerPopoverGrouping === 'file' || source.headerPopoverGrouping === 'path'
+				? source.headerPopoverGrouping
+				: DEFAULT_SETTINGS.headerPopoverGrouping,
 		idleThresholdMs: clampNumber(
 			source.idleThresholdMs,
 			RANGES.idleThresholdMs,

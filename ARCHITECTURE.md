@@ -79,7 +79,7 @@ src/
 │
 ├── domain/                         # Pure types and invariants; no Obsidian imports.
 │   ├── activity.ts                 # Sessions, metrics, closures, recovery decisions.
-│   └── settings.ts                 # Validated runtime settings and documented units.
+│   └── settings.ts                 # Validated plugin settings and durable UI preferences.
 │
 ├── platform/                       # Thin wrappers around time/window capabilities.
 │   ├── clock.ts                    # Wall + monotonic samples; injectable in tests.
@@ -298,43 +298,29 @@ DistributionQuery(metric, range, path, view, groupBy)
 
 ## Presentation and Export
 
-Spec 03 owns every user-visible surface and consumes immutable controller models.
+This document owns presentation module boundaries and dependency direction. User-visible behavior belongs to the [PRD Header Popover section](docs/PRD.md#环形图浮层), while stable cross-version constraints belong to the [Interface and Export decision](specs/constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export). Active Specs own implementation-local deltas and evidence. Pixel values, spacing, typography choices, and interaction copy do not belong here.
+
+Presentation surfaces consume immutable controller state and return typed intents. They never append evidence, rewrite summaries, or execute destructive storage mutations directly.
 
 ```text
-ActivityMapController
-├── ItemView                       # Range, breadcrumb, totals, chart, details, controls.
-├── file-header mini donut         # Stable miniature of today's vault-root distribution.
-├── interactive chart popover      # Shared query/donut/legend; hover/focus/pin/drill-down.
-├── Ribbon + commands              # Stable fallback when header integration is absent.
-├── settings tab                   # Persist valid values before applying them.
-└── data-operation dialogs         # Preview destructive scope; report progress/failure.
-```
+Query and tracking outputs
+  -> ActivityMapController          # Owns view state, intent routing, and stale-query guards.
+       ├── ItemView                 # Dockable complete interface.
+       ├── HeaderActionManager      # Capability-gated file-header adapter and fallback status.
+       ├── SummaryPopover           # Header-scoped query and interaction surface.
+       ├── SettingsTab              # Persists validated preferences before durable use.
+       └── DataOperation controls   # Invoke data-layer ports with immutable plans.
 
-The header popover, dockable view, and exported SVG share one chart model:
-
-```text
 DistributionResult
-  -> LiveDistributionProjection   # UI-only, idle-bounded unclosed active interval.
-  -> ChartModel                    # Stable items, colors, labels, geometry inputs.
-       ├── DonutChart DOM          # Reused by popover and ItemView.
-       └── SvgExporter             # Escaped, styled, standalone serialized artifact.
-
-# Export never snapshots live DOM, so transient tooltips/buttons cannot leak.
-# Every graphical item has equivalent label, percentage, and exact-value text.
-# Paths and labels are escaped before entering SVG markup.
+  -> LiveDistributionProjection     # Pure, idle-bounded presentation projection.
+  -> ChartModel                     # Shared semantic chart representation.
+       ├── DonutChart               # DOM presentation adapter.
+       └── SvgExporter              # Standalone serialization; never snapshots live DOM.
 ```
 
-UI code sends intents to the controller. It cannot append records, rewrite summaries, or delete files directly. Destructive actions execute only the immutable plan returned by the data layer. The plan freezes the selected shard pairs and every affected raw, summary-only, checkpoint, and registry path with per-path content fingerprints. Execution rejects a changed scope before mutation, rechecks each frozen pair immediately before its first write, and never widens deletion from a newly enumerated path.
+The Header Popover grouping preference crosses the settings port before becoming the default for a newly opened Popover. Grouping remains a query presentation axis: it changes item projection without changing scope or vault totals. Persistence failure rolls back the optimistic preference and invalidates its in-flight query.
 
-Daily summaries cross a strict persistence boundary before reaching queries: device/date identity, timestamps, counts, per-file finite non-negative integer metrics, `editingMs <= activeMs`, and warning objects are validated together. Missing summaries contribute no data; invalid summaries are excluded and surface a stable rebuild-required warning instead of silently reducing totals. Deleted identities use `lastKnownPath` for directory membership, while identities with no known path appear only in the vault-root Deleted group.
-
-The header-action manager listens to public workspace lifecycle events, owns one `FileView.addAction()` element per live file view through a weak registry, and removes only those elements on view removal or unload. It installs one stable miniature SVG donut driven by a dedicated today/vault-root query. Slice nodes are reconciled by stable item ID and reuse the chart palette. A pure live-distribution projection adds the current unclosed active interval to its owning scope item and vault total without mutating the persisted query result; both the miniature and popover use this projection. UI time advances only for today's `activeMs` query and is clipped at the last trusted interaction plus `idleThresholdMs`. Tracking snapshots update accessible status and restrained CSS state without replacing the SVG or rebuilding the action. Missing data retains the same empty-ring geometry.
-
-Each popover is attached to its trigger's owner document so pop-out windows keep independent focus, pointer, pin, close, and one-second live-tick behavior. Hover/focus opens the vault-root chart; action click toggles a pinned state. One ordered trailing action group keeps the path/file grouping toggle immediately before the shared pause/resume action without adding a control row. The grouping intent retains metric, range, and breadcrumb path, normalizes the legacy local-files view to children, and uses the ordinary generation guard so an older mode cannot replace a newer result. A new popover defaults to path grouping; file grouping recursively flattens present descendants while breadcrumbs continue to select scope. Selected-day navigation renders previous and next actions around a clickable ISO date value. The popover consumes the controller's immutable distribution and reuses the range controls, donut, legend, path, and directory/file activation behavior from the full view. Beneath the controls, one layout-only result wrapper is horizontally centered, capped at `36rem`, and allocates a `2:3` chart/list grid with equal inline padding without rendering region headings. The Popover requests a tight SVG view box so coordinate-space whitespace does not unbalance the visible columns. One responsive size cap accounts for the wrapper padding, gap, and narrower chart column, bounds both the rendered donut and legend, and leaves vertical overflow to the legend, so additional rows cannot grow the Popover beyond the chart. Present file items expose only their basename through `DistributionItem.label`; their full vault-relative `path` remains the activation and identity input. The flexible name column clips overflow with an ellipsis before fixed exact-value and rightmost percentage columns, so long labels cannot cover numeric data. The centered donut total uses a Popover-scoped serif face, and the metric selector reserves visible space between its semantic icon and label. Legend rows remain transparent and muted until pointer/focus highlights the row. Live ticks call update handles that retain slice and row DOM identity while changing geometry and text; in file grouping, a live descendant belongs to its concrete file item. A structural query or item-identity change alone rebuilds the region. Duplicate summary, title, tooltip, and ordinary tracking-status regions are absent. The live timer is cleared with the popover and does not trigger persistence or query refresh. Hover listeners remain capability-gated; keyboard focus, action click, Ribbon, commands, and the full view remain usable without hover or when header integration reports a warning.
-
-Data operations are single-flight controller intents. SVG serialization consumes the same immutable `ChartModel` as the live donut, resolves its stable color tokens to inline standalone colors, escapes every user-derived string, and downloads through a capability-detected standard Web API boundary. Raw JSON export and rebuild relay typed per-date progress. Deletion renders the backend plan ID and counts, expires the UI confirmation after five minutes, executes the exact retained plan object, and maps drift or partial failure to explicit error state before refreshing queries.
-
-Before deletion planning, the controller closes the in-flight session and awaits the tracking transition queue so the plan fingerprints durable evidence. Cancellation and every execution outcome resume tracking only when the controller initiated that operational pause, creating a fresh attribution session after the destructive boundary.
+Header integration is capability-gated behind `HeaderActionManager`; Ribbon, commands, and the dockable view remain fallback entrypoints. Export consumes `ChartModel`, escapes user-derived strings, and resolves standalone styles without depending on mounted presentation DOM. Destructive operations remain owned by the data layer and execute only through controller ports against immutable validated plans.
 
 ## Failure and Privacy Boundaries
 
@@ -376,11 +362,12 @@ Automated and real-environment evidence must remain distinguishable in Active Sp
 ## Change Ownership
 
 ```text
-Time/session/window semantics         -> Spec 01 + Tracking Runtime section
-Schema/storage/identity/query changes -> Spec 02 + Data Layer and Query Engine section
-UI/export/platform journey changes    -> Spec 03 + Presentation and Export section
-Stable cross-version boundary changes -> Constitution first, then this document and Specs
-Version outcome or release evidence   -> Roadmap after owning Spec evidence
+Time/session/window semantics             -> Spec 01 + Tracking Runtime section
+Schema/storage/identity/query changes     -> Spec 02 + Data Layer and Query Engine section
+User-visible UI/UX behavior               -> PRD + owning Active Spec
+Presentation/export ownership or flow     -> Presentation and Export section
+Stable cross-version boundary changes     -> Constitution first, then this document and Specs
+Version outcome or release evidence       -> Roadmap after owning Spec evidence
 ```
 
-Update this document in the same change whenever module ownership, dependency direction, startup/shutdown order, persistence flow, query boundary, presentation contract, or platform boundary changes.
+Update this document when module ownership, dependency direction, startup/shutdown order, persistence flow, query boundary, or platform boundary changes. Keep detailed UI behavior and visual tuning in the PRD and owning Active Spec.
