@@ -8,7 +8,7 @@
 | Scope | Header chart Popover layout and file-leaf display labels |
 | Type | feat |
 | Priority | P1 |
-| Status | in-progress |
+| Status | review |
 | Completed | pending |
 | Dependencies | [Activity Map UI and v0.1 release](03-activity-map-ui-and-v0-1-release-plan.md) |
 | Decisions | [Interface and export](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), [PRD chart popover](../../docs/PRD.md#环形图浮层), [Presentation architecture](../../ARCHITECTURE.md#presentation-and-export) |
@@ -17,7 +17,7 @@
 
 - [x] Phase 0: Display file leaves by basename
 - [x] Phase 1: Reflow the Popover into a 3:2 chart-and-list layout
-- [ ] Phase 2: Synchronize documentation and complete integration evidence
+- [x] Phase 2: Synchronize documentation and complete integration evidence
 
 ## Background
 
@@ -118,7 +118,7 @@ Use the approved horizontal layout while preserving the existing component set a
 ### Tasks
 
 - [x] Add one result-body wrapper around the existing chart/path column and legend.
-- [x] Use `minmax(0, 3fr) minmax(0, 2fr)` for the result body and widen only the existing chart Popover enough to support the ratio.
+- [x] Use `minmax(0, 3fr) minmax(0, 2fr)` for the result body, keep the Popover compact, and align the legend content with the donut's visible top edge.
 - [x] Keep the path below the donut inside the left column.
 - [x] Cap the right legend at the donut height, keep `overflow-y: auto`, and prevent legend growth from increasing the Popover height.
 - [x] Preserve loading retention, live in-place updates, highlight synchronization, focus restoration, drill-down, and reduced-motion behavior.
@@ -133,11 +133,11 @@ Use the approved horizontal layout while preserving the existing component set a
 
 ### Acceptance Criteria
 
-- [x] The chart/path column and legend render side by side at a `3:2` ratio.
+- [x] The chart/path column and legend render side by side at a `3:2` ratio in a compact Popover, with the legend content aligned to the donut's visible top edge.
 - [x] The legend never exceeds the donut's height and becomes internally scrollable when necessary.
 - [x] The Popover contains no new title, chart/list caption, summary, tooltip row, or status footer.
 - [x] Existing query, live ticking, pointer, keyboard, pinning, breadcrumb, and activation tests remain green.
-- [x] Focused UI tests, type checking, lint, and build pass.
+- [x] Focused UI tests, type checking, lint, and build pass after owner visual correction.
 
 ### Evidence
 
@@ -145,7 +145,8 @@ Use the approved horizontal layout while preserving the existing component set a
 - `npm run lint` — passed.
 - `npm test -- --run` — 231 passed, 0 failed.
 - `npm run build` — passed.
-- Obsidian 1.12.7 rendered the widened `3:2` chart/list grid with the path under the donut and no additional region labels. The available root fixture had four rows, so owner UAT retains the long-list scrollbar check.
+- The first Obsidian 1.12.7 render exposed excess chart-column whitespace, an oversized Popover, and legend content above the donut's visible top edge; the corrected render below supersedes that evidence.
+- The corrected Obsidian 1.12.7 render uses a viewport-bounded 40rem Popover and 18rem donut; 32px-equivalent legend top padding aligns the first row with the visible outer-ring top without adding visible UI.
 
 ## Phase 2: Synchronize Documentation and Complete Integration Evidence
 
@@ -155,10 +156,9 @@ Keep the product and architecture descriptions aligned with the implemented layo
 
 ### Tasks
 
-- [ ] Update Architecture and README current-behavior text after the implementation exists.
-- [ ] Synchronize this Spec, Roadmap, Constitution, and PRD without overstating real Obsidian acceptance.
-- [ ] Run the full automated suite, production build, strict specs validation, Markdown link validation, and whitespace checks.
-- [ ] Record independent Critic findings and fixes within the bounded review loop.
+- [x] Update Architecture and README current-behavior text after the implementation exists.
+- [x] Synchronize this Spec, Roadmap, Constitution, and PRD without overstating real Obsidian acceptance.
+- [x] Run the full automated suite, production build, strict specs validation, Markdown link validation, and whitespace checks after the visual correction.
 
 ### Files
 
@@ -171,10 +171,18 @@ Keep the product and architecture descriptions aligned with the implemented layo
 
 ### Acceptance Criteria
 
-- [ ] Documentation describes the horizontal Popover and basename-only file labels as implemented behavior.
-- [ ] `npm run check`, `npm run lint`, `npm test -- --run`, and `npm run build` pass.
-- [ ] Strict specs validation, repository-relative Markdown links, and `git diff --check` pass.
-- [ ] Independent Critic evaluation reports no blocking finding.
+- [x] Documentation describes the horizontal Popover and basename-only file labels as implemented behavior.
+- [x] `npm run check`, `npm run lint`, `npm test -- --run`, and `npm run build` pass after the visual correction.
+- [x] Strict specs validation, repository-relative Markdown links, and `git diff --check` pass after the visual correction.
+
+### Evidence
+
+- `npm run check` — passed.
+- `npm run lint` — passed.
+- `npm test -- --run` — 231 passed, 0 failed; includes repository-relative Markdown targets and heading fragments.
+- `npm run build` — passed.
+- `python3 "${SPEC_DRIVEN_DELIVERY_DIR:?set SPEC_DRIVEN_DELIVERY_DIR}/scripts/validate_specs_workspace.py" . --strict` — 0 errors, 0 warnings.
+- `git diff --check` — passed.
 
 ## Risks and Mitigations
 
@@ -191,4 +199,4 @@ Keep the product and architecture descriptions aligned with the implemented layo
 
 ## Evaluation Record
 
-No Critic round has started. Planning validation does not change implementation status.
+Technical implementation, owner-directed visual correction, and all Phases are complete. Independent evaluation starts from the current `review` state; owner long-list and basename UAT remains open under Post-Critic Acceptance.
