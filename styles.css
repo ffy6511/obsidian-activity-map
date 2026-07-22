@@ -345,9 +345,9 @@
 }
 
 .activity-map-chart-popover {
-	--activity-map-popover-chart-size: min(20rem, calc(60vw - 2.4rem));
+	--activity-map-popover-chart-size: min(18rem, calc(60vw - 2.4rem));
 
-	width: min(48rem, calc(100vw - 1rem));
+	width: min(40rem, calc(100vw - 1rem));
 	overflow: hidden;
 }
 
@@ -489,8 +489,10 @@
 }
 
 .activity-map-popover-legend {
+	box-sizing: border-box;
 	min-height: 0;
 	max-height: var(--activity-map-popover-chart-size);
+	padding-top: calc(var(--size-4-5) + var(--size-4-3));
 	overflow-y: auto;
 	overscroll-behavior: contain;
 }

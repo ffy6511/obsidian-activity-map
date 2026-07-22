@@ -40,9 +40,11 @@ describe('summary popover fixed layout', () => {
 		expect(donut.includes("center.setAttribute('dominant-baseline', 'middle')")).toBeTrue();
 		expect(donut.includes('nextModel.items.some((item) => !paths.has(item.id))')).toBeTrue();
 		expect(legend.includes('update(nextDistribution, nextItems')).toBeTrue();
-		expect(css.includes('--activity-map-popover-chart-size: min(20rem, calc(60vw - 2.4rem))')).toBeTrue();
+		expect(css.includes('--activity-map-popover-chart-size: min(18rem, calc(60vw - 2.4rem))')).toBeTrue();
+		expect(css.includes('width: min(40rem, calc(100vw - 1rem))')).toBeTrue();
 		expect(css.includes('grid-template-columns: minmax(0, 3fr) minmax(0, 2fr)')).toBeTrue();
 		expect(css.includes('max-height: var(--activity-map-popover-chart-size)')).toBeTrue();
+		expect(css.includes('padding-top: calc(var(--size-4-5) + var(--size-4-3))')).toBeTrue();
 		expect(css.includes('overflow-y: auto')).toBeTrue();
 		expect(css.includes('grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) max-content max-content')).toBeTrue();
 		expect(css.includes("[data-activity-map-id='previous-day']")).toBeTrue();
