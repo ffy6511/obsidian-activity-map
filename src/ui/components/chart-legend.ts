@@ -1,6 +1,7 @@
 import type { DistributionItem, DistributionResult } from '../../query/distribution-query';
 import { formatMetric, formatPercent } from '../format';
 import { stableColor } from './donut-chart';
+import { isTrustedPrimaryClick } from '../file-hover-preview';
 
 export interface ChartLegendHandle {
 	highlight(itemId: string | null): void;
@@ -15,6 +16,7 @@ export function renderChartLegend(args: {
 	items?: DistributionItem[];
 	onActivate: (item: DistributionItem) => void;
 	onHighlight?: (item: DistributionItem | null) => void;
+	onFileHover?: (event: MouseEvent, targetEl: HTMLElement, filePath: string) => void;
 }): ChartLegendHandle {
 	const list = args.container.createDiv({
 		cls: 'activity-map-chart-legend',
@@ -44,15 +46,27 @@ export function renderChartLegend(args: {
 		});
 		const percent = row.createSpan({ text: formatPercent(item.percentOfScope), cls: 'activity-map-chart-legend-percent' });
 		rows.set(item.id, { row, swatch, label, percent, value });
-		row.addEventListener('pointerenter', () => args.onHighlight?.(itemsById.get(item.id) ?? null));
-		row.addEventListener('pointerleave', () => args.onHighlight?.(null));
-		row.addEventListener('focus', () => args.onHighlight?.(itemsById.get(item.id) ?? null));
-		row.addEventListener('blur', () => args.onHighlight?.(null));
-		row.addEventListener('click', () => { const current = itemsById.get(item.id); if (current) args.onActivate(current); });
+		const setRowHighlight = (current: DistributionItem | null): void => {
+			setHighlight(rows, current?.id ?? null);
+			args.onHighlight?.(current);
+		};
+		row.addEventListener('pointerenter', () => setRowHighlight(itemsById.get(item.id) ?? null));
+		row.addEventListener('pointerleave', () => setRowHighlight(null));
+		row.addEventListener('focus', () => setRowHighlight(itemsById.get(item.id) ?? null));
+		row.addEventListener('blur', () => setRowHighlight(null));
+		row.addEventListener('mouseenter', (event) => {
+			const current = itemsById.get(item.id);
+			if (current?.kind === 'file' && current.path) args.onFileHover?.(event, row, current.path);
+		});
+		row.addEventListener('click', (event) => {
+			if (!isTrustedPrimaryClick(event)) return;
+			const current = itemsById.get(item.id);
+			if (current) args.onActivate(current);
+		});
 	}
 	return {
 		highlight(itemId) {
-			for (const [id, entry] of rows) entry.row.toggleClass('is-highlighted', id === itemId);
+			setHighlight(rows, itemId);
 		},
 		update(nextDistribution, nextItems = nextDistribution.detailItems) {
 			if (nextItems.length !== rows.size || nextItems.some((item) => !rows.has(item.id))) return false;
@@ -70,4 +84,14 @@ export function renderChartLegend(args: {
 			return true;
 		},
 	};
+}
+
+function setHighlight(
+	rows: Map<string, { row: HTMLButtonElement }>,
+	itemId: string | null,
+): void {
+	for (const [id, entry] of rows) {
+		entry.row.toggleClass('is-highlighted', id === itemId);
+		entry.row.toggleClass('is-dimmed', itemId !== null && id !== itemId);
+	}
 }

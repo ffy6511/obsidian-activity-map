@@ -1,5 +1,6 @@
 import type { DistributionItem, DistributionResult } from '../../query/distribution-query';
 import { formatMetric, formatPercent } from '../format';
+import { isTrustedPrimaryClick } from '../file-hover-preview';
 
 export interface ChartItem extends DistributionItem {
 	color: string;
@@ -121,9 +122,16 @@ export function renderDonutChart(args: {
 		path.addEventListener('pointerleave', () => { highlight(null); args.onHighlight?.(null); });
 		path.addEventListener('focus', () => { const current = currentItem(item.id); highlight(current); args.onHighlight?.(current); });
 		path.addEventListener('blur', () => { highlight(null); args.onHighlight?.(null); });
-		path.addEventListener('click', () => { const current = currentItem(item.id); if (!current) return; highlight(current); args.onHighlight?.(current); args.onActivate(current); });
+		path.addEventListener('click', (event) => {
+			if (!isTrustedPrimaryClick(event)) return;
+			const current = currentItem(item.id);
+			if (!current) return;
+			highlight(current);
+			args.onHighlight?.(current);
+			args.onActivate(current);
+		});
 		path.addEventListener('keydown', (event) => {
-			if (event.key === 'Enter' || event.key === ' ') {
+			if (event.isTrusted && (event.key === 'Enter' || event.key === ' ')) {
 				event.preventDefault();
 				const current = currentItem(item.id);
 				if (current) args.onActivate(current);

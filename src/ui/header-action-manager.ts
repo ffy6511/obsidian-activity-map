@@ -5,6 +5,7 @@ import type { DistributionResult } from '../query/distribution-query';
 import { statusPresentation } from './status-presentation';
 import { SummaryPopover } from './summary-popover';
 import { HeaderMiniDonut, headerDonutSlices, type HeaderMiniDonutPort } from './header-mini-donut';
+import { previewFileOnHover } from './file-hover-preview';
 
 interface HeaderEntry {
 	view: FileView;
@@ -101,6 +102,13 @@ export class HeaderActionManager {
 			action,
 			this.dependencies.controller,
 			this.dependencies.openFile,
+			(event, targetEl, path) => previewFileOnHover({
+				workspace: this.dependencies.workspace,
+				hoverParent: view.leaf,
+				event,
+				targetEl,
+				filePath: path,
+			}),
 		);
 		const ownerWindow = action.ownerDocument.defaultView;
 		const supportsHover = ownerWindow?.matchMedia?.('(hover: hover) and (pointer: fine)').matches === true;

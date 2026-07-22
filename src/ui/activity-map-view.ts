@@ -11,6 +11,7 @@ import { formatMetric, formatPercent, metricLabel } from './format';
 import { renderDataControls } from './data-controls';
 import { QueryHistory } from './query-history';
 import { distributionActivation } from './distribution-activation';
+import { previewFileOnHover } from './file-hover-preview';
 
 export const ACTIVITY_MAP_VIEW_TYPE = 'activity-map-view';
 
@@ -119,6 +120,13 @@ export class ActivityMapView extends ItemView {
 			items: detailItems,
 			onActivate: (item) => this.activateItem(item),
 			onHighlight: (item) => chartHandle.highlight(item?.id ?? null),
+			onFileHover: (event, targetEl, filePath) => previewFileOnHover({
+				workspace: this.hostApp.workspace,
+				hoverParent: this.leaf,
+				event,
+				targetEl,
+				filePath,
+			}),
 		});
 		if (model.warnings.length > 0) {
 			const warnings = this.contentEl.createEl('details', { cls: 'activity-map-warnings' });

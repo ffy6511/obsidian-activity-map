@@ -229,11 +229,16 @@
 	background: transparent;
 	color: var(--text-normal);
 	text-align: left;
+	transition: opacity 120ms ease, background-color 120ms ease;
 }
 
 .activity-map-detail-row:hover,
 .activity-map-detail-row:focus-visible {
 	background: var(--background-modifier-hover);
+}
+
+.activity-map-detail-row.is-dimmed {
+	opacity: 0.3;
 }
 
 .activity-map-detail-swatch {
@@ -531,6 +536,11 @@
 	color: var(--text-muted);
 	font-variant-numeric: tabular-nums;
 	text-align: left;
+	transition: opacity 120ms ease;
+}
+
+.activity-map-chart-legend-row.is-dimmed {
+	opacity: 0.3;
 }
 
 .activity-map-chart-legend-row:hover,

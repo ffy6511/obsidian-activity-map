@@ -31,6 +31,7 @@ import { RebuildService } from './data/rebuild-service';
 import { DeletionService } from './data/deletion-service';
 import { BrowserExportDestination } from './export/export-destination';
 import { LocalDataOperations } from './ui/data-controls';
+import { ACTIVITY_MAP_HOVER_SOURCE } from './ui/file-hover-preview';
 
 export default class ActivityMapPlugin extends Plugin {
 	private controller: ActivityMapController | null = null;
@@ -123,6 +124,10 @@ export default class ActivityMapPlugin extends Plugin {
 		}
 		if (loadedCheckpoint.quarantined) coordinator.degrade(loadedCheckpoint.reason ?? 'checkpoint-quarantined');
 		this.registerView(ACTIVITY_MAP_VIEW_TYPE, (leaf) => new ActivityMapView(leaf, controller, this.app));
+		this.registerHoverLinkSource(ACTIVITY_MAP_HOVER_SOURCE, {
+			display: 'Activity Map',
+			defaultMod: true,
+		});
 		this.addRibbonIcon('chart-pie', 'Open activity map', () => void this.activateView());
 		registerActivityMapCommands(this, controller, () => this.activateView(), (direction) => this.navigateViewHistory(direction));
 		this.addSettingTab(new ActivityMapSettingsTab(this.app, this, controller));

@@ -56,6 +56,7 @@ export class SummaryPopover {
 		private readonly trigger: HTMLElement,
 		private readonly controller: ActivityMapController,
 		private readonly openFile: (filePath: string) => Promise<void>,
+		private readonly previewFile?: (event: MouseEvent, targetEl: HTMLElement, filePath: string) => void,
 	) {}
 
 	open(): void {
@@ -283,6 +284,7 @@ export class SummaryPopover {
 			items,
 			onActivate: (item) => this.activateItem(item),
 			onHighlight: (item) => chartHandle.highlight(item?.id ?? null),
+			onFileHover: (event, targetEl, filePath) => this.previewFile?.(event, targetEl, filePath),
 		});
 		this.distributionView = {
 			update: (nextDistribution) => {

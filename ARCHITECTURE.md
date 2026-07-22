@@ -120,6 +120,7 @@ src/
 ├── ui/                             # Spec 03: Obsidian-owned presentation surfaces.
 │   ├── activity-map-controller.ts  # Intent serialization and immutable view model.
 │   ├── activity-map-view.ts        # Dockable ItemView renderer.
+│   ├── file-hover-preview.ts       # Public Page Preview event and activation gate.
 │   ├── header-action-manager.ts    # Public FileView.addAction lifecycle.
 │   ├── summary-popover.ts          # Owner-document-aware non-modal interaction.
 │   ├── settings-tab.ts             # Validated save-before-apply settings controls.
@@ -321,6 +322,8 @@ DistributionResult
 The Header Popover grouping preference crosses the settings port before becoming the default for a newly opened Popover. Grouping remains a query presentation axis: it changes item projection without changing scope or vault totals. Persistence failure rolls back the optimistic preference and invalidates its in-flight query.
 
 Header integration is capability-gated behind `HeaderActionManager`; Ribbon, commands, and the dockable view remain fallback entrypoints. Export consumes `ChartModel`, escapes user-derived strings, and resolves standalone styles without depending on mounted presentation DOM. Destructive operations remain owned by the data layer and execute only through controller ports against immutable validated plans.
+
+File rows in the Header Popover and dockable view register one `defaultMod` hover source and emit Obsidian's public `hover-link` event through `file-hover-preview.ts`. Page Preview owns the native preview lifecycle, so modifier hover never calls the file-opening path or changes the active tracking leaf. Direct activation accepts only user-agent-issued primary clicks or the existing keyboard contract; synthetic DOM clicks cannot switch the foreground file.
 
 ## Failure and Privacy Boundaries
 
