@@ -23,14 +23,7 @@ import type { ResolvedLeaf } from './tracking/target-resolver';
 import { LocalQueryService } from './query/query-service';
 import { ActivityMapController } from './ui/activity-map-controller';
 import { ActivityMapSettingsTab } from './ui/settings-tab';
-import { registerActivityMapCommands } from './ui/commands';
-import { ACTIVITY_MAP_VIEW_TYPE, ActivityMapView } from './ui/activity-map-view';
 import { HeaderActionManager } from './ui/header-action-manager';
-import { RawExportService } from './data/raw-export-service';
-import { RebuildService } from './data/rebuild-service';
-import { DeletionService } from './data/deletion-service';
-import { BrowserExportDestination } from './export/export-destination';
-import { LocalDataOperations } from './ui/data-controls';
 import { ACTIVITY_MAP_HOVER_SOURCE } from './ui/file-hover-preview';
 
 export default class ActivityMapPlugin extends Plugin {
@@ -72,14 +65,6 @@ export default class ActivityMapPlugin extends Plugin {
 		});
 		const summaries = new DailySummaryRepository({ shardStore: dataServices.getShardStore(), pathAdapter: adapter, fileAdapter: adapter });
 		summariesHolder.value = summaries;
-		const dataOperations = new LocalDataOperations(
-			new RawExportService(inventory, dataServices.getShardStore(), adapter),
-			new RebuildService(inventory, dataServices.getShardStore(), summaries),
-			new DeletionService(inventory, dataServices.getShardStore(), summaries, adapter, adapter, registry),
-			new BrowserExportDestination(document),
-			() => new Date(clock.now().wallMs).toISOString(),
-		);
-
 		this.windowById.set('main', window);
 		const workspaceSource = this.createWorkspaceSource();
 		const coordinator = new TrackingCoordinator({
@@ -109,7 +94,6 @@ export default class ActivityMapPlugin extends Plugin {
 			},
 			coordinator,
 			localDateFor(Date.now(), Intl.DateTimeFormat().resolvedOptions().timeZone),
-			dataOperations,
 		);
 		controllerHolder.value = controller;
 		observers.push(controller);
@@ -123,13 +107,10 @@ export default class ActivityMapPlugin extends Plugin {
 			}
 		}
 		if (loadedCheckpoint.quarantined) coordinator.degrade(loadedCheckpoint.reason ?? 'checkpoint-quarantined');
-		this.registerView(ACTIVITY_MAP_VIEW_TYPE, (leaf) => new ActivityMapView(leaf, controller, this.app));
 		this.registerHoverLinkSource(ACTIVITY_MAP_HOVER_SOURCE, {
 			display: 'Activity Map',
 			defaultMod: true,
 		});
-		this.addRibbonIcon('chart-pie', 'Open activity map', () => void this.activateView());
-		registerActivityMapCommands(this, controller, () => this.activateView(), (direction) => this.navigateViewHistory(direction));
 		this.addSettingTab(new ActivityMapSettingsTab(this.app, this, controller));
 		this.registerVaultIdentityEvents(registry);
 		this.registerPopoutEvents(coordinator);
@@ -154,19 +135,6 @@ export default class ActivityMapPlugin extends Plugin {
 		this.controller?.stop();
 		void this.coordinator?.stop();
 		this.windowById.clear();
-	}
-
-	private async activateView(): Promise<void> {
-		let leaf = this.app.workspace.getLeavesOfType(ACTIVITY_MAP_VIEW_TYPE)[0];
-		if (!leaf) {
-			leaf = this.app.workspace.getRightLeaf(false) ?? this.app.workspace.getLeaf(true);
-			await leaf.setViewState({ type: ACTIVITY_MAP_VIEW_TYPE, active: true });
-		}
-		await this.app.workspace.revealLeaf(leaf);
-	}
-
-	private async navigateViewHistory(direction: 'back' | 'forward'): Promise<void> {
-		await this.app.workspace.getActiveViewOfType(ActivityMapView)?.goHistory(direction);
 	}
 
 	private createWorkspaceSource(): WorkspaceSource {

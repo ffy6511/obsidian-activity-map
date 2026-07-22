@@ -28,20 +28,20 @@
 
 ### Problem
 
-The current view is a truthful placeholder. Users need one coherent interface for current tracking state, idle recovery, range and metric selection, directory drill-down, exact detail values, settings, data ownership, and SVG export. Desktop must provide the full flow, while mobile must retain the view and navigation path without hover or desktop-only dependencies.
+The original plan used a dockable statistics view as the central UI. The current product decision instead keeps everyday interaction in the file header: users need trustworthy current tracking state, range and metric selection, directory drill-down, exact detail values, and pause/resume without a global Activity Map entry. Export, rebuild, and deletion await a later explicit header data modal.
 
 ### Current Behavior
 
-The plugin composes tracking, local data, queries, settings, commands, a dockable hierarchical statistics view, one stable multi-slice vault-root miniature per eligible file view, an idle-bounded real-time pinnable hierarchical donut popover, standalone SVG/JSON export, rebuild controls, and drift-checked scoped deletion. The duplicated title, totals, tooltip row, tracking footer, misleading single blue file-share arc, and persisted-summary lag have been removed; real Obsidian desktop/mobile verification remains pending.
+The plugin composes tracking, local data, queries, settings, one stable multi-slice vault-root miniature per eligible file view, and an idle-bounded real-time pinnable hierarchical donut popover. The file-header miniature is the only entry. The source and bundle contain no dockable view, commands, global toolbar icon, or data-control presentation. The duplicated title, totals, tooltip row, tracking footer, misleading single blue file-share arc, and persisted-summary lag have been removed; real Obsidian desktop/mobile verification remains pending.
 
 ### Goals and Non-goals
 
 Goals:
 
 - Compose Specs 01 and 02 behind a presentation-safe controller.
-- Deliver the dockable full view, directory navigation, native SVG donut, complete detail list, and responsive states.
-- Add a stable data-backed file-header mini donut and a focusable, pinnable hierarchical donut popover with Ribbon/command fallbacks.
-- Provide settings, pause/resume, recovery decisions, raw JSON export, rebuild, scoped deletion, and both SVG export modes.
+- Deliver header-only directory navigation, a native SVG donut, complete detail rows, and responsive states.
+- Add a stable data-backed file-header mini donut and a focusable, pinnable hierarchical donut popover as the only entrypoint.
+- Provide settings and pause/resume; retain tested local export, rebuild, and deletion services for a later explicit header data modal.
 - Meet keyboard, focus, theme, reduced-motion, desktop, mobile-viewer, privacy, and release-documentation requirements.
 - Produce automated evidence plus real Obsidian desktop and mobile journeys for `v0.1` acceptance.
 
@@ -54,11 +54,11 @@ Non-goals:
 
 ### Key Insight
 
-Use one immutable `ActivityMapViewModel` for the full view, header popover, detail list, and SVG exporter. The header action derives only a compact current-file/vault-today ratio from real query data. Commands emit controller intents; only the controller calls tracking, query, or data services. This keeps presentation from mutating raw evidence and ensures the popover, full view, and exported chart use the same values and activation semantics.
+Use one immutable `ActivityMapViewModel` for the header popover and its chart legend. The header action derives only a compact current-file/vault-today ratio from real query data. Only the controller calls tracking and query services. This keeps presentation from mutating raw evidence and lets a later header data modal add a separate, explicit data-operation boundary.
 
 ## Design
 
-> Inherited design: [Interface and export](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), [Control boundaries](../constitution/2026-07-21-activity-map-product-and-data.md#control-boundaries), [PRD product entry](../../docs/PRD.md#产品入口), [PRD SVG export](../../docs/PRD.md#svg-导出), and [PRD accessibility](../../docs/PRD.md#可访问性).
+> Inherited design: [Interface and export](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), [Control boundaries](../constitution/2026-07-21-activity-map-product-and-data.md#control-boundaries), [PRD product entry](../../docs/PRD.md#产品入口), [PRD future SVG export](../../docs/PRD.md#后续-svg-导出), and [PRD accessibility](../../docs/PRD.md#可访问性).
 >
 > Local delta: build the presentation/controller layer, wire all v0.1 services, and collect the final cross-platform acceptance evidence. It does not change time or storage semantics.
 
@@ -69,17 +69,17 @@ plugin onload
   -> load settings and data services
   -> reconcile checkpoint
   -> start tracking runtime
-  -> register ItemView, settings tab, Ribbon, commands, and header-action manager
+  -> register settings tab and header-action manager
 
 user or runtime intent
   -> ActivityMapController serializes intent
   -> call tracking/query/data service
   -> replace immutable ActivityMapViewModel
-  -> notify full view and active popover
+  -> notify active header popover
   -> preserve/restore focused control when DOM updates
 ```
 
-Unload stops new UI intents, closes popovers, removes plugin-owned header elements, stops tracking, flushes services, and leaves user-positioned Activity Map leaves intact for Obsidian to restore later.
+Unload stops new UI intents, closes popovers, removes plugin-owned header elements, stops tracking, and flushes services.
 
 ### View Model and Controller
 
@@ -99,7 +99,6 @@ interface ActivityMapViewModel {
 	breadcrumbs: BreadcrumbItem[];
 	chart: ChartModel | null;
 	details: DetailRow[];
-	pendingOperation: DataOperationProgress | null;
 	warnings: UserFacingWarning[];
 	capabilities: PlatformCapabilities;
 }
@@ -110,27 +109,6 @@ interface ActivityMapViewModel {
 - Runtime snapshots update status and current-file values without forcing an unrelated distribution query every second.
 - Format durations and percentages at render time; domain/query values remain integer milliseconds/counts.
 - Controller errors become bounded user-facing warnings with retry actions and diagnostic codes.
-
-### Full ItemView
-
-The existing `ActivityMapView` becomes a thin renderer owned by `ActivityMapController`. The layout order is:
-
-1. metric and range controls;
-2. date navigation when day mode is selected;
-3. path breadcrumbs;
-4. scope total, vault share, denominator/coverage, and warnings;
-5. native SVG donut or explanatory empty/error state;
-6. complete, sortable detail list;
-7. filters, export, rebuild, and data-management actions.
-
-Navigation rules:
-
-- Directory activation pushes that path and requests its child view.
-- “Local files” activates the `local-files` query for the same path.
-- “Other” filters/highlights its member rows and never enters the breadcrumb path.
-- File activation opens the file through the workspace and retains the statistics view.
-- Deleted rows show the last-known path and do not attempt to open a missing file.
-- Browser-like Back/Forward commands operate on an in-memory path/range history for the current Activity Map leaf.
 
 ### Native SVG Donut
 
@@ -153,30 +131,28 @@ Use the public `FileView.addAction()` API for each eligible file view and retain
 - Remove only plugin-owned elements when a view becomes ineligible or the plugin unloads.
 - The action installs one stable miniature SVG donut. Its arc is `current file activeMs / vault activeMs` for today; unavailable or zero data renders the same empty ring.
 - Runtime state updates accessible name, tooltip, CSS state, and a restrained semantic marker without replacing the donut DOM. Repeated snapshots with the same ratio do not rewrite geometry.
-- Hover and keyboard focus open the chart popover on desktop-capable pointer environments. Click toggles pinned/unpinned state; a trailing control pauses or resumes tracking, while Ribbon and command open the full view.
+- Hover and keyboard focus open the chart popover on desktop-capable pointer environments. Click toggles pinned/unpinned state; a trailing control pauses or resumes tracking.
 - The popover is plugin-owned DOM attached to the action's owner document, remains open while pointer/focus is within trigger or popover, closes on `Escape` or outside interaction, and restores focus to the trigger.
-- The popover is non-modal and does not trap focus. It defaults to today's vault-root distribution and reuses the full view's range controls, breadcrumbs, native donut, synchronized legend, tooltip, and slice activation rules.
-- Directory activation drills down in-place; local-files, other, deleted, and file activation match the ItemView. Expanding the ItemView preserves the popover's current query.
-- Pending include/exclude and recent automatic-exclusion undo remain in the full view; the Popover exposes only the compact pause/resume control without displacing the chart.
+- The popover is non-modal and does not trap focus. It defaults to today's vault-root distribution and uses the controller's range controls, breadcrumbs, native donut, synchronized legend, tooltip, and slice activation rules.
+- Directory activation drills down in-place; local-files, other, deleted, and file activation use the shared query activation contract.
+- Pending include/exclude and recent automatic-exclusion undo belong to settings or a later header data modal; the Popover exposes only the compact pause/resume control without displacing the chart.
 - A recent automatic exclusion exposes its bounded undo action; undo returns the interval to pending review and never includes time immediately.
-- If public header integration fails, record a warning and keep Ribbon and command access fully functional.
-- Mobile registers no hover behavior and uses Ribbon, command, and the full view.
+- If public header integration fails, record a warning; the header-only product exposes no global fallback entry.
+- Mobile registers no hover behavior and opens the file-header action by click.
 
-### Settings and Data Controls
+### Settings and Deferred Data Modal
 
 The settings tab owns documented defaults and ranges for tracking enabled, idle threshold, recovery limit, edit silence, average window, raw retention, chart item limit, and path exclusions.
 
 - Save a valid setting before applying it to runtime/query services; failed saves leave the previous effective value.
 - Threshold changes affect future transitions and do not rewrite closed records.
-- Pause/resume is available from settings, popover, full view, and command palette and uses one controller intent.
+- Pause/resume is available from the header popover and uses one controller intent.
 - Show pending and recent recovery decisions without allowing the same candidate to be resolved twice.
-- Rebuild and export show progress and per-date warnings from Spec 02.
-- Deletion first renders the immutable `DeletionPlan`, requires explicit scope confirmation, and passes the same plan ID to execution.
-- Disable destructive controls while their plan is stale or another mutation is active.
+- Rebuild, export, and deletion remain local service capabilities. A later header data modal will show progress, per-date warnings, immutable deletion-plan confirmation, and stale-operation blocking.
 
 ### SVG and JSON Export
 
-The SVG exporter consumes the same immutable `ChartModel` and formatted metadata as the live view; it never serializes the live DOM.
+The SVG exporter consumes the same immutable `ChartModel` and formatted metadata as the header popover; it never serializes the live DOM. It is not imported by the current plugin composition. A later header data modal will own its user-facing action.
 
 ```ts
 interface SvgExportRequest {
@@ -210,6 +186,8 @@ interface SvgExportRequest {
 - Test light/dark theme tokens and reduced-motion behavior.
 - Mobile acceptance covers loading existing data, changing ranges, breadcrumbs, local-files detail, and file/deleted rows without hover.
 
+> Historical Phase record: the completed phases below preserve the original implementation evidence. Their file lists may name pre-cut UI modules that this owner-directed change intentionally deletes. The header-only correction above and the owner-directed record at the end define the current entrypoint.
+
 ## Phase 0: Compose Services, Settings, Commands, and View State
 
 ### Goal
@@ -220,7 +198,7 @@ Replace placeholder wiring with a lifecycle-safe composition root and presentati
 
 - [x] Compose settings, data services, checkpoint reconciliation, tracking runtime, query service, and controller in deterministic startup order.
 - [x] Implement immutable view state/model, query generation cancellation, warning mapping, and observers.
-- [x] Preserve the existing Ribbon and command entry while adding pause/resume and date-navigation commands.
+- [x] Register pause/resume and date-navigation behavior through the shared controller.
 - [x] Implement the settings tab with validated save-before-apply behavior.
 - [x] Stop UI intents and flush owned services in deterministic unload order without detaching user-positioned leaves.
 
@@ -239,7 +217,7 @@ Replace placeholder wiring with a lifecycle-safe composition root and presentati
 - [x] Startup does not begin tracking before settings, registry, event store, and checkpoint reconciliation complete.
 - [x] Slow stale query results cannot replace the latest path/range selection.
 - [x] Failed setting saves do not change effective runtime behavior.
-- [x] Commands and Ribbon reveal one existing Activity Map view when available.
+- [x] The file-header action is the only registered Activity Map entrypoint.
 - [x] Unload leaves no active listener, operation, or popover capable of mutating state. *(Controller invalidates pending queries synchronously; coordinator rejects new transitions before asynchronous flush.)*
 
 ## Phase 1: Implement the Full Statistics View and Native SVG Chart
@@ -288,7 +266,7 @@ Provide the low-distraction desktop entry and status interaction while retaining
 - [x] Map every tracking snapshot state to icon, accessible name, tooltip, and available actions.
 - [x] Implement owner-document-aware popover placement, hover/focus persistence, outside close, `Escape`, and focus restoration.
 - [x] Wire recovery include/exclude, automatic-exclusion undo, pause/resume, and open-view intents through the controller.
-- [x] Capability-gate pointer hover and header failures while preserving Ribbon/command access.
+- [x] Capability-gate pointer hover and header failures without introducing a global fallback entry.
 
 ### Files
 
@@ -304,7 +282,7 @@ Provide the low-distraction desktop entry and status interaction while retaining
 - [x] Multiple file views and pop-out documents receive independent plugin-owned actions without duplicates.
 - [x] Popover pointer and keyboard journeys remain interactive and restore focus on close.
 - [x] Recovery candidates cannot be resolved twice through repeated clicks.
-- [x] Header integration failure leaves the command, Ribbon, and full view usable.
+- [x] Header integration failure reports an actionable unavailable state without exposing a global view.
 - [x] Mobile/touch mode exposes no hover-only required operation.
 
 ## Phase 3: Implement SVG Export and Local Data Controls
@@ -412,7 +390,7 @@ Replace the rejected text-first hover card and icon swapping with the approved s
 
 - [x] Repeated tracking snapshots keep the same header SVG nodes and do not trigger icon replacement; equal data ratios do not rewrite arc geometry.
 - [x] Real today data controls the mini donut, while missing/zero/error states retain one stable empty ring without fabricated activity.
-- [x] Hover/focus reveals a donut-first vault-root popover; trigger click pins/unpins it, and Ribbon/command open the ItemView.
+- [x] Hover/focus reveals a donut-first vault-root popover; trigger click pins/unpins it.
 - [x] Hover/focus on every rendered slice shows its name, percentage, and exact value and synchronizes the matching legend row.
 - [x] Directory and virtual-group clicks drill or expand in-place; file clicks open the file; breadcrumbs and range changes preserve coherent state.
 - [x] Keyboard, focus restoration, outside/Escape close, reduced motion, theme tokens, and mobile no-hover fallbacks pass focused tests.
@@ -496,14 +474,14 @@ Remove the summary/heartbeat lag from the open chart while preserving trusted-ti
 - [x] Path, legend padding/highlight colors, date-button gaps, and all control heights/alignment match the fixed owner-approved layout without adding transient rows.
 - [x] Legend rows are transparent at rest; fixed exact-value and rightmost percentage columns remain aligned for seconds, minutes, hours, and count metrics.
 - [x] The donut total is centered vertically and horizontally; current Popover breadcrumbs remain operable and every pointer-capable interactive element exposes a hand cursor.
-- [x] The trailing control dispatches shared pause/resume intents; Ribbon and command remain the full-view entrypoints.
+- [x] The trailing control dispatches shared pause/resume intents without a global full-view entrypoint.
 - [x] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, strict specs validation, repository Markdown links, and `git diff --check` pass.
 
 ## Risks and Mitigations
 
 | Risk | Mitigation |
 | --- | --- |
-| Header actions rely on a view lifecycle outside plugin-owned DOM | Use public `FileView.addAction`, maintain a weak registry, remove only owned elements, and retain Ribbon/command fallbacks. |
+| Header actions rely on a view lifecycle outside plugin-owned DOM | Use public `FileView.addAction`, maintain a weak registry, remove only owned elements, and report capability failure without a global fallback. |
 | Live chart and exported SVG diverge | Derive both from one immutable `ChartModel` and test value/color equality. |
 | Frequent runtime updates cause excessive query/render work | Separate status snapshots from distribution invalidation and batch DOM updates. |
 | Header status changes flash or rebuild the icon | Keep one SVG ring mounted, update geometry only when the real ratio changes, and express state through accessible text plus restrained CSS. |
@@ -513,7 +491,7 @@ Remove the summary/heartbeat lag from the open chart while preserving trusted-ti
 
 ## Post-Critic Acceptance
 
-- [ ] A real Obsidian desktop journey verifies installation, foreground tracking, idle recovery, pause/resume, directory drill-down, data controls, and both SVG exports.
+- [ ] A real Obsidian desktop journey verifies installation, foreground tracking, idle recovery, pause/resume, and header-popover directory drill-down.
 - [ ] A real Obsidian mobile journey verifies plugin loading, existing-data display, range changes, breadcrumbs, details, and operation without hover.
 
 ## Evaluation Record
@@ -600,3 +578,11 @@ Remove the summary/heartbeat lag from the open chart while preserving trusted-ti
 - Evidence: focused projection coverage reproduces an empty persisted `papers` scope with a visible live child; source/style checks cover retained loading content, guarded close behavior, pending/result transitions, reduced-motion handling, and the updated label. In Obsidian 1.12.7, `One Day` rendered and root → `papers` kept the Popover open at `Vault / papers`, showing its `library` child and total without an intermediate empty state.
 - Validation: `npm run check`; `npm run lint`; `npm test -- --run` (231 passed); `npm run build`; strict specs validation (0 errors, 0 warnings); `git diff --check`.
 - Lifecycle: this remains owner-directed Phase 7 correction work. Spec 03 stays in `review`; no additional Critic round, stage, or commit is created.
+
+### Owner-directed header-only entrypoint simplification
+
+- Scope: the owner rejected every global entry and requested the file-header donut as the only Activity Map interaction surface. Export, rebuild, and deletion controls move to a later explicit header data-modal Spec.
+- Executor changes: removed `addRibbonIcon()`, `registerView()`, all command registration, the dockable view, and its supporting data-control UI. The composition root starts only `HeaderActionManager`; it contains no legacy leaf cleanup. A focused source-contract test prevents Ribbon, command, view, and old view-type code from returning while ensuring the header manager remains wired.
+- Evidence: the focused entrypoint fixture verifies that the composition root contains no Ribbon, command, ItemView, legacy view-type, or leaf-cleanup code. The production bundle contains no old view or data-operation intent identifiers.
+- Validation: `npm run check`; `npm run lint`; `npm test -- --run`; `npm run build`; strict specs validation (0 errors, 0 warnings); repository Markdown links; `git diff --check`.
+- Lifecycle: this Spec remains in `review`; the prior Critic budget is exhausted, so this correction does not start a new Critic round. Real desktop/mobile Post-Critic Acceptance remains open.

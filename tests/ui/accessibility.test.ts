@@ -8,23 +8,19 @@ async function source(path: string): Promise<string> {
 describe('automated accessibility and platform presentation checks', () => {
 	it('keeps chart keyboard behavior, text alternatives, and equivalent detail text', async () => {
 		const chart = await source('src/ui/components/donut-chart.ts');
-		const details = await source('src/ui/components/detail-list.ts');
+		const legend = await source('src/ui/components/chart-legend.ts');
 		expect(chart.includes("setAttribute('tabindex', '0')")).toBeTrue();
 		expect(chart.includes("event.key === 'Enter' || event.key === ' '")).toBeTrue();
 		expect(chart.includes("setAttribute('aria-label'")).toBeTrue();
 		expect(chart.includes("createSvg('title')")).toBeTrue();
-		expect(details.includes("'Complete activity details'")).toBeTrue();
-		expect(details.includes('formatMetric(item.value')).toBeTrue();
-		expect(details.includes('formatPercent(item.percentOfScope)')).toBeTrue();
+		expect(legend.includes("'Activity chart legend'")).toBeTrue();
+		expect(legend.includes('formatMetric(item.value')).toBeTrue();
+		expect(legend.includes('formatPercent(item.percentOfScope)')).toBeTrue();
 	});
 
-	it('preserves focus across rerenders and names transient and destructive controls', async () => {
-		const view = await source('src/ui/activity-map-view.ts');
+	it('preserves focus across header interactions and names transient controls', async () => {
 		const popover = await source('src/ui/summary-popover.ts');
 		const miniDonut = await source('src/ui/header-mini-donut.ts');
-		const deletion = await source('src/ui/deletion-confirmation.ts');
-		expect(view.includes('data-activity-map-id')).toBeTrue();
-		expect(view.includes('?.focus()')).toBeTrue();
 		expect(popover.includes("event.key === 'Escape'")).toBeTrue();
 		expect(popover.includes('this.trigger.focus()')).toBeTrue();
 		expect(popover.includes('togglePinned()')).toBeTrue();
@@ -36,8 +32,6 @@ describe('automated accessibility and platform presentation checks', () => {
 		expect(popover.includes('Chart area')).toBeFalse();
 		expect(popover.includes('List area')).toBeFalse();
 		expect(miniDonut.includes("setAttribute('aria-hidden', 'true')")).toBeTrue();
-		expect(deletion.includes("role: 'alertdialog'")).toBeTrue();
-		expect(deletion.includes('Delete planned data')).toBeTrue();
 	});
 
 	it('uses non-color status text, theme tokens, reduced motion, and a touch-safe hover gate', async () => {

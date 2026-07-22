@@ -15,19 +15,19 @@ Authority links:
 
 ## Current Implementation
 
-The tracking, persistence, maintenance, query, controller, statistics, file-header, export, and data-control surfaces are implemented, covered by deterministic fixtures, and composed by the plugin entrypoint. The installable bundle collects activity, maintains queryable daily summaries, renders hierarchical native-SVG distributions, exports standalone SVG or raw JSON, rebuilds summaries, and executes previewed drift-checked deletion plans:
+The tracking, persistence, maintenance, query, controller, settings, and file-header/popover surfaces are implemented and covered by deterministic fixtures. Export, rebuild, and deletion modules remain tested local data-service boundaries, but the current plugin neither composes nor bundles a user-facing data-operation UI. The installable bundle collects activity, maintains queryable daily summaries, and renders hierarchical native-SVG distributions from the file-header entry; a later header data modal will compose those services.
 
 ```text
 src/
 ├── domain/                 # Implemented activity/settings contracts.
 ├── platform/               # Implemented clock and window abstractions.
 ├── tracking/               # Implemented attribution runtime and recovery behavior.
-├── data/                   # Implemented local evidence, summaries, and data controls.
+├── data/                   # Implemented local evidence, summaries, and data-operation services.
 ├── query/                  # Implemented date, path-grouped, and file-grouped distribution queries.
-├── ui/                     # Implemented controller, immutable view model, commands, and settings.
+├── ui/                     # Header-only presentation, controller, immutable view model, and settings.
 └── main.ts                 # Composes recovery, tracking, data, query, and bootstrap presentation.
 
-styles.css                  # Responsive view, chart, detail, theme, focus, and reduced-motion styles.
+styles.css                  # Header popover, chart, detail, theme, focus, and reduced-motion styles.
 manifest.json               # Plugin ID activity-map; cross-platform manifest flag.
 main.js                     # Generated build artifact; ignored and never edited directly.
 ```
@@ -60,9 +60,9 @@ Obsidian public APIs + standard Web APIs
 └───────────────────────────┬─────────────────────────────────────┘
                             │ ActivityMapViewModel
                             ▼
-┌──────────────────── Presentation and Export ─────────────────────┐
-│ Full ItemView, file-header status, popover, settings, detail     │
-│ list, native SVG donut, JSON/SVG export, and data controls.      │
+┌────────────── Header Presentation and Local Data Services ───────┐
+│ File-header donut, popover, settings, detail list, native SVG    │
+│ model, and unregistered local export/rebuild/deletion services.  │
 └──────────────────────────────────────────────────────────────────┘
 
 # Dependency rule: arrows point toward a consumer of validated output.
@@ -119,12 +119,10 @@ src/
 │
 ├── ui/                             # Spec 03: Obsidian-owned presentation surfaces.
 │   ├── activity-map-controller.ts  # Intent serialization and immutable view model.
-│   ├── activity-map-view.ts        # Dockable ItemView renderer.
 │   ├── file-hover-preview.ts       # Public Page Preview event and activation gate.
 │   ├── header-action-manager.ts    # Public FileView.addAction lifecycle.
 │   ├── summary-popover.ts          # Owner-document-aware non-modal interaction.
 │   ├── settings-tab.ts             # Validated save-before-apply settings controls.
-│   ├── data-controls.ts            # Export/rebuild/delete progress and warnings.
 │   └── components/                 # Range, breadcrumb, donut, and detail renderers.
 │
 └── export/                         # Spec 03: deterministic standalone artifacts.
@@ -197,14 +195,14 @@ onload
   2. open registry and event stores    # File/device identity exists before attribution.
   3. load and reconcile checkpoint     # Recover once before accepting new events.
   4. start tracking coordinator        # Registers workspace/window/editor/DOM inputs.
-  5. register controller + UI          # UI receives a complete initial snapshot.
+  5. register controller, settings, and header actions
 
 onunload / Obsidian quit
   1. reject new UI intents             # Prevent operations during teardown.
   2. unregister tracking inputs        # Stop new state transitions.
   3. close/flush active session        # Append evidence before clearing checkpoint.
   4. flush data/settings queues        # Resolve owned asynchronous writes.
-  5. remove transient owned DOM        # Keep Obsidian-restorable ItemView placement.
+  5. remove transient owned DOM        # Header-only UI owns no restorable Activity Map leaf.
 ```
 
 Every startup stage can enter a visible degraded state. A persistence failure must stop new unverifiable attribution; the plugin must not silently fall back to in-memory totals.
@@ -306,11 +304,9 @@ Presentation surfaces consume immutable controller state and return typed intent
 ```text
 Query and tracking outputs
   -> ActivityMapController          # Owns view state, intent routing, and stale-query guards.
-       ├── ItemView                 # Dockable complete interface.
-       ├── HeaderActionManager      # Capability-gated file-header adapter and fallback status.
+       ├── HeaderActionManager      # Capability-gated file-header entry and unavailable status.
        ├── SummaryPopover           # Header-scoped query and interaction surface.
-       ├── SettingsTab              # Persists validated preferences before durable use.
-       └── DataOperation controls   # Invoke data-layer ports with immutable plans.
+       └── SettingsTab              # Persists validated preferences before durable use.
 
 DistributionResult
   -> LiveDistributionProjection     # Pure, idle-bounded presentation projection.
@@ -321,9 +317,9 @@ DistributionResult
 
 The Header Popover grouping preference crosses the settings port before becoming the default for a newly opened Popover. Grouping remains a query presentation axis: it changes item projection without changing scope or vault totals. Persistence failure rolls back the optimistic preference and invalidates its in-flight query.
 
-Header integration is capability-gated behind `HeaderActionManager`; Ribbon, commands, and the dockable view remain fallback entrypoints. Export consumes `ChartModel`, escapes user-derived strings, and resolves standalone styles without depending on mounted presentation DOM. Destructive operations remain owned by the data layer and execute only through controller ports against immutable validated plans.
+Header integration is capability-gated behind `HeaderActionManager` and is the only registered Activity Map interaction entry. The source contains no dockable Activity Map view, command registration, or data-control presentation. A later header-modal Spec will compose the local data services. Export consumes `ChartModel`, escapes user-derived strings, and resolves standalone styles without depending on mounted presentation DOM. Destructive operations remain owned by the data layer and must execute only against immutable validated plans when the future modal introduces its controller boundary.
 
-File rows in the Header Popover and dockable view register one `defaultMod` hover source and emit Obsidian's public `hover-link` event through `file-hover-preview.ts`. Page Preview owns the native preview lifecycle, so modifier hover never calls the file-opening path or changes the active tracking leaf. Because the native preview is mounted outside the Activity Map DOM, `SummaryPopover` treats the owning leaf's connected `hoverPopover.hoverEl` as a temporary interaction extension: it preserves the source row while the preview is open, excludes preview clicks from outside-click dismissal, and resumes delayed close after Obsidian removes the preview. Direct activation accepts only user-agent-issued primary clicks or the existing keyboard contract; synthetic DOM clicks cannot switch the foreground file. List and donut highlight transitions remain presentation-only and are disabled by the reduced-motion media query.
+File rows in the Header Popover register one `defaultMod` hover source and emit Obsidian's public `hover-link` event through `file-hover-preview.ts`. Page Preview owns the native preview lifecycle, so modifier hover never calls the file-opening path or changes the active tracking leaf. Because the native preview is mounted outside the Activity Map DOM, `SummaryPopover` treats the owning leaf's connected `hoverPopover.hoverEl` as a temporary interaction extension: it preserves the source row while the preview is open, excludes preview clicks from outside-click dismissal, and resumes delayed close after Obsidian removes the preview. Direct activation accepts only user-agent-issued primary clicks or the existing keyboard contract; synthetic DOM clicks cannot switch the foreground file. List and donut highlight transitions remain presentation-only and are disabled by the reduced-motion media query.
 
 ## Failure and Privacy Boundaries
 
@@ -335,8 +331,8 @@ Malformed NDJSON line     -> isolate line + continue valid records
 Failed JSON replacement   -> recover primary/backup + report affected path
 Checkpoint uncertainty    -> degraded pause; never guess elapsed time
 Stale deletion plan       -> reject changed scope/path fingerprints before mutation
-Missing export capability -> explain unavailable action; keep viewing functional
-Header-action failure     -> Ribbon/command/full-view fallback
+Future data-modal export failure -> explain unavailable action; keep viewing functional
+Header-action failure     -> visible unavailable warning; no global fallback entry
 
 # No failure path enables telemetry, remote upload, note-content reads,
 # selected-text capture, or storage of actual typed strings.
@@ -351,11 +347,11 @@ unit tests
   └── fixed query models  # Date denominators, paths, “other”, deleted rows.
 
 integration fixtures
-  └── signal -> session -> shard -> summary -> query -> UI/export
+  └── signal -> session -> shard -> summary -> query -> header UI/local services
                             # Stronger than unit tests, still not real Obsidian UAT.
 
 real Obsidian evidence
-  ├── desktop full journey
+  ├── desktop header-only journey
   └── mobile viewer journey
                             # Recorded separately after technical/Critic gates.
 ```

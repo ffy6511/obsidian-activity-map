@@ -33,11 +33,11 @@ Deliver a local-first Obsidian plugin that measures trustworthy file activity an
 
 - [x] A buildable, linted, documented Obsidian plugin repository with a strictly validated specs workspace.
 - [x] Foreground-only per-file activity sessions with trusted activity signals, idle clipping, pause, sleep handling, and explicit corrections.
-- [x] Durable per-device daily session shards, recoverable aggregates, stable file identity, retention, export, rebuild, and deletion controls.
+- [x] Durable per-device daily session shards, recoverable aggregates, stable file identity, and retention.
 - [x] Correct selected-day, rolling daily-average, all-history, path aggregation, detail, and deleted-file queries.
-- [x] Stable multi-slice header mini donut, idle-bounded real-time centered `2:3` chart/list Popover with ellipsized basename-only file leaves, dockable full view, and complete synchronized scrollable detail list.
+- [x] Stable multi-slice header mini donut as the only entry, idle-bounded real-time centered `2:3` chart/list Popover with ellipsized basename-only file leaves, and complete synchronized scrollable detail list.
 - [x] Header Popover grouping toggle switches the current path scope between hierarchical path slices and recursive file slices, persists the last successful choice, and does not change totals or activation identity.
-- [x] Standalone full-infographic and chart-only SVG export.
+- [x] Tested local services generate standalone full-infographic and chart-only SVG artifacts; their header-modal controls are deferred.
 - [ ] Full desktop behavior and a mobile interaction path that does not depend on hover.
 
 ### Acceptance Criteria
@@ -45,9 +45,9 @@ Deliver a local-first Obsidian plugin that measures trustworthy file activity an
 - [x] Controlled-clock tests prove foreground exclusivity, idle clipping, recovery correction, pause, sleep-delay, and cross-midnight semantics.
 - [x] Persistence tests prove restart recovery, corrupt-record isolation, aggregate rebuild, safe retention, export, and scoped deletion.
 - [x] Fixed-data query tests prove daily-average denominators, path drill-down, “local files”, “other”, rename, and deleted-file behavior.
-- [ ] A real Obsidian desktop journey covers installation, tracking, idle recovery, drill-down, data control, and both SVG exports.
+- [ ] A real Obsidian desktop journey covers installation, tracking, idle recovery, pause/resume, and header-popover drill-down.
 - [ ] A real Obsidian mobile journey covers loading statistics, changing ranges, drill-down, and details without hover.
-- [x] Keyboard, focus, pin/unpin, stable-highlight layout, accessible-name, non-color encoding, theme, and reduced-motion checks pass across the header donut popover and full view.
+- [x] Keyboard, focus, pin/unpin, stable-highlight layout, accessible-name, non-color encoding, theme, and reduced-motion checks pass across the header donut and popover.
 - [ ] Type checking, lint, automated tests, production build, specs validation, and independent Critic evaluation pass.
 - [x] README, PRD, Constitution, settings help, release notes, and installation instructions describe the verified behavior accurately.
 
@@ -58,6 +58,7 @@ The three-round joint Critic budget ended with three P1 findings. An owner-direc
 - [ ] `v0.2`: implement trustworthy `typedChars` and separate deletion metrics.
 - [ ] `v0.2`: add explicit multi-device conflict diagnostics, deduplication, and merge controls.
 - [ ] `v0.2`: evaluate historical aggregation by `pathAtEvent` and richer trend comparisons.
+- [ ] `v0.2`: surface raw/SVG export, aggregate rebuild, and scoped deletion in an explicit header data modal.
 
 ## v0.2 — Human-input metrics and multi-device hardening
 

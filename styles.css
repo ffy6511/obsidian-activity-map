@@ -1,30 +1,3 @@
-.activity-map-view {
-	--activity-map-panel: color-mix(in srgb, var(--background-secondary) 86%, transparent);
-	padding: var(--size-4-4);
-	container-type: inline-size;
-	overflow: auto;
-}
-
-.activity-map-view-header {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	justify-content: space-between;
-	gap: var(--size-4-2);
-	margin-bottom: var(--size-4-3);
-}
-
-.activity-map-view-header h2 {
-	margin: 0;
-	font-size: var(--font-ui-large);
-}
-
-.activity-map-view-actions {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--size-4-2);
-}
-
 .activity-map-controls {
 	display: flex;
 	flex-wrap: wrap;
@@ -130,41 +103,6 @@
 	color: var(--text-faint);
 }
 
-.activity-map-summary {
-	display: grid;
-	grid-template-columns: 1fr auto;
-	gap: var(--size-2-1) var(--size-4-4);
-	margin: var(--size-4-4) 0;
-	padding: var(--size-4-4);
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-m);
-	background: var(--activity-map-panel);
-}
-
-.activity-map-summary-label,
-.activity-map-summary-vault,
-.activity-map-summary-coverage {
-	color: var(--text-muted);
-}
-
-.activity-map-summary-total {
-	grid-row: span 2;
-	font-size: 1.5rem;
-	font-weight: var(--font-semibold);
-}
-
-.activity-map-body {
-	display: grid;
-	grid-template-columns: minmax(13rem, 1fr) minmax(15rem, 1.15fr);
-	gap: var(--size-4-4);
-	align-items: start;
-}
-
-.activity-map-chart-panel,
-.activity-map-details-panel {
-	min-width: 0;
-}
-
 .activity-map-donut {
 	display: block;
 	width: min(100%, 24rem);
@@ -194,15 +132,6 @@
 	opacity: 0.24;
 }
 
-.activity-map-chart-tooltip {
-	min-height: 1.5em;
-	margin-top: var(--size-2-1);
-	color: var(--text-normal);
-	font-size: var(--font-ui-small);
-	font-variant-numeric: tabular-nums;
-	text-align: center;
-}
-
 .activity-map-donut-total {
 	fill: var(--text-normal);
 	font-size: 14px;
@@ -214,62 +143,12 @@
 	font-family: Georgia, 'Times New Roman', serif;
 }
 
-.activity-map-detail-list {
-	display: flex;
-	flex-direction: column;
-	gap: var(--size-2-1);
-}
-
-.activity-map-detail-row {
-	display: grid;
-	grid-template-columns: 0.75rem minmax(0, 1fr) auto auto;
-	gap: var(--size-4-2);
-	align-items: center;
-	width: 100%;
-	padding: var(--size-4-2);
-	border: 0;
-	border-radius: var(--radius-s);
-	background: transparent;
-	color: var(--text-normal);
-	text-align: left;
-	transition:
-		opacity 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
-		background-color 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.activity-map-detail-row:hover,
-.activity-map-detail-row:focus-visible {
-	background: var(--background-modifier-hover);
-}
-
-.activity-map-detail-row.is-dimmed {
-	opacity: 0.3;
-}
-
 .activity-map-detail-swatch {
 	width: 0.65rem;
 	height: 0.65rem;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 50%;
 	background: var(--activity-map-item-color);
-}
-
-.activity-map-detail-label {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.activity-map-detail-value {
-	font-variant-numeric: tabular-nums;
-	font-weight: var(--font-medium);
-}
-
-.activity-map-detail-percent {
-	min-width: 3ch;
-	color: var(--text-muted);
-	font-variant-numeric: tabular-nums;
-	text-align: right;
 }
 
 .activity-map-detail-heading {
@@ -288,11 +167,6 @@
 
 .activity-map-state.mod-error {
 	color: var(--text-error);
-}
-
-.activity-map-warnings {
-	margin-top: var(--size-4-4);
-	color: var(--text-warning);
 }
 
 .activity-map-header-action {
@@ -552,8 +426,7 @@
 
 .activity-map-chart-legend-row:hover,
 .activity-map-chart-legend-row:focus-visible,
-.activity-map-chart-legend-row.is-highlighted,
-.activity-map-detail-row.is-highlighted {
+.activity-map-chart-legend-row.is-highlighted {
 	background: var(--background-modifier-hover) !important;
 }
 
@@ -606,73 +479,8 @@
 	margin: 0;
 }
 
-.activity-map-data-controls {
-	margin: var(--size-4-4) 0;
-	padding: var(--size-4-4);
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-m);
-	background: var(--activity-map-panel);
-}
-
-.activity-map-data-controls h3,
-.activity-map-data-controls h4 {
-	margin: 0 0 var(--size-4-2);
-}
-
-.activity-map-data-disclosure,
-.activity-map-plan-id {
-	color: var(--text-muted);
-	font-size: var(--font-ui-smaller);
-}
-
-.activity-map-data-control-buttons,
-.activity-map-deletion-controls {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--size-4-2);
-	margin-top: var(--size-4-2);
-}
-
-.activity-map-deletion-controls select {
-	max-width: min(100%, 18rem);
-}
-
-.activity-map-deletion-confirmation {
-	margin-top: var(--size-4-4);
-	padding: var(--size-4-3);
-	border: 1px solid var(--text-error);
-	border-radius: var(--radius-s);
-}
-
-.activity-map-data-controls .mod-error {
-	color: var(--text-error);
-}
-
-@container (max-width: 34rem) {
-	.activity-map-body {
-		grid-template-columns: 1fr;
-	}
-
-	.activity-map-controls {
-		align-items: stretch;
-	}
-
-	.activity-map-donut {
-		width: min(100%, 18rem);
-	}
-
-	.activity-map-detail-row {
-		grid-template-columns: 0.75rem minmax(0, 1fr) auto;
-	}
-
-	.activity-map-detail-percent {
-		display: none;
-	}
-}
-
 @media (prefers-reduced-motion: reduce) {
 	.activity-map-donut path,
-	.activity-map-detail-row,
 	.activity-map-chart-legend-row,
 	.activity-map-chart-legend-label,
 	.activity-map-chart-legend-percent,

@@ -6,11 +6,6 @@ import type { MetricKey } from '../query/path-projection';
 import type { RangeMode } from '../query/date-range';
 import { initialViewModel, type ActivityMapViewModel } from './view-model';
 import { localDateFor } from '../platform/clock';
-import type { DeletionScope } from '../data/deletion-service';
-import type { ExportScope } from '../data/raw-export-service';
-import type { SvgExportMode } from '../export/svg-exporter';
-import type { DataOperationPort } from './data-controls';
-import type { DataOperationProgress } from '../data/retention-service';
 
 export interface QueryService {
 	run(query: DistributionQuery): Promise<DistributionResult>;
@@ -27,7 +22,6 @@ export interface TrackingControl {
 	updateSettings(settings: ActivityMapSettings): void;
 	resolveRecovery(args: { candidateId: string; kind: 'include' | 'exclude' }): Promise<unknown>;
 	undoAutomaticExclusion(candidateId: string): boolean;
-	settle?(): Promise<void>;
 }
 
 export type ActivityMapIntent =
@@ -41,12 +35,6 @@ export type ActivityMapIntent =
 	| { kind: 'resume' }
 	| { kind: 'resolve-recovery'; candidateId: string; decision: 'include' | 'exclude' }
 	| { kind: 'undo-automatic-exclusion'; candidateId: string }
-	| { kind: 'export-svg'; mode: SvgExportMode }
-	| { kind: 'export-raw'; scope: ExportScope }
-	| { kind: 'rebuild-summaries' }
-	| { kind: 'plan-deletion'; scope: DeletionScope }
-	| { kind: 'execute-deletion'; planId: string }
-	| { kind: 'dismiss-operation' }
 	| { kind: 'update-settings'; patch: Partial<ActivityMapSettings> };
 
 /** Serializes UI intent effects and rejects stale query generations. */
@@ -57,7 +45,6 @@ export class ActivityMapController implements TrackingObserver {
 	private groupingRevision = 0;
 	private stopped = false;
 	private today: string;
-	private resumeAfterDeletion = false;
 
 	constructor(
 		settings: ActivityMapSettings,
@@ -65,7 +52,6 @@ export class ActivityMapController implements TrackingObserver {
 		private readonly settingsService: SettingsService,
 		private readonly tracking: TrackingControl,
 		today: string,
-		private readonly dataOperations?: DataOperationPort,
 	) {
 		this.model = initialViewModel(settings, today);
 		this.today = today;
@@ -128,27 +114,6 @@ export class ActivityMapController implements TrackingObserver {
 				return;
 			case 'undo-automatic-exclusion':
 				this.tracking.undoAutomaticExclusion(intent.candidateId);
-				return;
-			case 'export-svg':
-				await this.exportSvg(intent.mode);
-				return;
-			case 'export-raw':
-				await this.exportRaw(intent.scope);
-				return;
-			case 'rebuild-summaries':
-				await this.rebuildSummaries();
-				return;
-			case 'plan-deletion':
-				await this.planDeletion(intent.scope);
-				return;
-			case 'execute-deletion':
-				await this.executeDeletion(intent.planId);
-				return;
-			case 'dismiss-operation':
-				if (this.model.operation.kind !== 'running') {
-					this.publish({ ...this.model, operation: { kind: 'idle' } });
-					this.resumeAfterDeletionIfNeeded();
-				}
 				return;
 			case 'update-settings': {
 				// Persistence is the commit point. Runtime behavior changes only after
@@ -249,117 +214,4 @@ export class ActivityMapController implements TrackingObserver {
 		this.model = model;
 		for (const listener of this.listeners) listener(model);
 	}
-
-	private async exportSvg(mode: SvgExportMode): Promise<void> {
-		if (!this.beginOperation('svg-export', 'Exporting SVG')) return;
-		try {
-			if (!this.dataOperations || !this.model.distribution) throw new Error('No distribution is available to export.');
-			const result = await this.dataOperations.exportSvg({ mode, query: this.model.query, distribution: this.model.distribution });
-			this.publish({ ...this.model, operation: result.outcome === 'downloaded' ? { kind: 'completed', message: result.message } : { kind: 'error', message: result.message } });
-		} catch (error) {
-			this.operationError(error);
-		}
-	}
-
-	private async exportRaw(scope: ExportScope): Promise<void> {
-		if (!this.beginOperation('export', 'Exporting raw JSON')) return;
-		try {
-			if (!this.dataOperations) throw new Error('Raw export is unavailable.');
-			const result = await this.dataOperations.exportRaw({ scope, onProgress: (progress) => this.onOperationProgress('Exporting raw JSON', progress) });
-			const message = `${result.destination.message}; ${result.records} record${result.records === 1 ? '' : 's'}, ${result.warnings} warning${result.warnings === 1 ? '' : 's'}.`;
-			this.publish({ ...this.model, operation: result.destination.outcome === 'downloaded' ? { kind: 'completed', message } : { kind: 'error', message } });
-		} catch (error) {
-			this.operationError(error);
-		}
-	}
-
-	private async rebuildSummaries(): Promise<void> {
-		if (!this.beginOperation('rebuild', 'Rebuilding summaries')) return;
-		try {
-			if (!this.dataOperations) throw new Error('Summary rebuild is unavailable.');
-			const result = await this.dataOperations.rebuild((progress) => this.onOperationProgress('Rebuilding summaries', progress));
-			const counts = { rebuilt: 0, unchanged: 0, unavailable: 0, failed: 0 };
-			for (const outcome of result.outcomes) counts[outcome.outcome] += 1;
-			const message = `Rebuild finished: ${counts.rebuilt} rebuilt, ${counts.unchanged} unchanged, ${counts.unavailable} unavailable, ${counts.failed} failed.`;
-			this.publish({ ...this.model, operation: counts.failed > 0 ? { kind: 'error', message } : { kind: 'completed', message } });
-			await this.refresh();
-		} catch (error) {
-			this.operationError(error);
-		}
-	}
-
-	private async planDeletion(scope: DeletionScope): Promise<void> {
-		if (this.model.operation.kind === 'running') return;
-		try {
-			if (!this.dataOperations) throw new Error('Data deletion is unavailable.');
-			if (this.model.operation.kind !== 'deletion-preview') {
-				this.resumeAfterDeletion = this.model.tracking?.state !== 'paused';
-				if (this.resumeAfterDeletion) {
-					// Close and persist the in-flight session before fingerprinting the
-					// destructive scope. Resume starts a fresh session after the outcome.
-					this.tracking.pause('data-deletion');
-					await this.tracking.settle?.();
-				}
-			}
-			const plan = await this.dataOperations.planDeletion(scope);
-			if (this.stopped) return;
-			this.publish({ ...this.model, operation: { kind: 'deletion-preview', plan } });
-		} catch (error) {
-			this.operationError(error);
-			this.resumeAfterDeletionIfNeeded();
-		}
-	}
-
-	private async executeDeletion(planId: string): Promise<void> {
-		if (!this.dataOperations || this.model.operation.kind !== 'deletion-preview' || this.model.operation.plan.planId !== planId || !isDeletionPlanFresh(this.model.operation.plan)) {
-			this.publish({ ...this.model, operation: { kind: 'error', message: 'Deletion plan is missing or stale. Create a new preview.' } });
-			this.resumeAfterDeletionIfNeeded();
-			return;
-		}
-		const plan = this.model.operation.plan;
-		if (!this.beginOperation('deletion', 'Deleting activity data')) return;
-		try {
-			const result = await this.dataOperations.executeDeletion(plan, (progress) => this.onOperationProgress('Deleting activity data', progress));
-			const message = result.outcome === 'completed'
-				? `Deletion completed for plan ${result.planId}.`
-				: result.outcome === 'aborted-drift'
-					? `Deletion aborted because plan ${result.planId} became stale; no data was removed.`
-					: `Deletion partially failed for plan ${result.planId}: ${result.errors.map((error) => `${error.path}: ${error.message}`).join('; ')}`;
-			this.publish({ ...this.model, operation: result.outcome === 'completed' ? { kind: 'completed', message } : { kind: 'error', message } });
-			await this.refresh();
-			this.resumeAfterDeletionIfNeeded();
-		} catch (error) {
-			this.operationError(error);
-			this.resumeAfterDeletionIfNeeded();
-		}
-	}
-
-	private beginOperation(operation: DataOperationProgress['operation'] | 'svg-export', label: string): boolean {
-		if (this.stopped || this.model.operation.kind === 'running') return false;
-		this.publish({ ...this.model, operation: { kind: 'running', operation, label, completed: 0, total: 0 } });
-		return true;
-	}
-
-	private onOperationProgress(label: string, progress: DataOperationProgress): void {
-		if (this.stopped || this.model.operation.kind !== 'running') return;
-		this.publish({ ...this.model, operation: { kind: 'running', operation: progress.operation, label, completed: progress.completed, total: progress.total } });
-	}
-
-	private operationError(error: unknown): void {
-		if (this.stopped) return;
-		this.publish({ ...this.model, operation: { kind: 'error', message: error instanceof Error ? error.message : String(error) } });
-	}
-
-	private resumeAfterDeletionIfNeeded(): void {
-		if (!this.resumeAfterDeletion) return;
-		this.resumeAfterDeletion = false;
-		this.tracking.resume();
-	}
-}
-
-const DELETION_PLAN_MAX_AGE_MS = 5 * 60_000;
-
-export function isDeletionPlanFresh(plan: { createdAt: string }, nowMs = Date.now()): boolean {
-	const ageMs = nowMs - Date.parse(plan.createdAt);
-	return Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= DELETION_PLAN_MAX_AGE_MS;
 }
