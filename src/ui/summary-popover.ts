@@ -26,6 +26,19 @@ export function createDistributionGroupingAction(args: {
 	};
 }
 
+export function createTrackingAction(args: {
+	paused: boolean;
+	getCurrentPaused(): boolean;
+	onTracking(intent: 'pause' | 'resume'): void;
+}): RangeTrailingAction {
+	return {
+		icon: args.paused ? 'play' : 'pause',
+		label: args.paused ? 'Resume activity tracking' : 'Pause activity tracking',
+		id: 'tracking-toggle',
+		onActivate: () => { args.onTracking(args.getCurrentPaused() ? 'resume' : 'pause'); },
+	};
+}
+
 /** Interactive, pinnable header chart sharing the controller's query state. */
 export class SummaryPopover {
 	private element: HTMLElement | null = null;
@@ -172,6 +185,7 @@ export class SummaryPopover {
 		if (!force && model.loadState === 'loading' && this.distributionView) {
 			this.element?.addClass('is-query-pending');
 			this.controlsView?.updateTrailingAction(this.groupingAction(model));
+			this.controlsView?.updateTrailingAction(this.trackingAction(model));
 			return;
 		}
 		this.render(model);
@@ -184,7 +198,6 @@ export class SummaryPopover {
 		popover.empty();
 		popover.removeClass('is-query-pending');
 		this.distributionView = null;
-		const paused = model.tracking?.state === 'paused';
 		const distribution = model.distribution
 			? withLiveActivity(model.distribution, model.tracking, {
 				nowMs: Date.now(),
@@ -200,12 +213,7 @@ export class SummaryPopover {
 			onRange: (range) => { this.expandedOther = null; void this.controller.dispatch({ kind: 'set-range', range }); },
 			trailingActions: [
 				this.groupingAction(model),
-				{
-					icon: paused ? 'play' : 'pause',
-					label: paused ? 'Resume activity tracking' : 'Pause activity tracking',
-					id: 'tracking-toggle',
-					onActivate: () => { void this.controller.dispatch({ kind: paused ? 'resume' : 'pause' }); },
-				},
+				this.trackingAction(model),
 			],
 		});
 
@@ -230,6 +238,14 @@ export class SummaryPopover {
 			getCurrentGrouping: () => this.controller.getViewModel().query.groupBy,
 			onBeforeActivate: () => { this.expandedOther = null; },
 			onGrouping: (groupBy) => { void this.controller.dispatch({ kind: 'set-grouping', groupBy }); },
+		});
+	}
+
+	private trackingAction(model: ActivityMapViewModel): RangeTrailingAction {
+		return createTrackingAction({
+			paused: model.tracking?.state === 'paused',
+			getCurrentPaused: () => this.controller.getViewModel().tracking?.state === 'paused',
+			onTracking: (kind) => { void this.controller.dispatch({ kind }); },
 		});
 	}
 

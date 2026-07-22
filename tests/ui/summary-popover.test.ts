@@ -29,7 +29,8 @@ describe('summary popover fixed layout', () => {
 		expect(source.includes('activity-map-popover-path')).toBeTrue();
 		expect(source.includes("cls: 'activity-map-popover-result'")).toBeTrue();
 		expect(source.includes("cls: 'activity-map-popover-chart-column'")).toBeTrue();
-		expect(source.includes("icon: paused ? 'play' : 'pause'")).toBeTrue();
+		expect(source.includes("icon: args.paused ? 'play' : 'pause'")).toBeTrue();
+		expect(source.includes('this.controlsView?.updateTrailingAction(this.trackingAction(model))')).toBeTrue();
 		expect(source.includes('this.renderIfChanged(model, true);')).toBeTrue();
 		expect(source.includes('if (isLiveTodayQuery(model)) this.updateLiveDistribution(model);')).toBeTrue();
 		expect(source.includes("model.loadState === 'loading' && this.distributionView")).toBeTrue();

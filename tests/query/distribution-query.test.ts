@@ -1,5 +1,7 @@
 import { describe, expect, it } from '../helpers/test-harness';
 
+import type { DailySummary } from '../../src/data/daily-summary-repository';
+import type { FileRegistryEntry } from '../../src/data/file-registry';
 import { runDistributionQuery } from '../../src/query/distribution-query';
 import { resolveRange } from '../../src/query/date-range';
 import { QueryCache, queryKey } from '../../src/query/query-cache';
@@ -181,6 +183,28 @@ describe('distribution query file grouping', () => {
 		});
 		expect(result.detailItems.find((item) => item.kind === 'deleted')?.memberIds).toContain('file-c');
 		expect(result.chartItems.some((item) => item.kind === 'other')).toBeTrue();
+	});
+
+	it('orders equal-value files with identical basenames independently of input order', () => {
+		const registryEntries: Record<string, FileRegistryEntry> = {
+			a: { fileId: 'a', currentPath: 'x/u/same.md', lastKnownPath: 'x/u/same.md', state: 'present', firstSeenAt: '2026-07-01T00:00:00.000Z', lastSeenAt: '2026-07-22T00:00:00.000Z' },
+			b: { fileId: 'b', currentPath: 'x/v/same.md', lastKnownPath: 'x/v/same.md', state: 'present', firstSeenAt: '2026-07-01T00:00:00.000Z', lastSeenAt: '2026-07-22T00:00:00.000Z' },
+		};
+		const resultFor = (fileIds: readonly ('a' | 'b')[]) => {
+			const metricsByFileId: DailySummary['metricsByFileId'] = {};
+			for (const fileId of fileIds) metricsByFileId[fileId] = { activeMs: 10_000, editingMs: 0, openCount: 1 };
+			const summary: DailySummary = {
+				schemaVersion: 1, deviceId: 'd', localDate: '2026-07-22', generatedAt: '2026-07-22T23:59:59.000Z',
+				sourceRecordCount: 2, sourceFingerprint: fileIds.join(','), metricsByFileId, warnings: [],
+			};
+			return runDistributionQuery({
+				query: { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-22' }, path: 'x', view: 'children', groupBy: 'file' },
+				resolved: resolveRange({ range: { mode: 'day', localDate: '2026-07-22' }, recordedDates: ['2026-07-22'] }),
+				summaries: [{ summary }], registryEntries, maxChartItems: 8,
+			});
+		};
+		expect(resultFor(['a', 'b']).detailItems.map((item) => item.id)).toEqual(['file:a', 'file:b']);
+		expect(resultFor(['b', 'a']).detailItems.map((item) => item.id)).toEqual(['file:a', 'file:b']);
 	});
 });
 

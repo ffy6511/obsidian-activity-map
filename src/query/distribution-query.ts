@@ -52,6 +52,16 @@ export interface DistributionResult {
 	warnings: DataWarning[];
 }
 
+/** Orders shared persisted and live presentation items deterministically. */
+export function compareDistributionItems(a: DistributionItem, b: DistributionItem): number {
+	if (b.value !== a.value) return b.value - a.value;
+	const labelOrder = a.label.localeCompare(b.label);
+	if (labelOrder !== 0) return labelOrder;
+	const pathOrder = (a.path ?? '').localeCompare(b.path ?? '');
+	if (pathOrder !== 0) return pathOrder;
+	return a.id.localeCompare(b.id);
+}
+
 /** Input summaries for a query: one per contributing date/device. */
 export interface QuerySummaryInput {
 	summary: DailySummary;
@@ -204,13 +214,9 @@ function buildDetailItems(
 			memberIds: projection.deleted.map((f) => f.fileId),
 		});
 	}
-	// Sort by descending value, then stable by label/id. Details retain all.
-	items.sort((a, b) => {
-		if (b.value !== a.value) {
-			return b.value - a.value;
-		}
-		return a.label.localeCompare(b.label);
-	});
+	// Details retain all. The path/ID tie-break prevents equal basenames from
+	// inheriting summary or registry iteration order.
+	items.sort(compareDistributionItems);
 	return items;
 }
 

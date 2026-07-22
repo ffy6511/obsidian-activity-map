@@ -120,6 +120,19 @@ describe('live distribution projection', () => {
 		expect(projected.detailItems.find((item) => item.id === 'file:file-8')?.value).toBe(30_000);
 	});
 
+	it('uses the persisted path and ID tie-break after a live projection', () => {
+		const equalItems: DistributionItem[] = [
+			{ id: 'file:b', kind: 'file', label: 'same.md', path: 'projects/v/same.md', value: 10_000, percentOfScope: 0.5, memberIds: ['b'] },
+			{ id: 'file:c', kind: 'file', label: 'same.md', path: 'projects/u/same.md', value: 10_000, percentOfScope: 0.5, memberIds: ['c'] },
+			{ id: 'file:a', kind: 'file', label: 'same.md', path: 'projects/u/same.md', value: 10_000, percentOfScope: 0.5, memberIds: ['a'] },
+		];
+		const base = { ...distribution('projects', 'children', 'file'), scopeTotal: 30_000, vaultTotal: 30_000, detailItems: equalItems, chartItems: equalItems };
+		const projected = withLiveActivity(base, snapshot('outside/live.md'), {
+			nowMs: Date.parse('2026-07-21T10:00:20.000Z'), idleThresholdMs: 180_000, timeZone: 'UTC',
+		});
+		expect(projected.detailItems.map((item) => item.id)).toEqual(['file:a', 'file:c', 'file:b']);
+	});
+
 	it('clips UI-side growth at the trusted idle boundary', () => {
 		const projected = withLiveActivity(distribution(), snapshot(), {
 			nowMs: Date.parse('2026-07-21T10:10:00.000Z'),

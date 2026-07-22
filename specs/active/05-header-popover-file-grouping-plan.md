@@ -257,3 +257,17 @@ Align public behavior and architecture with the implemented grouping contract an
 - Deferred findings: finding 4 is unselected in this round and must be re-ranked by the same Critic in Round 2 before any fix.
 - Validation rerun: `npm run check`, `npm run lint`, `npm test -- --run` (239 passed, 0 failed), `npm run build`, strict specs validation (0 errors, 0 warnings), and `git diff --check` all passed.
 - Verdict: changes-required.
+
+### Round 2
+
+- Critic: `spec05_critic` (same independent read-only evaluator).
+- Review scope: full re-review of Spec 05 and commit `a52ab3e`, including Round 1 fixes, regressions, documentation, lifecycle, and Post-Critic Acceptance readiness.
+- Evidence reviewed: the complete branch, clean worktree, 239-test rerun, and all previously recorded technical gates.
+- Findings:
+  1. P1 blocking — pause/resume retained stale icon, label, and captured intent while a grouping query was loading, so a second activation could not resume before the query settled.
+  2. P2 blocking — persisted and live item comparators still lacked full-path and stable-ID tie-breaks for equal values and identical basenames.
+- Selected fixes: both blocking findings; no other findings were reported.
+- Executor fixes: added a current-state tracking action and synchronized both retained trailing actions in place; added delayed-query Pause/Resume DOM behavior coverage for icon, accessible label, node identity, and focus; shared one value/label/path/ID comparator between persisted and live projections; added reversed-input and live-order regression tests.
+- Deferred findings: none.
+- Validation rerun: `npm run check`, `npm run lint`, `npm test -- --run` (242 passed, 0 failed), `npm run build`, strict specs validation (0 errors, 0 warnings), and `git diff --check` all passed.
+- Verdict: changes-required.

@@ -1,6 +1,6 @@
 import type { TrackingSnapshot } from '../domain/activity';
 import { localDateFor } from '../platform/clock';
-import { buildChartItems, type DistributionItem, type DistributionResult } from '../query/distribution-query';
+import { buildChartItems, compareDistributionItems, type DistributionItem, type DistributionResult } from '../query/distribution-query';
 import { liveTodayMs } from './live-today';
 
 export interface LiveDistributionOptions {
@@ -44,7 +44,7 @@ export function withLiveActivity(
 	}
 	const scopeTotal = distribution.scopeTotal + scopeIncrement;
 	const vaultTotal = distribution.vaultTotal + liveMs;
-	detailItems.sort(compareItems);
+	detailItems.sort(compareDistributionItems);
 	refreshPercents(detailItems, scopeTotal);
 	// Rebuild from complete details so a live-only file cannot bypass the same
 	// top-N/Other partition applied by the persisted query.
@@ -57,11 +57,6 @@ export function withLiveActivity(
 		detailItems,
 		chartItems,
 	};
-}
-
-function compareItems(a: DistributionItem, b: DistributionItem): number {
-	if (b.value !== a.value) return b.value - a.value;
-	return a.label.localeCompare(b.label);
 }
 
 function cloneItems(items: readonly DistributionItem[]): DistributionItem[] {
