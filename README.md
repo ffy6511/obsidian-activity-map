@@ -1,10 +1,28 @@
 <p align="center">
-  <img src="docs/assets/activity-map-hero.png" style="width:70%;" alt="Activity Map hero">
+  <img src="docs/assets/activity-map-hero.png" style="width:60%;" alt="Activity Map hero">
 </p>
 
 <p align="center">
-  Local-first, trustworthy activity insights for your Obsidian vault.
+  <span style="display: inline-block; padding-bottom: 8px;">Local-first, trustworthy activity insights for your Obsidian vault.</span>
+  <br />
+  <a href="https://github.com/ffy6511/obsidian-activity-map/stargazers"><img src="https://img.shields.io/github/stars/ffy6511/obsidian-activity-map?style=flat&logo=github&label=Stars&cacheSeconds=300&v=public" alt="GitHub stars" /></a>
+  <a href="https://github.com/ffy6511/obsidian-activity-map/releases"><img src="https://img.shields.io/github/downloads/ffy6511/obsidian-activity-map/total?style=flat&logo=github&label=Downloads&cacheSeconds=300&v=public" alt="GitHub downloads" /></a>
+  <a href="https://github.com/ffy6511/obsidian-activity-map/releases/latest"><img src="https://img.shields.io/github/v/release/ffy6511/obsidian-activity-map?display_name=tag&style=flat&logo=github&label=Release&cacheSeconds=300&v=public" alt="Latest release" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/ffy6511/obsidian-activity-map?style=flat&label=License&cacheSeconds=300&v=public" alt="License" /></a>
 </p>
+
+<table>
+  <tbody>
+    <tr>
+      <td width="50%"><img src="docs/assets/activity-map-by-file.jpg" alt="Activity Map grouped by file" width="100%" /></td>
+      <td width="50%"><img src="docs/assets/activity-map-by-path.jpg" alt="Activity Map grouped by path" width="100%" /></td>
+    </tr>
+    <tr>
+      <td align="center">Compare focused time for individual files.</td>
+      <td align="center">Aggregate activity by folder, then drill into the part.</td>
+    </tr>
+  </tbody>
+</table>
 
 [English](#english) · [简体中文](#简体中文)
 
