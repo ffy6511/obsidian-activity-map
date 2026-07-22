@@ -37,14 +37,18 @@ describe('summary popover fixed layout', () => {
 			expect(controls.includes(expected)).toBeTrue();
 		}
 		expect(donut.includes('update(nextDistribution)')).toBeTrue();
+		expect(donut.includes("args.tightBounds === true ? '28 28 184 184' : '0 0 240 240'")).toBeTrue();
 		expect(donut.includes("center.setAttribute('dominant-baseline', 'middle')")).toBeTrue();
 		expect(donut.includes('nextModel.items.some((item) => !paths.has(item.id))')).toBeTrue();
 		expect(legend.includes('update(nextDistribution, nextItems')).toBeTrue();
-		expect(css.includes('--activity-map-popover-chart-size: min(18rem, calc(60vw - 2.4rem))')).toBeTrue();
+		expect(source.includes('tightBounds: true')).toBeTrue();
+		expect(css.includes('--activity-map-popover-chart-size: min(16.5rem, calc(50vw - 2rem))')).toBeTrue();
 		expect(css.includes('width: min(40rem, calc(100vw - 1rem))')).toBeTrue();
-		expect(css.includes('grid-template-columns: minmax(0, 3fr) minmax(0, 2fr)')).toBeTrue();
+		expect(css.includes('grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)')).toBeTrue();
+		expect(css.includes('width: min(100%, 36rem)')).toBeTrue();
+		expect(css.includes('margin-inline: auto')).toBeTrue();
+		expect(css.includes('padding-inline: var(--size-4-4)')).toBeTrue();
 		expect(css.includes('max-height: var(--activity-map-popover-chart-size)')).toBeTrue();
-		expect(css.includes('padding-top: calc(var(--size-4-5) + var(--size-4-3))')).toBeTrue();
 		expect(css.includes('overflow-y: auto')).toBeTrue();
 		expect(css.includes('grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) max-content max-content')).toBeTrue();
 		expect(css.includes("[data-activity-map-id='previous-day']")).toBeTrue();
@@ -54,8 +58,8 @@ describe('summary popover fixed layout', () => {
 		expect(css.includes('grid-template-columns: 0.75rem minmax(0, 1fr) 7ch 4ch')).toBeTrue();
 		expect(css.includes('background: transparent !important')).toBeTrue();
 		expect(css.includes('cursor: pointer')).toBeTrue();
-		expect(css.includes('margin-bottom: calc(-1 * var(--size-4-5))')).toBeTrue();
-		expect(css.includes('padding: var(--size-2-1) var(--size-4-3)')).toBeTrue();
+		expect(css.includes('margin-bottom: var(--size-4-2)')).toBeTrue();
+		expect(css.includes('padding: var(--size-2-1) var(--size-4-2)')).toBeTrue();
 		expect(css.includes('.activity-map-popover-path .activity-map-breadcrumb:disabled')).toBeTrue();
 		expect(css.includes('.activity-map-chart-legend-row:hover .activity-map-chart-legend-label')).toBeTrue();
 		expect(css.includes('.activity-map-chart-popover.is-query-pending')).toBeTrue();

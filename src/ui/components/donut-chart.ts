@@ -71,12 +71,13 @@ export function renderDonutChart(args: {
 	onActivate: (item: ChartItem) => void;
 	onHighlight?: (item: ChartItem | null) => void;
 	showTooltip?: boolean;
+	tightBounds?: boolean;
 }): DonutChartHandle {
 	let distribution = args.distribution;
 	let model = buildChartModel(distribution);
 	const svg = args.container.createSvg('svg');
 	svg.setAttribute('class', 'activity-map-donut');
-	svg.setAttribute('viewBox', '0 0 240 240');
+	svg.setAttribute('viewBox', args.tightBounds === true ? '28 28 184 184' : '0 0 240 240');
 	svg.setAttribute('role', 'list');
 	svg.setAttribute('aria-label', 'Activity distribution');
 	const paths = new Map<string, { path: SVGPathElement; title: SVGTitleElement }>();

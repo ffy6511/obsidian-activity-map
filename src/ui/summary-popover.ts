@@ -215,6 +215,7 @@ export class SummaryPopover {
 			onActivate: (item) => this.activateItem(item),
 			onHighlight: (item) => legendHandle?.highlight(item?.id ?? null),
 			showTooltip: false,
+			tightBounds: true,
 		});
 		this.renderCurrentPath(chartColumn, model);
 		const items = this.expandedOther

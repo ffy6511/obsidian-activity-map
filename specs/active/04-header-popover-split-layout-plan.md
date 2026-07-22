@@ -16,7 +16,7 @@
 ## Phases
 
 - [x] Phase 0: Display file leaves by basename
-- [x] Phase 1: Reflow the Popover into a 3:2 chart-and-list layout
+- [x] Phase 1: Reflow the Popover into a centered 1:1 chart-and-list layout
 - [x] Phase 2: Synchronize documentation and complete integration evidence
 
 ## Background
@@ -35,7 +35,7 @@ Goals:
 
 - Keep the existing control row and all Popover interaction semantics unchanged.
 - Place the donut and its current path on the left and the synchronized legend on the right.
-- Allocate the result body in a `3fr 2fr` chart-to-list ratio.
+- Center a width-bounded result body with equal chart/list columns and equal inline padding.
 - Cap the legend's visible height at the donut height and scroll only the legend when rows overflow.
 - Display a file leaf's basename while retaining its full vault-relative path for identity and activation.
 
@@ -69,9 +69,9 @@ ProjectedFile.path
 
 ```text
 Popover controls
-Popover result body (3fr : 2fr)
+Popover result body (centered 1fr : 1fr; equal inline padding)
 ├── existing chart column
-│   ├── existing donut
+│   ├── existing donut with tight SVG bounds
 │   └── existing current-path breadcrumbs
 └── existing legend
     └── overflow-y: auto; max-height equals the donut height
@@ -109,7 +109,7 @@ Remove redundant parent paths from file labels without changing file identity, m
 - `npm run lint` — passed.
 - `npm test -- --run` — 231 passed, 0 failed.
 
-## Phase 1: Reflow the Popover into a 3:2 Chart-and-List Layout
+## Phase 1: Reflow the Popover into a Centered 1:1 Chart-and-List Layout
 
 ### Goal
 
@@ -118,7 +118,8 @@ Use the approved horizontal layout while preserving the existing component set a
 ### Tasks
 
 - [x] Add one result-body wrapper around the existing chart/path column and legend.
-- [x] Use `minmax(0, 3fr) minmax(0, 2fr)` for the result body, keep the Popover compact, and align the legend content with the donut's visible top edge.
+- [x] Use equal `minmax(0, 1fr)` columns in a centered, width-bounded result body with equal inline padding.
+- [x] Crop only the Popover donut to its outer-ring SVG bounds and share a responsive size cap between the rendered donut and legend.
 - [x] Keep the path below the donut inside the left column.
 - [x] Cap the right legend at the donut height, keep `overflow-y: auto`, and prevent legend growth from increasing the Popover height.
 - [x] Preserve loading retention, live in-place updates, highlight synchronization, focus restoration, drill-down, and reduced-motion behavior.
@@ -127,13 +128,15 @@ Use the approved horizontal layout while preserving the existing component set a
 ### Files
 
 - `src/ui/summary-popover.ts`
+- `src/ui/components/donut-chart.ts`
 - `styles.css`
 - `tests/ui/summary-popover.test.ts`
 - `tests/ui/accessibility.test.ts`
 
 ### Acceptance Criteria
 
-- [x] The chart/path column and legend render side by side at a `3:2` ratio in a compact Popover, with the legend content aligned to the donut's visible top edge.
+- [x] The chart/path column and legend render side by side at a `1:1` ratio in a compact, horizontally centered result container with equal left/right padding.
+- [x] The Popover donut has no coordinate-space outer whitespace, while other donut consumers retain the full SVG view box.
 - [x] The legend never exceeds the donut's height and becomes internally scrollable when necessary.
 - [x] The Popover contains no new title, chart/list caption, summary, tooltip row, or status footer.
 - [x] Existing query, live ticking, pointer, keyboard, pinning, breadcrumb, and activation tests remain green.
@@ -145,8 +148,9 @@ Use the approved horizontal layout while preserving the existing component set a
 - `npm run lint` — passed.
 - `npm test -- --run` — 231 passed, 0 failed.
 - `npm run build` — passed.
-- The first Obsidian 1.12.7 render exposed excess chart-column whitespace, an oversized Popover, and legend content above the donut's visible top edge; the corrected render below supersedes that evidence.
-- The corrected Obsidian 1.12.7 render uses a viewport-bounded 40rem Popover and 18rem donut; 32px-equivalent legend top padding aligns the first row with the visible outer-ring top without adding visible UI.
+- The first Obsidian 1.12.7 render exposed excess chart-column whitespace, an oversized Popover, and legend content above the donut's visible top edge; subsequent owner-directed tuning superseded that render.
+- In the 2026-07-22 Codex task, the owner accepted the live Obsidian layout after the result changed to centered equal columns, equal inline padding, tight Popover-only SVG bounds, and reduced legend-row padding. No repository screenshot is retained because the surrounding vault content is private.
+- The final responsive cap is `min(16.5rem, calc(50vw - 2rem))`: at the `36rem` wrapper maximum, two `16px` inline paddings and one `16px` gap leave two `16.5rem` columns, so the legend maximum cannot exceed the rendered donut.
 
 ## Phase 2: Synchronize Documentation and Complete Integration Evidence
 
@@ -195,8 +199,34 @@ Keep the product and architecture descriptions aligned with the implemented layo
 
 ## Post-Critic Acceptance
 
-- [ ] The owner verifies the 3:2 layout, list-only overflow, and basename-only file rows in real Obsidian.
+- [ ] In Obsidian 1.12.7 or newer, open the Header Popover at a real path containing enough rows to overflow the legend and at least one nested file leaf, then record a screenshot or video plus the tested vault-relative path.
+- [ ] Confirm the legend has `scrollHeight > clientHeight`, its rendered outer height is no greater than the donut SVG height, scrolling changes only the legend scroll position, and the Popover bounds do not grow.
+- [ ] Confirm the nested file row displays only its basename and activating it opens the unchanged full vault-relative path.
 
 ## Evaluation Record
 
-Technical implementation, owner-directed visual correction, and all Phases are complete. Independent evaluation starts from the current `review` state; owner long-list and basename UAT remains open under Post-Critic Acceptance.
+### Round 1
+
+- Critic: `/root/spec04_critic_round1`
+- Review scope: full
+- Evidence reviewed: commits `504ae26`, `9d338b3`, `4d24cd6`, `42e1381`, and `6b9dda7`; implementation, tests, documentation, 231-test/check/lint/build/spec-validator/diff-check results, and the recorded real-render boundary.
+- Findings: P1 blocking — the combined owner checkbox did not define an executable long-list/basename journey or observable evidence; P2 non-blocking — the corrected-render statement pointed to no durable artifact.
+- Selected fixes: define the real-vault fixture and measurable overflow/height/activation evidence; replace the dangling render statement with an explicit owner observation and privacy boundary.
+- Executor fixes: expanded Post-Critic Acceptance into setup and observable checks; recorded the accepted live-render source and lack of a repository screenshot; synchronized the final centered `1:1` constraint after owner tuning.
+- Deferred findings: none.
+- Validation rerun: `npm run check`, `npm run lint`, `npm test -- --run` (231 passed), `npm run build`, strict specs validation (0 errors, 0 warnings), and `git diff --check` all passed after the final constraint synchronization.
+- Verdict: changes-required.
+
+### Round 2
+
+- Critic: `/root/spec04_critic_round1`
+- Review scope: full
+- Evidence reviewed: current implementation and synchronized Constitution, PRD, Architecture, README, Roadmap, Spec, focused tests, and the passing check/lint/231-test/build/spec-validator/diff-check results.
+- Findings: none; both Round 1 findings are resolved.
+- Selected fixes: none.
+- Executor fixes: none after review.
+- Deferred findings: none.
+- Validation rerun: no code changed after the supplied full gates; strict specs validation and `git diff --check` are rerun after recording this round.
+- Verdict: pass.
+
+One final round remains reserved for Post-Critic Acceptance evidence. The Spec remains in `review` while the owner long-list and basename journey is open.

@@ -4,7 +4,7 @@ Activity Map is a local-first Obsidian plugin for measuring trustworthy activity
 
 ## Project Status
 
-The repository contains composed tracking, local persistence, maintenance, hierarchical queries, settings, commands, dockable statistics, SVG/JSON export, rebuild, and scoped deletion. The file-header entry renders the actual today/vault-root distribution as stable miniature slices; its pinnable popover updates trusted live values in place, preserves highlight state, exposes pause/resume and direct date selection, and uses a `3:2` donut/list layout with bounded list-only scrolling. File leaves show their basename while retaining the full path for activation. Controlled-clock, fake-adapter, accessibility-source, privacy-source, XML, and bundle checks cover the technical candidate; final real Obsidian desktop/mobile acceptance remains pending.
+The repository contains composed tracking, local persistence, maintenance, hierarchical queries, settings, commands, dockable statistics, SVG/JSON export, rebuild, and scoped deletion. The file-header entry renders the actual today/vault-root distribution as stable miniature slices; its pinnable popover updates trusted live values in place, preserves highlight state, exposes pause/resume and direct date selection, and uses a centered `1:1` donut/list layout with bounded list-only scrolling. File leaves show their basename while retaining the full path for activation. Controlled-clock, fake-adapter, accessibility-source, privacy-source, XML, and bundle checks cover the technical candidate; final real Obsidian desktop/mobile acceptance remains pending.
 
 Treat this as a development build until the complete UI and real Obsidian journeys pass. Follow the [Roadmap](specs/ROADMAP.md) for release acceptance status.
 
@@ -16,7 +16,7 @@ The planned first release will provide:
 - idle clipping and explicit recovery corrections;
 - selected-day, rolling daily-average, and all-history queries;
 - hierarchical folder drill-down with file-level details;
-- a stable multi-slice header mini donut, `3:2` pinnable chart/list popover, and dockable full view;
+- a stable multi-slice header mini donut, centered `1:1` pinnable chart/list popover, and dockable full view;
 - local data controls and standalone SVG export;
 - complete desktop behavior and a mobile view path without hover.
 
