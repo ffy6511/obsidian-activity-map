@@ -271,3 +271,17 @@ Align public behavior and architecture with the implemented grouping contract an
 - Deferred findings: none.
 - Validation rerun: `npm run check`, `npm run lint`, `npm test -- --run` (242 passed, 0 failed), `npm run build`, strict specs validation (0 errors, 0 warnings), and `git diff --check` all passed.
 - Verdict: changes-required.
+
+### Round 3
+
+- Critic: `spec05_critic` (same independent read-only evaluator; final allowed round).
+- Review scope: full re-review of Spec 05 and commit `409cc16`, including all prior fixes, regressions, documentation, lifecycle, and Post-Critic Acceptance readiness.
+- Evidence reviewed: complete clean branch, shared comparator and retained-action control flow, DOM and query regression tests, independent reversed-input reproduction, and recorded technical gates.
+- Findings: none.
+- Selected fixes: none.
+- Executor fixes: none required.
+- Deferred findings: none.
+- Validation rerun: Critic reran `npm test -- --run` (242 passed, 0 failed), independently reproduced stable `file:a,file:b` ordering from both input orders, and passed `git diff --check`; the recorded check, lint, build, strict validator, and Markdown-link gates remain green.
+- Verdict: pass.
+
+The three-round Critic budget is exhausted. The Spec remains in `review` only for the two unchecked Owner journeys in Post-Critic Acceptance; successful UAT is recorded without starting a fourth Critic round. Any substantive UAT defect keeps the Spec in `review` and is reported against the exhausted review budget.
