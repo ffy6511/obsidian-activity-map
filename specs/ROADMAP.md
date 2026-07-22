@@ -36,7 +36,7 @@ Deliver a local-first Obsidian plugin that measures trustworthy file activity an
 - [x] Durable per-device daily session shards, recoverable aggregates, stable file identity, retention, export, rebuild, and deletion controls.
 - [x] Correct selected-day, rolling daily-average, all-history, path aggregation, detail, and deleted-file queries.
 - [x] Stable multi-slice header mini donut, idle-bounded real-time centered `1:1` chart/list Popover with basename-only file leaves, dockable full view, and complete synchronized scrollable detail list.
-- [ ] Header Popover grouping toggle switches the current path scope between hierarchical path slices and recursive file slices without changing totals or activation identity.
+- [x] Header Popover grouping toggle switches the current path scope between hierarchical path slices and recursive file slices without changing totals or activation identity.
 - [x] Standalone full-infographic and chart-only SVG export.
 - [ ] Full desktop behavior and a mobile interaction path that does not depend on hover.
 

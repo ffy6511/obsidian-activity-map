@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | Decision date | 2026-07-21 |
-| Related specs | [Tracking runtime](../active/01-activity-tracking-runtime-plan.md), [Local data and query](../active/02-local-data-and-query-plan.md), [UI and v0.1 release](../active/03-activity-map-ui-and-v0-1-release-plan.md), [Header Popover split layout](../active/04-header-popover-split-layout-plan.md) |
+| Related specs | [Tracking runtime](../active/01-activity-tracking-runtime-plan.md), [Local data and query](../active/02-local-data-and-query-plan.md), [UI and v0.1 release](../active/03-activity-map-ui-and-v0-1-release-plan.md), [Header Popover split layout](../active/04-header-popover-split-layout-plan.md), [Header Popover file grouping](../active/05-header-popover-file-grouping-plan.md) |
 | Product requirements | [Activity Map PRD](../../docs/PRD.md) |
 
 ## Decision Summary

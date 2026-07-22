@@ -8,7 +8,7 @@
 | Scope | Distribution query grouping and Header Popover controls |
 | Type | feat |
 | Priority | P1 |
-| Status | in-progress |
+| Status | review |
 | Completed | pending |
 | Dependencies | [Header Popover split layout](04-header-popover-split-layout-plan.md) |
 | Decisions | [Interface and export](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), [PRD chart popover](../../docs/PRD.md#环形图浮层), [Presentation architecture](../../ARCHITECTURE.md#presentation-and-export) |
@@ -17,7 +17,7 @@
 
 - [x] Phase 0: Add path/file grouping to the distribution query
 - [x] Phase 1: Add the Header Popover grouping toggle
-- [ ] Phase 2: Synchronize documentation and complete integration evidence
+- [x] Phase 2: Synchronize documentation and complete integration evidence
 
 ## Background
 
@@ -197,9 +197,9 @@ Align public behavior and architecture with the implemented grouping contract an
 
 ### Tasks
 
-- [ ] Update Architecture and README after the implementation exists.
-- [ ] Synchronize this Spec, Constitution, PRD, and Roadmap without claiming unexecuted real-Obsidian journeys.
-- [ ] Run the full automated suite, production build, strict specs validation, Markdown link validation, and whitespace checks.
+- [x] Update Architecture and README after the implementation exists.
+- [x] Synchronize this Spec, Constitution, PRD, and Roadmap without claiming unexecuted real-Obsidian journeys.
+- [x] Run the full automated suite, production build, strict specs validation, Markdown link validation, and whitespace checks.
 
 ### Files
 
@@ -212,9 +212,18 @@ Align public behavior and architecture with the implemented grouping contract an
 
 ### Acceptance Criteria
 
-- [ ] Documentation distinguishes path grouping, recursive file grouping, and the unchanged path scope.
-- [ ] `npm run check`, `npm run lint`, `npm test -- --run`, and `npm run build` pass.
-- [ ] Strict specs validation, repository-relative Markdown links, and `git diff --check` pass.
+- [x] Documentation distinguishes path grouping, recursive file grouping, and the unchanged path scope.
+- [x] `npm run check`, `npm run lint`, `npm test -- --run`, and `npm run build` pass.
+- [x] Strict specs validation, repository-relative Markdown links, and `git diff --check` pass.
+
+### Evidence
+
+- `npm run check` — passed.
+- `npm run lint` — passed.
+- `npm test -- --run` — passed, 236 tests and 0 failures; the suite includes repository-relative Markdown target and heading-fragment validation.
+- `npm run build` — passed.
+- `SPEC_DRIVEN_DELIVERY_DIR=/Users/zhuo/.agents/skills/spec-driven-delivery python3 /Users/zhuo/.agents/skills/spec-driven-delivery/scripts/validate_specs_workspace.py . --strict` — passed with 0 errors and 0 warnings.
+- `git diff --check` — passed.
 
 ## Risks and Mitigations
 
@@ -233,4 +242,4 @@ Align public behavior and architecture with the implemented grouping contract an
 
 ## Evaluation Record
 
-No Critic round has started. Planning evidence does not change implementation status.
+No Critic round has started. All implementation Phases and technical gates are complete; the Spec is in review pending independent evaluation and Post-Critic Acceptance.

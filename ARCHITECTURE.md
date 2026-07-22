@@ -23,7 +23,7 @@ src/
 ├── platform/               # Implemented clock and window abstractions.
 ├── tracking/               # Implemented attribution runtime and recovery behavior.
 ├── data/                   # Implemented local evidence, summaries, and data controls.
-├── query/                  # Implemented date and hierarchical distribution queries.
+├── query/                  # Implemented date, path-grouped, and file-grouped distribution queries.
 ├── ui/                     # Implemented controller, immutable view model, commands, and settings.
 └── main.ts                 # Composes recovery, tracking, data, query, and bootstrap presentation.
 
@@ -54,8 +54,9 @@ Obsidian public APIs + standard Web APIs
                             │ immutable query results
                             ▼
 ┌────────────────────────── Query Engine ──────────────────────────┐
-│ Calculate date ranges, current-path projections, folder groups, │
-│ vault/scope totals, top items, “other”, and deleted-file rows.  │
+│ Calculate date ranges, current-path projections, path/file      │
+│ groups, vault/scope totals, top items, “other”, and deleted     │
+│ file rows.                                                      │
 └───────────────────────────┬─────────────────────────────────────┘
                             │ ActivityMapViewModel
                             ▼
@@ -279,16 +280,18 @@ Replaceable JSON uses a recoverable `.next`/`.bak` protocol. Mutation is seriali
 ### Query Path
 
 ```text
-DistributionQuery(metric, range, path, view)
+DistributionQuery(metric, range, path, view, groupBy)
   -> resolve day coverage and average denominator
   -> load verified daily summaries across device shards
   -> join fileId with current path or deleted state
-  -> group by next directory segment or direct local files
+  -> groupBy path: next directory segment or direct local files
+  -> groupBy file: every present descendant file below path
   -> compute scopeTotal + vaultTotal + percentOfVault
   -> sort all details; derive top N + “other” for the chart
   -> return DistributionResult + warnings + coverage
 
 # Daily averages include zero-use natural days after the first recorded date.
+# Grouping changes item presentation, not scopeTotal or vaultTotal.
 # “Other” is a derived query item and never becomes a real path.
 # Valid historical summaries avoid scanning expired raw session files.
 ```
@@ -327,7 +330,7 @@ Daily summaries cross a strict persistence boundary before reaching queries: dev
 
 The header-action manager listens to public workspace lifecycle events, owns one `FileView.addAction()` element per live file view through a weak registry, and removes only those elements on view removal or unload. It installs one stable miniature SVG donut driven by a dedicated today/vault-root query. Slice nodes are reconciled by stable item ID and reuse the chart palette. A pure live-distribution projection adds the current unclosed active interval to its owning scope item and vault total without mutating the persisted query result; both the miniature and popover use this projection. UI time advances only for today's `activeMs` query and is clipped at the last trusted interaction plus `idleThresholdMs`. Tracking snapshots update accessible status and restrained CSS state without replacing the SVG or rebuilding the action. Missing data retains the same empty-ring geometry.
 
-Each popover is attached to its trigger's owner document so pop-out windows keep independent focus, pointer, pin, close, and one-second live-tick behavior. Hover/focus opens the vault-root chart; action click toggles a pinned state; a trailing icon separated from the date group dispatches the controller's shared pause/resume intent. Selected-day navigation renders previous and next actions around a clickable ISO date value. The popover consumes the controller's immutable distribution and reuses the range controls, donut, legend, path, and directory/file activation behavior from the full view. Beneath the controls, one layout-only result wrapper is horizontally centered, capped at `36rem`, and allocates equal columns with equal inline padding to the donut/path and legend without rendering region headings. The Popover requests a tight SVG view box so coordinate-space whitespace does not unbalance the visible columns. One responsive size cap accounts for the wrapper padding and gap, bounds both the rendered donut and legend, and leaves vertical overflow to the legend, so additional rows cannot grow the Popover beyond the chart. Present file items expose only their basename through `DistributionItem.label`; their full vault-relative `path` remains the activation and identity input. Fixed exact-value and rightmost percentage columns remain aligned across formats, and legend rows are transparent and muted until pointer/focus highlights the row. Live ticks call update handles that retain slice and row DOM identity while changing geometry and text; a structural query or item-identity change alone rebuilds the region. Duplicate summary, title, tooltip, and ordinary tracking-status regions are absent. The live timer is cleared with the popover and does not trigger persistence or query refresh. Hover listeners remain capability-gated; keyboard focus, action click, Ribbon, commands, and the full view remain usable without hover or when header integration reports a warning.
+Each popover is attached to its trigger's owner document so pop-out windows keep independent focus, pointer, pin, close, and one-second live-tick behavior. Hover/focus opens the vault-root chart; action click toggles a pinned state. One ordered trailing action group keeps the path/file grouping toggle immediately before the shared pause/resume action without adding a control row. The grouping intent retains metric, range, and breadcrumb path, normalizes the legacy local-files view to children, and uses the ordinary generation guard so an older mode cannot replace a newer result. A new popover defaults to path grouping; file grouping recursively flattens present descendants while breadcrumbs continue to select scope. Selected-day navigation renders previous and next actions around a clickable ISO date value. The popover consumes the controller's immutable distribution and reuses the range controls, donut, legend, path, and directory/file activation behavior from the full view. Beneath the controls, one layout-only result wrapper is horizontally centered, capped at `36rem`, and allocates equal columns with equal inline padding to the donut/path and legend without rendering region headings. The Popover requests a tight SVG view box so coordinate-space whitespace does not unbalance the visible columns. One responsive size cap accounts for the wrapper padding and gap, bounds both the rendered donut and legend, and leaves vertical overflow to the legend, so additional rows cannot grow the Popover beyond the chart. Present file items expose only their basename through `DistributionItem.label`; their full vault-relative `path` remains the activation and identity input. Fixed exact-value and rightmost percentage columns remain aligned across formats, and legend rows are transparent and muted until pointer/focus highlights the row. Live ticks call update handles that retain slice and row DOM identity while changing geometry and text; in file grouping, a live descendant belongs to its concrete file item. A structural query or item-identity change alone rebuilds the region. Duplicate summary, title, tooltip, and ordinary tracking-status regions are absent. The live timer is cleared with the popover and does not trigger persistence or query refresh. Hover listeners remain capability-gated; keyboard focus, action click, Ribbon, commands, and the full view remain usable without hover or when header integration reports a warning.
 
 Data operations are single-flight controller intents. SVG serialization consumes the same immutable `ChartModel` as the live donut, resolves its stable color tokens to inline standalone colors, escapes every user-derived string, and downloads through a capability-detected standard Web API boundary. Raw JSON export and rebuild relay typed per-date progress. Deletion renders the backend plan ID and counts, expires the UI confirmation after five minutes, executes the exact retained plan object, and maps drift or partial failure to explicit error state before refreshing queries.
 
