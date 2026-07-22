@@ -64,12 +64,17 @@ jobs:
           }
           EOF
 
-      - name: Validate and build
-        run: |
-          npm run check
-          npm run lint
-          npm test -- --run
-          npm run build
+      - name: Type-check
+        run: npm run check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test -- --run
+
+      - name: Build production bundle
+        run: npm run build
 
       - name: Verify release assets
         run: |
