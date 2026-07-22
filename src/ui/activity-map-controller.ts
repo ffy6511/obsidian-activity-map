@@ -86,7 +86,33 @@ export class ActivityMapController implements TrackingObserver {
 
 	onSnapshot(snapshot: TrackingSnapshot): void {
 		if (this.stopped) return;
-		this.today = localDateFor(Date.parse(snapshot.sampledAt), Intl.DateTimeFormat().resolvedOptions().timeZone);
+		const nextToday = localDateFor(
+			Date.parse(snapshot.sampledAt),
+			Intl.DateTimeFormat().resolvedOptions().timeZone,
+		);
+		const previousToday = this.today;
+		this.today = nextToday;
+
+		if (
+			nextToday !== previousToday &&
+			this.model.query.range.mode === 'day' &&
+			this.model.query.range.localDate === previousToday
+		) {
+			// The default day query follows the local clock. Without a new query
+			// generation, header surfaces retain yesterday's result and the live
+			// projection correctly refuses to add today's unclosed interval to it.
+			this.model = {
+				...this.model,
+				tracking: snapshot,
+				query: {
+					...this.model.query,
+					range: { mode: 'day', localDate: nextToday },
+				},
+			};
+			void this.refresh();
+			return;
+		}
+
 		this.publish({ ...this.model, tracking: snapshot });
 	}
 

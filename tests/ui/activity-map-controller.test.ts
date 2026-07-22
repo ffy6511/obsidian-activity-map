@@ -2,6 +2,8 @@ import { describe, expect, expectReject, it } from '../helpers/test-harness';
 
 import { ActivityMapController, type QueryService, type TrackingControl } from '../../src/ui/activity-map-controller';
 import { normalizeSettings } from '../../src/domain/settings';
+import type { TrackingSnapshot } from '../../src/domain/activity';
+import { localDateFor } from '../../src/platform/clock';
 import type { DistributionQuery, DistributionResult } from '../../src/query/distribution-query';
 
 function result(query: DistributionQuery, value: number): DistributionResult {
@@ -33,6 +35,20 @@ function tracking(): TrackingControl & { updates: number; pauses: number; resume
 	};
 }
 
+function activeSnapshot(sampledAt: string): TrackingSnapshot {
+	return {
+		state: 'active',
+		reason: 'active',
+		currentTarget: { fileId: 'file-1', path: 'notes/today.md', windowId: 'window-1', leafId: 'leaf-1' },
+		sessionStartedAt: sampledAt,
+		lastTrustedActivityAt: sampledAt,
+		pendingRecovery: [],
+		recentDecisions: [],
+		degradedReason: null,
+		sampledAt,
+	};
+}
+
 describe('activity map controller', () => {
 	it('provides and executes a dedicated today vault-root query for the header chart', async () => {
 		const settings = normalizeSettings({ deviceId: 'd1' });
@@ -47,6 +63,50 @@ describe('activity map controller', () => {
 		});
 		await controller.getHeaderDistribution();
 		expect(requested).toEqual(controller.getHeaderDefaultQuery());
+	});
+
+	it('refreshes the default day query after local midnight so live activity stays visible', async () => {
+		const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+		const beforeMidnight = Date.UTC(2026, 6, 21, 12, 0, 0);
+		const afterMidnight = beforeMidnight + 24 * 60 * 60 * 1_000;
+		const previousToday = localDateFor(beforeMidnight, timeZone);
+		const nextToday = localDateFor(afterMidnight, timeZone);
+		expect(nextToday).not.toEqual(previousToday);
+
+		const requested: DistributionQuery[] = [];
+		const settings = normalizeSettings({ deviceId: 'd1' });
+		const controller = new ActivityMapController(
+			settings,
+			{ run: async (query) => { requested.push(query); return result(query, 0); } },
+			{ update: async () => settings },
+			tracking(),
+			previousToday,
+		);
+		await controller.dispatch({ kind: 'refresh' });
+
+		controller.onSnapshot(activeSnapshot(new Date(afterMidnight).toISOString()));
+
+		expect(controller.getViewModel().query.range).toEqual({ mode: 'day', localDate: nextToday });
+		expect(requested.at(-1)?.range).toEqual({ mode: 'day', localDate: nextToday });
+		expect(controller.getHeaderDefaultQuery().range).toEqual({ mode: 'day', localDate: nextToday });
+	});
+
+	it('keeps a user-selected historical day fixed when tracking crosses local midnight', async () => {
+		const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+		const afterMidnight = Date.UTC(2026, 6, 22, 12, 0, 0);
+		const settings = normalizeSettings({ deviceId: 'd1' });
+		const controller = new ActivityMapController(
+			settings,
+			{ run: async (query) => result(query, 0) },
+			{ update: async () => settings },
+			tracking(),
+			localDateFor(afterMidnight - 24 * 60 * 60 * 1_000, timeZone),
+		);
+		await controller.dispatch({ kind: 'set-range', range: { mode: 'day', localDate: '2026-01-15' } });
+
+		controller.onSnapshot(activeSnapshot(new Date(afterMidnight).toISOString()));
+
+		expect(controller.getViewModel().query.range).toEqual({ mode: 'day', localDate: '2026-01-15' });
 	});
 
 	it('switches grouping without changing scope controls and normalizes the view', async () => {
