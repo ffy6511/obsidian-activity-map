@@ -11,7 +11,7 @@ function run(args: {
 	path: string;
 	view: 'children' | 'local-files';
 	groupBy?: 'path' | 'file';
-	metric?: 'activeMs' | 'editingMs' | 'openCount';
+	metric?: 'activeMs' | 'editingMs' | 'openCount' | 'typedChars';
 	range?:
 		| { mode: 'day'; localDate: string }
 		| { mode: 'average'; days: 7 | 30 | 90 | 'all'; today: string }
@@ -58,6 +58,28 @@ describe('distribution query root view', () => {
 		expect(deleted?.value).toBe(10_000);
 		expect(deleted?.memberIds).toContain('file-c');
 	});
+
+	it('projects typedChars independently from time and open-count metrics', () => {
+		const source = sampleSummaries()[0];
+		if (!source) throw new Error('missing source fixture');
+		const typed: DailySummary = {
+			...source,
+			metricsByFileId: {
+				'file-a': { activeMs: 60_000, editingMs: 30_000, openCount: 1, typedChars: 9 },
+				'file-b': { activeMs: 20_000, editingMs: 0, openCount: 1, typedChars: 2 },
+				'file-c': { activeMs: 10_000, editingMs: 0, openCount: 1, typedChars: 1 },
+				'file-root': { activeMs: 5_000, editingMs: 0, openCount: 1, typedChars: 4 },
+			},
+		};
+		const result = runDistributionQuery({
+			query: { metric: 'typedChars', range: { mode: 'day', localDate: '2026-07-14' }, path: '', view: 'children', groupBy: 'path' },
+			resolved: resolveRange({ range: { mode: 'day', localDate: '2026-07-14' }, recordedDates: ['2026-07-14'] }),
+			summaries: [{ summary: typed }], registryEntries: sampleRegistry(), maxChartItems: 8,
+		});
+		expect(result.scopeTotal).toBe(16);
+		expect(result.detailItems.find((item) => item.id === 'dir:projects')?.value).toBe(11);
+		expect(result.detailItems.find((item) => item.id === 'group:deleted')?.value).toBe(1);
+	});
 });
 
 describe('distribution query directory drill-down', () => {
@@ -89,7 +111,7 @@ describe('distribution query directory drill-down', () => {
 			...summary,
 			metricsByFileId: {
 				...summary.metricsByFileId,
-				'unknown-file': { activeMs: 3_000, editingMs: 0, openCount: 1 },
+				'unknown-file': { activeMs: 3_000, editingMs: 0, openCount: 1, typedChars: 0 },
 			},
 		};
 		const query = (path: string) => runDistributionQuery({
@@ -192,7 +214,7 @@ describe('distribution query file grouping', () => {
 		};
 		const resultFor = (fileIds: readonly ('a' | 'b')[]) => {
 			const metricsByFileId: DailySummary['metricsByFileId'] = {};
-			for (const fileId of fileIds) metricsByFileId[fileId] = { activeMs: 10_000, editingMs: 0, openCount: 1 };
+			for (const fileId of fileIds) metricsByFileId[fileId] = { activeMs: 10_000, editingMs: 0, openCount: 1, typedChars: 0 };
 			const summary: DailySummary = {
 				schemaVersion: 1, deviceId: 'd', localDate: '2026-07-22', generatedAt: '2026-07-22T23:59:59.000Z',
 				sourceRecordCount: 2, sourceFingerprint: fileIds.join(','), metricsByFileId, warnings: [],

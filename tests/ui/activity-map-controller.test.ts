@@ -143,6 +143,38 @@ describe('activity map controller', () => {
 		expect(reopened.getHeaderDefaultQuery().groupBy).toBe('file');
 	});
 
+	it('switches to Typed chars without changing the active range, path, or grouping', async () => {
+		const settings = normalizeSettings({ deviceId: 'd1' });
+		const requested: DistributionQuery[] = [];
+		const controller = new ActivityMapController(
+			settings,
+			{ run: async (query) => { requested.push(query); return result(query, 8); } },
+			{ update: async () => settings },
+			tracking(),
+			'2026-07-21',
+		);
+		await controller.dispatch({
+			kind: 'set-query',
+			query: {
+				metric: 'activeMs',
+				range: { mode: 'average', days: 30, today: '2026-07-21' },
+				path: 'projects',
+				view: 'children',
+				groupBy: 'file',
+			},
+		});
+		await controller.dispatch({ kind: 'set-metric', metric: 'typedChars' });
+		expect(controller.getViewModel().query).toEqual({
+			metric: 'typedChars',
+			range: { mode: 'average', days: 30, today: '2026-07-21' },
+			path: 'projects',
+			view: 'children',
+			groupBy: 'file',
+		});
+		expect(requested.at(-1)).toEqual(controller.getViewModel().query);
+		expect(controller.getViewModel().distribution?.detailItems[0]?.id).toBe('x');
+	});
+
 	it('rolls back an optimistic grouping when preference persistence fails', async () => {
 		const settings = normalizeSettings({ deviceId: 'd1' });
 		const controller = new ActivityMapController(

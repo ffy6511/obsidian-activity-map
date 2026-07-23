@@ -26,6 +26,24 @@ function snapshot(state: 'active' | 'paused'): TrackingSnapshot {
 }
 
 describe('grouping control behavior', () => {
+	it('offers Typed chars with a keyboard semantic icon', () => {
+		const { document } = installDomEnvironment();
+		const container = document.createElement('div');
+		document.body.appendChild(container);
+		let renderedIcon = '';
+		let selectedMetric = '';
+		renderRangeControls({
+			container, metric: 'typedChars', range: { mode: 'all' }, onMetric: (metric) => { selectedMetric = metric; }, onRange: () => {},
+			renderIcon: (_element, icon) => { renderedIcon = icon; },
+		});
+		const metric = container.querySelector<HTMLSelectElement>('[data-activity-map-id="metric"]');
+		if (!metric) throw new Error('metric selector missing');
+		expect(Array.from(metric.options).map((option) => option.textContent)).toContain('Typed chars');
+		expect(renderedIcon).toBe('keyboard');
+		metric.dispatchEvent(new Event('change'));
+		expect(selectedMetric).toBe('typedChars');
+	});
+
 	it('keeps one focused native toggle current across two delayed grouping queries', () => {
 		const { document } = installDomEnvironment();
 		const pending: DistributionQuery[] = [];

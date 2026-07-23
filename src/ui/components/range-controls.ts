@@ -32,7 +32,7 @@ export function renderRangeControls(args: {
 	const metricIcon = metricControl.createSpan({ cls: 'activity-map-control-icon', attr: { 'aria-hidden': 'true' } });
 	renderIcon(metricIcon, iconForMetric(args.metric));
 	const metric = metricControl.createEl('select', { attr: { 'aria-label': 'Metric', 'data-activity-map-id': 'metric' } });
-	for (const [value, label] of [['activeMs', 'Activity'], ['editingMs', 'Editing'], ['openCount', 'Open count']] as const) {
+	for (const [value, label] of [['activeMs', 'Activity'], ['editingMs', 'Editing'], ['typedChars', 'Typed chars'], ['openCount', 'Open count']] as const) {
 		metric.createEl('option', { value, text: label });
 	}
 	metric.value = args.metric;
@@ -131,6 +131,7 @@ function iconButton(
 
 function iconForMetric(metric: MetricKey): string {
 	if (metric === 'editingMs') return 'pencil';
+	if (metric === 'typedChars') return 'keyboard';
 	if (metric === 'openCount') return 'folder-open';
 	return 'clock-3';
 }

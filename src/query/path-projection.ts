@@ -11,7 +11,7 @@
 import type { FileRegistryEntry } from '../data/file-registry';
 
 /** Metric keys queryable by the distribution engine. */
-export type MetricKey = 'activeMs' | 'editingMs' | 'openCount';
+export type MetricKey = 'activeMs' | 'editingMs' | 'openCount' | 'typedChars';
 
 /** A file with its current or last-known path and a metric value. */
 export interface ProjectedFile {
@@ -40,7 +40,7 @@ export interface PathGroup {
  * "deleted" group handled by the caller.
  */
 export function projectAndGroup(args: {
-	metricsByFileId: Record<string, { activeMs: number; editingMs: number; openCount: number }>;
+	metricsByFileId: Record<string, { activeMs: number; editingMs: number; openCount: number; typedChars: number }>;
 	registryEntries: Record<string, FileRegistryEntry>;
 	path: string;
 	metric: MetricKey;

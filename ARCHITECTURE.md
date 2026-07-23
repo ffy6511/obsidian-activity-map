@@ -15,7 +15,7 @@ Authority links:
 
 ## Current Implementation
 
-The tracking, persistence, maintenance, query, controller, settings, and file-header/popover surfaces are implemented and covered by deterministic fixtures. Export, rebuild, and deletion modules remain tested local data-service boundaries, but the current plugin neither composes nor bundles a user-facing data-operation UI. The installable bundle collects activity, maintains queryable daily summaries, and renders hierarchical native-SVG distributions from the file-header entry; a later header data modal will compose those services.
+The tracking, persistence, maintenance, query, controller, settings, and file-header/popover surfaces are implemented and covered by deterministic fixtures. Trusted editor input also produces content-free `typedChars` evidence and a fourth distribution metric. Export, rebuild, and deletion modules remain tested local data-service boundaries, but the current plugin neither composes nor bundles a user-facing data-operation UI. The installable bundle collects activity, maintains queryable daily summaries, and renders hierarchical native-SVG distributions from the file-header entry; a later header data modal will compose the remaining data controls.
 
 ```text
 src/
@@ -39,11 +39,11 @@ Automated integration, accessibility-source, privacy-source, XML, and generated-
 ```text
 Obsidian public APIs + standard Web APIs
         │
-        │ focus / leaf / file / editor / trusted DOM events
+        │ focus / leaf / file / editor / trusted DOM input events
         ▼
 ┌──────────────────────── Tracking Runtime ────────────────────────┐
 │ Select one eligible foreground file.                            │
-│ Apply session, idle, edit-burst, pause, and recovery semantics. │
+│ Apply session, idle, edit-burst, typed-input, pause, recovery.  │
 └───────────────────────────┬─────────────────────────────────────┘
                             │ closed sessions + checkpoints
                             ▼
@@ -55,7 +55,7 @@ Obsidian public APIs + standard Web APIs
                             ▼
 ┌────────────────────────── Query Engine ──────────────────────────┐
 │ Calculate date ranges, current-path projections, path/file      │
-│ groups, vault/scope totals, top items, “other”, and deleted     │
+│ groups, vault/scope totals, typed metrics, top items, “other”,  │
 │ file rows.                                                      │
 └───────────────────────────┬─────────────────────────────────────┘
                             │ ActivityMapViewModel
@@ -89,6 +89,7 @@ src/
 │   ├── ports.ts                    # Identity, checkpoint, record-sink, observer contracts.
 │   ├── activity-engine.ts          # Pure serialized transitions and session invariants.
 │   ├── editing-burst.ts            # Union/clipping of editor activity intervals.
+│   ├── typed-input.ts              # Trusted grapheme count and IME commit classifier.
 │   ├── recovery-queue.ts            # Pending decisions and bounded auto-exclusion undo.
 │   ├── transition-queue.ts         # Serializes concurrent callbacks into ordered transitions.
 │   ├── heartbeat-monitor.ts        # Detects delayed callbacks without counting the gap.
@@ -102,7 +103,7 @@ src/
 │   ├── settings-repository.ts      # Serialized loadData/saveData operations.
 │   ├── safe-json-store.ts          # Verified .next/.bak replacement and recovery.
 │   ├── file-registry.ts            # Stable fileId and current/last-known path mapping.
-│   ├── event-envelope.ts           # Versioned session/adjustment persistence envelope.
+│   ├── event-envelope.ts           # Versioned session/adjustment/typed-input envelopes.
 │   ├── ndjson-shard-store.ts       # Per-device/date serialized append and tolerant read.
 │   ├── checkpoint-repository.ts    # Recoverable in-flight runtime snapshot.
 │   ├── daily-summary-repository.ts # Replaceable metricsByFileId projection.
@@ -113,7 +114,7 @@ src/
 │
 ├── query/                          # Spec 02: read-only statistics semantics.
 │   ├── date-range.ts               # Day, 7/30/90/all averages, and coverage.
-│   ├── path-projection.ts          # Current path, local files, deleted grouping.
+│   ├── path-projection.ts          # Current path, local files, deleted grouping, metric projection.
 │   ├── distribution-query.ts       # Scope/vault totals, ranking, and “other”.
 │   └── query-cache.ts              # Snapshot cache with targeted invalidation.
 │
@@ -234,6 +235,20 @@ One callback creates one immutable wall/monotonic clock sample. Wall time owns t
 
 Trusted activity refreshes a bounded live checkpoint, including collapsed completed-edit duration plus the current burst endpoints. `editor-change` carries its source file/leaf/window through the platform boundary and is accepted only when it matches the unique foreground target.
 
+## typedChars Input Boundary
+
+`TrackingCoordinator` keeps a classifier per owner window. It accepts only trusted `beforeinput` `insertText` from a CodeMirror/Markdown editor while that same window owns the active tracked target. It records a grapheme count and a source class; no committed text crosses the classifier boundary. IME composition updates are ignored, while `compositionend` is held for one microtask so a following final `insertText` replaces it rather than creating a double count.
+
+```text
+trusted editor input -> TypedInputClassifier -> TypedInputRecord
+                     -> TrackingRecordSink.appendTypedInputs
+                     -> per-device/date NDJSON typed-input envelope
+                     -> DailySummary.metricsByFileId.typedChars
+                     -> immutable DistributionQuery metric
+```
+
+Append failure enters the same degraded safety boundary as a session append. Pre-`typedChars` daily summaries normalize the missing field to zero; retained session/adjustment records stay valid unchanged.
+
 ## Data Layer and Query Engine
 
 Spec 02 implements local evidence, derived summaries, and read-only product queries.
@@ -247,7 +262,7 @@ Spec 02 implements local evidence, derived summaries, and read-only product quer
     ├── checkpoint.json               # Recoverable in-flight runtime state.
     ├── files.json                    # Stable fileId -> current/last-known path.
     ├── sessions/<device>/<date>.ndjson
-    │                                   # Append-oriented session/adjustment evidence.
+    │                                   # Append-oriented session/adjustment/typed-input evidence.
     └── daily/<device>/<date>.json
                                         # Replaceable metricsByFileId projection.
 

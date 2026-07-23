@@ -3,6 +3,7 @@ import type { MetricKey } from '../query/path-projection';
 export function formatMetric(value: number, metric: MetricKey, denominatorDays: number | null = null): string {
 	const normalized = denominatorDays && denominatorDays > 0 ? value / denominatorDays : value;
 	if (metric === 'openCount') return `${normalized.toFixed(denominatorDays ? 1 : 0)} opens`;
+	if (metric === 'typedChars') return `${normalized.toFixed(denominatorDays ? 1 : 0)} chars`;
 	const seconds = Math.round(normalized / 1000);
 	const hours = Math.floor(seconds / 3600);
 	const minutes = Math.floor((seconds % 3600) / 60);
@@ -17,5 +18,11 @@ export function formatPercent(value: number): string {
 }
 
 export function metricLabel(metric: MetricKey): string {
-	return metric === 'activeMs' ? 'Activity' : metric === 'editingMs' ? 'Editing' : 'Open count';
+	return metric === 'activeMs'
+		? 'Activity'
+		: metric === 'editingMs'
+			? 'Editing'
+			: metric === 'typedChars'
+				? 'Typed chars'
+				: 'Open count';
 }

@@ -32,7 +32,7 @@ Activity Map is an Obsidian plugin that shows how you spend focused time across 
 
 ### Features
 
-- **Trustworthy per-file activity** — Tracks active time, editing time, and file-open counts for the file currently in focus. Background windows, untrackable views, paused tracking, and confirmed idle time are excluded.
+- **Trustworthy per-file activity** — Tracks active time, editing time, typed character counts, and file-open counts for the file currently in focus. Typed characters count trusted `insertText` and final IME commits by Unicode grapheme cluster; paste, drop, undo/redo, programmatic changes, and external writes are excluded.
 - **Idle-aware tracking** — Stops a session at the last trusted interaction after an idle period. Short uncertain gaps can be reviewed explicitly; long sleep or lock-screen gaps stay excluded by default.
 - **Explore activity by time and place** — Inspect a selected day, 7/30/90-day daily averages, all-history averages, or all-history totals. Drill from the vault root into folders, or switch to a recursive file-level view for the current path.
 - **Clear visual entry point** — Eligible file headers show a compact donut chart that opens a pinnable summary popover. There is no global toolbar icon or Command Palette entry.
@@ -87,7 +87,7 @@ Activity Map is local-first. It does not itself upload, sync, sell, or send your
 
 - No account, telemetry, analytics, remote API, or network upload is included.
 - Activity records stay in the plugin data directory inside your vault configuration directory.
-- The plugin stores activity metadata such as file identity, file path at the time of an event, timestamps, durations, and open counts so it can show and rebuild your statistics.
+- The plugin stores activity metadata such as file identity, file path at the time of an event, timestamps, durations, open counts, and content-free typed-character counts so it can show and rebuild your statistics.
 - It does not read or store note content, selected text, or the actual strings you type.
 
 ### License
@@ -102,7 +102,7 @@ Activity Map 是一款本地优先的 Obsidian 活动统计插件。它帮助你
 
 ### 功能
 
-- **可信的逐文件活动统计**：记录当前聚焦文件的活动时长、编辑时长和打开/切入次数；后台窗口、不可追踪视图、暂停期间和已确认的空闲时间不会计入。
+- **可信的逐文件活动统计**：记录当前聚焦文件的活动时长、编辑时长、输入字符数和打开/切入次数；输入字符按 Unicode grapheme cluster 统计可信 `insertText` 与 IME 最终提交，粘贴、拖放、撤销/重做、程序化修改和外部写入不会计入。
 - **识别空闲与休眠**：空闲后会在最后一次可信交互时结束 session。较短的未确定间隔可由你明确决定是否补计；休眠、锁屏或长时间间隔默认排除。
 - **按时间与目录查看投入**：支持指定日、7/30/90 天日均、全部历史日均与全部历史总量；可以从 vault 根目录逐层下钻，也可以切换为当前路径下的递归文件视图。
 - **低打扰入口**：符合条件的文件页眉会显示微型环形图，点击可打开并固定统计浮层；不提供全局工具栏图标或命令面板入口。
@@ -150,7 +150,7 @@ Activity Map 坚持本地优先：插件自身不会上传、同步、出售或�
 
 - 不包含账号体系、遥测、分析服务、远程 API 或网络上传。
 - 活动记录保存在 vault 配置目录下的插件数据目录中。
-- 为统计与重建数据，插件会保存文件内部身份、事件发生时的文件路径、时间戳、时长和打开次数等活动元数据。
+- 为统计与重建数据，插件会保存文件内部身份、事件发生时的文件路径、时间戳、时长、打开次数和不含内容的输入字符数等活动元数据。
 - 不读取或保存笔记正文、选中文本，也不保存你实际输入的字符串。
 
 ### 许可证

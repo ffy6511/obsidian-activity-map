@@ -142,14 +142,15 @@ export function runDistributionQuery(args: {
 /** Merge per-file metrics across summaries (sums intact device shards). */
 function mergeSummaries(
 	summaries: readonly QuerySummaryInput[],
-): Record<string, { activeMs: number; editingMs: number; openCount: number }> {
-	const out: Record<string, { activeMs: number; editingMs: number; openCount: number }> = {};
+): Record<string, { activeMs: number; editingMs: number; openCount: number; typedChars: number }> {
+	const out: Record<string, { activeMs: number; editingMs: number; openCount: number; typedChars: number }> = {};
 	for (const { summary } of summaries) {
 		for (const [fileId, metrics] of Object.entries(summary.metricsByFileId)) {
-			const bucket = (out[fileId] ??= { activeMs: 0, editingMs: 0, openCount: 0 });
+			const bucket = (out[fileId] ??= { activeMs: 0, editingMs: 0, openCount: 0, typedChars: 0 });
 			bucket.activeMs += metrics.activeMs;
 			bucket.editingMs += metrics.editingMs;
 			bucket.openCount += metrics.openCount;
+			bucket.typedChars += metrics.typedChars;
 		}
 	}
 	return out;
