@@ -75,16 +75,16 @@ Extend trusted activity reporting with privacy-preserving input metrics, local p
 
 ### Key Deliverables
 
-- [ ] Trusted text-input and IME final-commit capture with grapheme-cluster counts and explicit source exclusions.
-- [ ] Current-query poster export with Portrait, Wide, and Compact layouts; an editable empty caption; and SVG, PNG, or JPEG automatic downloads.
+- [x] Trusted text-input and IME final-commit capture with grapheme-cluster counts and explicit source exclusions.
+- [x] Current-query poster export with Portrait, Wide, and Compact layouts; an editable empty caption; and SVG, PNG, or JPEG automatic downloads.
 - [ ] Separate deletion metrics that do not reduce the input count.
 - [ ] Multi-device overlap diagnostics, deterministic deduplication policy, and user-controlled conflict resolution.
 - [ ] Optional event-time path analysis and richer range comparison views.
 
 ### Acceptance Criteria
 
-- [ ] Input tests cover Latin text, CJK IME, combining marks, emoji, paste, drop, undo/redo, programmatic edits, and external writes.
-- [ ] Export tests prove frozen-query data parity, wordmark inclusion, escaping, all layout/format choices, and unavailable-download handling; a real desktop journey covers editing the preview caption and each download format.
+- [x] Input tests cover Latin text, CJK IME, combining marks, emoji, paste, drop, undo/redo, programmatic edits, and external writes.
+- [x] Export tests prove frozen-query data parity, wordmark inclusion, escaping, all layout/format choices, and unavailable-download handling; a real desktop journey covers editing the preview caption and each download format.
 - [ ] Multi-device fixtures cover independent shards, simultaneous activity, duplicates, conflicts, and interrupted reconciliation.
-- [ ] Metrics remain local, do not store typed content, and expose their accuracy limitations in product help.
+- [x] Metrics remain local, do not store typed content, and expose their accuracy limitations in product help.
 - [ ] Migration, compatibility, documentation, automated gates, and independent Critic evaluation pass.

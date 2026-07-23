@@ -5,7 +5,7 @@ import { normalizeSettings } from '../../src/domain/settings';
 import type { DistributionQuery } from '../../src/query/distribution-query';
 import { ActivityMapController, type QueryService, type TrackingControl } from '../../src/ui/activity-map-controller';
 import { renderRangeControls } from '../../src/ui/components/range-controls';
-import { createDistributionGroupingAction, createTrackingAction } from '../../src/ui/summary-popover';
+import { createDistributionGroupingAction, createPosterExportAction, createTrackingAction } from '../../src/ui/summary-popover';
 import { installDomEnvironment } from '../helpers/dom-environment';
 
 function tracking(): TrackingControl {
@@ -42,6 +42,35 @@ describe('grouping control behavior', () => {
 		expect(renderedIcon).toBe('keyboard');
 		metric.dispatchEvent(new Event('change'));
 		expect(selectedMetric).toBe('typedChars');
+	});
+
+	it('places poster export immediately after tracking and disables it without a ready snapshot', () => {
+		const { document } = installDomEnvironment();
+		const container = document.createElement('div');
+		document.body.appendChild(container);
+		let exports = 0;
+		renderRangeControls({
+			container, metric: 'activeMs', range: { mode: 'all' }, onMetric: () => {}, onRange: () => {}, renderIcon: () => {},
+			trailingActions: [
+				createTrackingAction({ paused: false, getCurrentPaused: () => false, onTracking: () => {} }),
+				createPosterExportAction({ available: true, onExport: () => { exports += 1; } }),
+			],
+		});
+		const actions = container.querySelectorAll<HTMLButtonElement>('.activity-map-control-actions > button');
+		expect(Array.from(actions).map((button) => button.dataset.activityMapId)).toEqual(['tracking-toggle', 'poster-export']);
+		const exportButton = actions[1];
+		if (!exportButton) throw new Error('poster export button missing');
+		expect(exportButton.disabled).toBeFalse();
+		exportButton.click();
+		expect(exports).toBe(1);
+
+		const unavailable = document.createElement('div');
+		document.body.appendChild(unavailable);
+		renderRangeControls({
+			container: unavailable, metric: 'activeMs', range: { mode: 'all' }, onMetric: () => {}, onRange: () => {}, renderIcon: () => {},
+			trailingActions: [createPosterExportAction({ available: false, onExport: () => { exports += 1; } })],
+		});
+		expect(unavailable.querySelector<HTMLButtonElement>('[data-activity-map-id="poster-export"]')?.disabled).toBeTrue();
 	});
 
 	it('keeps one focused native toggle current across two delayed grouping queries', () => {

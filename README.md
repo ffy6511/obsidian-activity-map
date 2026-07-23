@@ -37,7 +37,8 @@ Activity Map is an Obsidian plugin that shows how you spend focused time across 
 - **Explore activity by time and place** — Inspect a selected day, 7/30/90-day daily averages, all-history averages, or all-history totals. Drill from the vault root into folders, or switch to a recursive file-level view for the current path.
 - **Clear visual entry point** — Eligible file headers show a compact donut chart that opens a pinnable summary popover. There is no global toolbar icon or Command Palette entry.
 - **Detailed, accessible charts** — The donut chart and detail list share the same data, support keyboard interaction, retain stable colors, and keep every item available in the list even when smaller chart slices are grouped as “Other”.
-- **Local settings** — Configure excluded paths and timing thresholds. Export, rebuild, and deletion controls will return in a later explicit header data modal.
+- **Exportable data posters** — From the summary popover, export the current frozen result as a Portrait, Wide, or Compact poster in SVG, PNG, or JPG. Edit an optional caption directly on the preview; downloads are local and never screenshot Obsidian.
+- **Local settings** — Configure excluded paths and timing thresholds. Rebuild and deletion controls will return in a later explicit header data modal.
 
 ### Install
 
@@ -89,6 +90,7 @@ Activity Map is local-first. It does not itself upload, sync, sell, or send your
 - Activity records stay in the plugin data directory inside your vault configuration directory.
 - The plugin stores activity metadata such as file identity, file path at the time of an event, timestamps, durations, open counts, and content-free typed-character counts so it can show and rebuild your statistics.
 - It does not read or store note content, selected text, or the actual strings you type.
+- A poster contains only the current aggregate query result, selected optional caption, and bundled wordmark; SVG, PNG, and JPG stay on your device.
 
 ### License
 
@@ -107,7 +109,8 @@ Activity Map 是一款本地优先的 Obsidian 活动统计插件。它帮助你
 - **按时间与目录查看投入**：支持指定日、7/30/90 天日均、全部历史日均与全部历史总量；可以从 vault 根目录逐层下钻，也可以切换为当前路径下的递归文件视图。
 - **低打扰入口**：符合条件的文件页眉会显示微型环形图，点击可打开并固定统计浮层；不提供全局工具栏图标或命令面板入口。
 - **清晰且可访问的图表**：环形图和明细列表使用同一份数据，支持键盘操作与稳定配色；即使图表把较小项目合并为“其他”，明细列表仍会保留全部项目。
-- **本地设置**：可设置排除路径和时间阈值。导出、重建和删除控制将在后续显式页眉数据 modal 中提供。
+- **可导出的数据海报**：从统计浮层可将当前冻结结果导出为 Portrait、Wide 或 Compact 海报，并选择 SVG、PNG 或 JPG。可直接在预览中编辑可选说明文字；下载留在本地，不会截取 Obsidian 页面。
+- **本地设置**：可设置排除路径和时间阈值。重建和删除控制将在后续显式页眉数据 modal 中提供。
 
 ### 安装
 
@@ -152,6 +155,7 @@ Activity Map 坚持本地优先：插件自身不会上传、同步、出售或�
 - 活动记录保存在 vault 配置目录下的插件数据目录中。
 - 为统计与重建数据，插件会保存文件内部身份、事件发生时的文件路径、时间戳、时长、打开次数和不含内容的输入字符数等活动元数据。
 - 不读取或保存笔记正文、选中文本，也不保存你实际输入的字符串。
+- 海报只包含当前聚合查询结果、用户选择的可选说明文字和随插件打包的 wordmark；SVG、PNG 与 JPG 均只在本机生成和下载。
 
 ### 许可证
 

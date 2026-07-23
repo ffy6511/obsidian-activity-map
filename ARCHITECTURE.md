@@ -15,7 +15,7 @@ Authority links:
 
 ## Current Implementation
 
-The tracking, persistence, maintenance, query, controller, settings, and file-header/popover surfaces are implemented and covered by deterministic fixtures. Trusted editor input also produces content-free `typedChars` evidence and a fourth distribution metric. Export, rebuild, and deletion modules remain tested local data-service boundaries, but the current plugin neither composes nor bundles a user-facing data-operation UI. The installable bundle collects activity, maintains queryable daily summaries, and renders hierarchical native-SVG distributions from the file-header entry; a later header data modal will compose the remaining data controls.
+The tracking, persistence, maintenance, query, controller, settings, and file-header/popover surfaces are implemented and covered by deterministic fixtures. Trusted editor input also produces content-free `typedChars` evidence and a fourth distribution metric. A ready Popover result can now open a local poster-export modal that freezes its query data, offers three layouts and SVG/PNG/JPG downloads, and embeds the bundled PNG wordmark as a data URL in the SVG. Rebuild and deletion remain tested local data-service boundaries pending their later data-modal controls.
 
 ```text
 src/
@@ -126,7 +126,7 @@ src/
 │   ├── settings-tab.ts             # Validated save-before-apply settings controls.
 │   └── components/                 # Range, breadcrumb, donut, and detail renderers.
 │
-└── export/                         # Spec 03: deterministic standalone artifacts.
+└── export/                         # Spec 07: deterministic standalone poster artifacts.
     ├── poster-exporter.ts          # Query snapshot -> escaped Portrait/Wide/Compact SVG.
     ├── poster-wordmark.ts          # Bundled PNG wordmark data URL.
     └── export-destination.ts       # Capability-gated Blob download and SVG rasterization.
@@ -329,11 +329,17 @@ DistributionResult
   -> ChartModel                     # Shared semantic chart representation.
        ├── DonutChart               # DOM presentation adapter.
        └── PosterExporter           # Standalone serialization; never snapshots live DOM.
+
+SummaryPopover ready distribution
+  -> PosterExportSession            # Deep-copied modal snapshot + volatile caption/options.
+  -> PosterExportModal              # Obsidian modal and in-preview caption editor.
+  -> BrowserSvgRasterizer           # SVG bytes -> PNG/JPG when capability exists.
+  -> BrowserExportDestination       # One local Blob download.
 ```
 
 The Header Popover grouping preference crosses the settings port before becoming the default for a newly opened Popover. Grouping remains a query presentation axis: it changes item projection without changing scope or vault totals. Persistence failure rolls back the optimistic preference and invalidates its in-flight query.
 
-Header integration is capability-gated behind `HeaderActionManager` and is the only registered Activity Map interaction entry. The source contains no dockable Activity Map view, command registration, or data-control presentation. A later header-modal Spec will compose the local data services. Export consumes `ChartModel`, escapes user-derived strings, and resolves standalone styles without depending on mounted presentation DOM. Destructive operations remain owned by the data layer and must execute only against immutable validated plans when the future modal introduces its controller boundary.
+Header integration is capability-gated behind `HeaderActionManager` and is the only registered Activity Map interaction entry. The source contains no dockable Activity Map view or command registration. The trailing control group places poster export directly after pause/resume; it remains disabled without a ready query result. Opening it deep-copies the displayed distribution before later ticks or navigation can mutate controller state. The preview image, the SVG download, and PNG/JPG rasterization all derive from the same escaped standalone SVG; a missing canvas/download capability reports a modal error without claiming success. Rebuild and destructive data controls remain owned by the data layer until the later data modal introduces their controller boundary.
 
 File rows in the Header Popover register one `defaultMod` hover source and emit Obsidian's public `hover-link` event through `file-hover-preview.ts`. Page Preview owns the native preview lifecycle, so modifier hover never calls the file-opening path or changes the active tracking leaf. Because the native preview is mounted outside the Activity Map DOM, `SummaryPopover` treats the owning leaf's connected `hoverPopover.hoverEl` as a temporary interaction extension: it preserves the source row while the preview is open, excludes preview clicks from outside-click dismissal, and resumes delayed close after Obsidian removes the preview. Direct activation accepts only user-agent-issued primary clicks or the existing keyboard contract; synthetic DOM clicks cannot switch the foreground file. List and donut highlight transitions remain presentation-only and are disabled by the reduced-motion media query.
 
@@ -347,7 +353,7 @@ Malformed NDJSON line     -> isolate line + continue valid records
 Failed JSON replacement   -> recover primary/backup + report affected path
 Checkpoint uncertainty    -> degraded pause; never guess elapsed time
 Stale deletion plan       -> reject changed scope/path fingerprints before mutation
-Future data-modal export failure -> explain unavailable action; keep viewing functional
+Poster-export failure       -> keep the modal open with an explicit unavailable/error state
 Header-action failure     -> visible unavailable warning; no global fallback entry
 
 # No failure path enables telemetry, remote upload, note-content reads,

@@ -8,7 +8,7 @@
 | Scope | Poster renderer, Header Popover export modal, browser download boundary, bundled wordmark |
 | Type | feat |
 | Priority | P1 |
-| Status | in-progress |
+| Status | review |
 | Completed | pending |
 | Dependencies | [Product requirements](../../docs/PRD.md#海报导出-modal), [Constitution](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), [typedChars](06-typed-character-metric-plan.md) |
 | Decisions | [Export decision](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), [Privacy boundary](../constitution/2026-07-21-activity-map-product-and-data.md#privacy-and-network-boundary) |
@@ -16,7 +16,7 @@
 ## Phases
 
 - [x] Phase 0: render deterministic complete posters from an immutable query snapshot
-- [ ] Phase 1: open the export modal and download the selected format
+- [x] Phase 1: open the export modal and download the selected format
 
 ## Background
 
@@ -82,23 +82,26 @@ Evidence: `npm run check`, `npm run lint`, `npm test -- --run` (255 tests), `npm
 
 ### Tasks
 
-- [ ] Add the Export action immediately right of pause/resume, using the current query/distribution only when it is ready.
-- [ ] Build a modal whose preview dominates the content area; place caption editing directly over the preview's bottom center; add layout/format controls and one Export action.
-- [ ] Report download/rasterization failure in the modal, keep keyboard behavior accessible, update styles/docs/architecture, and add DOM/controller coverage.
+- [x] Add the Export action immediately right of pause/resume, using the current query/distribution only when it is ready.
+- [x] Build a modal whose preview dominates the content area; place caption editing directly over the preview's bottom center; add layout/format controls and one Export action.
+- [x] Report download/rasterization failure in the modal, keep keyboard behavior accessible, update styles/docs/architecture, and add DOM/controller coverage.
 
 ### Files
 
 - `src/ui/{summary-popover,poster-export-modal}.ts`
+- `src/export/poster-export-session.ts`
 - `src/ui/components/range-controls.ts`
 - `styles.css`, `ARCHITECTURE.md`, `README.md`, `docs/PRD.md`
 - `tests/ui/*`, `tests/export/*`
 
 ### Acceptance Criteria
 
-- [ ] Opening the modal freezes the actual current query result; later live updates do not alter its preview or download.
-- [ ] Caption editing occurs inside the visual poster preview, defaults to empty, and reaches all selected export formats.
-- [ ] SVG, PNG, and JPEG each start exactly one local download after the user presses Export; no confirmation modal is rendered.
-- [ ] Focus returns safely on close and all repository gates pass with exact evidence recorded below.
+- [x] Opening the modal freezes the actual current query result; later live updates do not alter its preview or download.
+- [x] Caption editing occurs inside the visual poster preview, defaults to empty, and reaches all selected export formats.
+- [x] SVG, PNG, and JPEG each start exactly one local download after the user presses Export; no confirmation modal is rendered.
+- [x] Focus returns safely on close and all repository gates pass with exact evidence recorded below.
+
+Evidence: `npm run check`, `npm run lint`, `npm test -- --run` (258 tests), `npm run build`, strict specs validation, `git diff --check`, and a production-bundle data-URL check all passed on 2026-07-23. Focused coverage proves ready-only action order, disabled unavailable state, frozen snapshot isolation, identical SVG bytes across SVG/PNG/JPG paths, caption propagation, accessible controls, focus restoration, and absence of a confirmation modal.
 
 ## Risks and Mitigations
 

@@ -115,6 +115,7 @@ export default class ActivityMapPlugin extends Plugin {
 		this.registerVaultIdentityEvents(registry);
 		this.registerPopoutEvents(coordinator);
 		const headerActions = new HeaderActionManager({
+			app: this.app,
 			workspace: this.app.workspace,
 			controller,
 			openFile: (filePath) => this.app.workspace.openLinkText(filePath, '', false),

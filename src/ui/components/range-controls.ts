@@ -8,6 +8,7 @@ export interface RangeTrailingAction {
 	label: string;
 	id: string;
 	pressed?: boolean;
+	disabled?: boolean;
 	onActivate(): void;
 }
 
@@ -90,7 +91,9 @@ export function renderRangeControls(args: {
 	if (args.trailingActions?.length) {
 		const actionGroup = controls.createDiv({ cls: 'activity-map-control-actions activity-map-control-trailing' });
 		for (const action of args.trailingActions) {
-			actionButtons.set(action.id, iconButton(actionGroup, action.icon, action.label, action.id, () => action.onActivate(), '', action.pressed, renderIcon));
+			const button = iconButton(actionGroup, action.icon, action.label, action.id, () => action.onActivate(), '', action.pressed, renderIcon);
+			button.disabled = action.disabled === true;
+			actionButtons.set(action.id, button);
 		}
 	}
 	return {
@@ -99,6 +102,7 @@ export function renderRangeControls(args: {
 			if (!button) return false;
 			renderIcon(button, action.icon);
 			button.setAttribute('aria-label', action.label);
+			button.disabled = action.disabled === true;
 			if (action.pressed === undefined) button.removeAttribute('aria-pressed');
 			else button.setAttribute('aria-pressed', String(action.pressed));
 			return true;

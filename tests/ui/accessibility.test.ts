@@ -20,6 +20,7 @@ describe('automated accessibility and platform presentation checks', () => {
 
 	it('preserves focus across header interactions and names transient controls', async () => {
 		const popover = await source('src/ui/summary-popover.ts');
+		const posterModal = await source('src/ui/poster-export-modal.ts');
 		const miniDonut = await source('src/ui/header-mini-donut.ts');
 		expect(popover.includes("event.key === 'Escape'")).toBeTrue();
 		expect(popover.includes('this.trigger.focus()')).toBeTrue();
@@ -31,6 +32,11 @@ describe('automated accessibility and platform presentation checks', () => {
 		expect(popover.includes("cls: 'activity-map-popover-result'")).toBeTrue();
 		expect(popover.includes('Chart area')).toBeFalse();
 		expect(popover.includes('List area')).toBeFalse();
+		expect(posterModal.includes("'aria-label': 'Optional poster caption'")).toBeTrue();
+		expect(posterModal.includes("'aria-live': 'polite'")).toBeTrue();
+		expect(posterModal.includes('caption.focus()')).toBeTrue();
+		expect(posterModal.includes('this.trigger.focus()')).toBeTrue();
+		expect(posterModal.includes('ConfirmationModal')).toBeFalse();
 		expect(miniDonut.includes("setAttribute('aria-hidden', 'true')")).toBeTrue();
 	});
 

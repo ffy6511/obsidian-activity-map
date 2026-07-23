@@ -19,8 +19,12 @@ describe('summary popover fixed layout', () => {
 		expect(source.includes('clearInterval')).toBeTrue();
 		expect(source.includes('updateLiveDistribution')).toBeTrue();
 		expect(source.includes("id: 'tracking-toggle'")).toBeTrue();
+		expect(source.includes("id: 'poster-export'")).toBeTrue();
 		expect(source.includes("id: 'distribution-grouping-toggle'")).toBeTrue();
 		expect(source.indexOf("id: 'distribution-grouping-toggle'")).toBeLessThan(source.indexOf("id: 'tracking-toggle'"));
+		expect(source.indexOf("id: 'tracking-toggle'")).toBeLessThan(source.indexOf("id: 'poster-export'"));
+		expect(source.includes("void import('./poster-export-modal')")).toBeTrue();
+		expect(source.includes('withLiveActivity(model.distribution')).toBeTrue();
 		expect(source.includes("args.getCurrentGrouping() === 'path' ? 'file' : 'path'")).toBeTrue();
 		expect(source.includes("pressed: args.groupBy === 'file'")).toBeTrue();
 		expect(source.includes("args.groupBy === 'file' ? 'folder-tree' : 'files'")).toBeTrue();
@@ -75,6 +79,9 @@ describe('summary popover fixed layout', () => {
 		expect(css.includes('.activity-map-chart-legend-row:hover .activity-map-chart-legend-label')).toBeTrue();
 		expect(css.includes('.activity-map-chart-popover.is-query-pending')).toBeTrue();
 		expect(css.includes('@keyframes activity-map-query-result-in')).toBeTrue();
+		expect(css.includes('.activity-map-poster-preview')).toBeTrue();
+		expect(css.includes('.activity-map-poster-caption-input')).toBeTrue();
+		expect(css.includes('bottom: 7.5%')).toBeTrue();
 		expect(controls.includes("['day', 'One Day']")).toBeTrue();
 	});
 });

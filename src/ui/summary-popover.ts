@@ -1,3 +1,5 @@
+import type { App } from 'obsidian';
+
 import type { DistributionGrouping, DistributionItem } from '../query/distribution-query';
 import type { ActivityMapController } from './activity-map-controller';
 import type { ActivityMapViewModel } from './view-model';
@@ -39,6 +41,19 @@ export function createTrackingAction(args: {
 	};
 }
 
+export function createPosterExportAction(args: {
+	available: boolean;
+	onExport(): void;
+}): RangeTrailingAction {
+	return {
+		icon: 'download',
+		label: 'Export activity poster',
+		id: 'poster-export',
+		disabled: !args.available,
+		onActivate: () => args.onExport(),
+	};
+}
+
 /** Interactive, pinnable header chart sharing the controller's query state. */
 export class SummaryPopover {
 	private element: HTMLElement | null = null;
@@ -51,6 +66,8 @@ export class SummaryPopover {
 	private lastRenderKey = '';
 	private distributionView: { update(distribution: import('../query/distribution-query').DistributionResult): boolean } | null = null;
 	private controlsView: RangeControlsHandle | null = null;
+	private posterModal: { close(): void } | null = null;
+	private openingPoster = false;
 
 	constructor(
 		private readonly trigger: HTMLElement,
@@ -58,6 +75,7 @@ export class SummaryPopover {
 		private readonly openFile: (filePath: string) => Promise<void>,
 		private readonly previewFile?: (event: MouseEvent, targetEl: HTMLElement, filePath: string) => void,
 		private readonly getNativePreview?: () => HTMLElement | null,
+		private readonly app?: App,
 	) {}
 
 	open(): void {
@@ -201,6 +219,7 @@ export class SummaryPopover {
 			this.element?.addClass('is-query-pending');
 			this.controlsView?.updateTrailingAction(this.groupingAction(model));
 			this.controlsView?.updateTrailingAction(this.trackingAction(model));
+			this.controlsView?.updateTrailingAction(this.posterExportAction(model));
 			return;
 		}
 		this.render(model);
@@ -229,6 +248,7 @@ export class SummaryPopover {
 			trailingActions: [
 				this.groupingAction(model),
 				this.trackingAction(model),
+				this.posterExportAction(model),
 			],
 		});
 
@@ -261,6 +281,40 @@ export class SummaryPopover {
 			paused: model.tracking?.state === 'paused',
 			getCurrentPaused: () => this.controller.getViewModel().tracking?.state === 'paused',
 			onTracking: (kind) => { void this.controller.dispatch({ kind }); },
+		});
+	}
+
+	private posterExportAction(model: ActivityMapViewModel): RangeTrailingAction {
+		return createPosterExportAction({
+			available: this.app !== undefined && model.loadState === 'ready' && model.distribution !== null,
+			onExport: () => this.openPosterExport(),
+		});
+	}
+
+	private openPosterExport(): void {
+		if (!this.app || this.posterModal || this.openingPoster) return;
+		const model = this.controller.getViewModel();
+		if (model.loadState !== 'ready' || !model.distribution) return;
+		const distribution = withLiveActivity(model.distribution, model.tracking, {
+			nowMs: Date.now(),
+			idleThresholdMs: model.settings.idleThresholdMs,
+		});
+		this.openingPoster = true;
+		// The modal bundles a PNG data URL. Keep that binary-only module outside
+		// the Popover's unit-test import path while freezing this click's data now.
+		void import('./poster-export-modal').then(({ PosterExportModal }) => {
+			if (!this.app || this.posterModal) return;
+			const modal = new PosterExportModal(this.app, this.trigger, {
+				query: distribution.query,
+				distribution,
+			}, () => { this.posterModal = null; });
+			this.posterModal = modal;
+			modal.open();
+			this.close(false);
+		}).catch((error: unknown) => {
+			this.controller.reportWarning(`Poster export is unavailable: ${error instanceof Error ? error.message : String(error)}`);
+		}).finally(() => {
+			this.openingPoster = false;
 		});
 	}
 

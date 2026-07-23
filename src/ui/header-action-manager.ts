@@ -1,4 +1,4 @@
-import type { EventRef, FileView, Workspace, WorkspaceLeaf } from 'obsidian';
+import type { App, EventRef, FileView, Workspace, WorkspaceLeaf } from 'obsidian';
 
 import type { ActivityMapController } from './activity-map-controller';
 import type { DistributionResult } from '../query/distribution-query';
@@ -16,6 +16,7 @@ interface HeaderEntry {
 }
 
 export interface HeaderActionDependencies {
+	app?: App;
 	workspace: Workspace;
 	controller: ActivityMapController;
 	openFile: (filePath: string) => Promise<void>;
@@ -110,6 +111,7 @@ export class HeaderActionManager {
 				filePath: path,
 			}),
 			() => view.leaf.hoverPopover?.hoverEl ?? null,
+			this.dependencies.app,
 		);
 		const ownerWindow = action.ownerDocument.defaultView;
 		const supportsHover = ownerWindow?.matchMedia?.('(hover: hover) and (pointer: fine)').matches === true;

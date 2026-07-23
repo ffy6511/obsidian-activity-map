@@ -8,7 +8,7 @@
 | Scope | Trusted input boundary, raw event schema, daily aggregate, distribution query, metric control |
 | Type | feat |
 | Priority | P1 |
-| Status | in-progress |
+| Status | review |
 | Completed | pending |
 | Dependencies | [Product requirements](../../docs/PRD.md#交互输入字符-typedchars), [Constitution](../constitution/2026-07-21-activity-map-product-and-data.md#metrics-and-extensibility), [Architecture](../../ARCHITECTURE.md#dependency-direction) |
 | Decisions | [Input metric decision](../constitution/2026-07-21-activity-map-product-and-data.md#metrics-and-extensibility), [Privacy boundary](../constitution/2026-07-21-activity-map-product-and-data.md#privacy-and-network-boundary) |
