@@ -58,7 +58,7 @@ Use one immutable `ActivityMapViewModel` for the header popover and its chart le
 
 ## Design
 
-> Inherited design: [Interface and export](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), [Control boundaries](../constitution/2026-07-21-activity-map-product-and-data.md#control-boundaries), [PRD product entry](../../docs/PRD.md#产品入口), [PRD future SVG export](../../docs/PRD.md#后续-svg-导出), and [PRD accessibility](../../docs/PRD.md#可访问性).
+> Inherited design: [Interface and export](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), [Control boundaries](../constitution/2026-07-21-activity-map-product-and-data.md#control-boundaries), [PRD product entry](../../docs/PRD.md#产品入口), [PRD poster export](../../docs/PRD.md#海报导出), and [PRD accessibility](../../docs/PRD.md#可访问性).
 >
 > Local delta: build the presentation/controller layer, wire all v0.1 services, and collect the final cross-platform acceptance evidence. It does not change time or storage semantics.
 

@@ -5,12 +5,12 @@
 | Field | Value |
 | --- | --- |
 | Decision date | 2026-07-21 |
-| Related specs | [Tracking runtime](../active/01-activity-tracking-runtime-plan.md), [Local data and query](../active/02-local-data-and-query-plan.md), [UI and v0.1 release](../active/03-activity-map-ui-and-v0-1-release-plan.md), [Header Popover split layout](../active/04-header-popover-split-layout-plan.md), [Header Popover file grouping](../active/05-header-popover-file-grouping-plan.md) |
+| Related specs | [Tracking runtime](../active/01-activity-tracking-runtime-plan.md), [Local data and query](../active/02-local-data-and-query-plan.md), [UI and v0.1 release](../active/03-activity-map-ui-and-v0-1-release-plan.md), [Header Popover split layout](../active/04-header-popover-split-layout-plan.md), [Header Popover file grouping](../active/05-header-popover-file-grouping-plan.md), [typedChars](../active/06-typed-character-metric-plan.md), [poster export](../active/07-poster-export-plan.md) |
 | Product requirements | [Activity Map PRD](../../docs/PRD.md) |
 
 ## Decision Summary
 
-Activity Map will be a local-first, cross-platform Obsidian plugin that records trustworthy foreground activity per file, preserves durable file identity and event-time paths, stores settings separately from sharded time-series data, and presents directory aggregates through a progressively disclosed UI. Desktop receives the complete experience; mobile remains a supported viewer and uses only capabilities verified on that platform.
+Activity Map will be a local-first, cross-platform Obsidian plugin that records trustworthy foreground activity per file, preserves durable file identity and event-time paths, stores settings separately from sharded time-series data, and presents directory aggregates through a progressively disclosed UI. It also records a privacy-preserving `typedChars` count from eligible human text input and exports the current distribution as an editable, local poster. Desktop receives the complete experience; mobile remains a supported viewer and uses only capabilities verified on that platform.
 
 ## Background
 
@@ -20,7 +20,7 @@ These requirements affect every release. They belong in a stable decision record
 
 ## User Narrative
 
-A user works across several Obsidian windows and project folders. Activity Map attributes time only to the trackable file in the focused window. When the user walks away, the plugin closes the session at the last trusted interaction. On return, a short uncertain interval can be explicitly included; a long sleep interval stays excluded. The user opens the file-header donut, navigates from the vault root into a project, changes from today to a 30-day average, inspects the exact file rows, and pauses or resumes tracking from the popover. All records remain local. Export, rebuild, and deletion services remain internal until a later explicit header data modal exposes them.
+A user works across several Obsidian windows and project folders. Activity Map attributes time only to the trackable file in the focused window. When the user walks away, the plugin closes the session at the last trusted interaction. On return, a short uncertain interval can be explicitly included; a long sleep interval stays excluded. The user opens the file-header donut, navigates from the vault root into a project, changes from today to a 30-day average, inspects the exact file rows, and pauses or resumes tracking from the popover. While composing text in an eligible foreground editor, only the number of committed grapheme clusters is recorded. From the top control group, the user opens a large poster preview, selects its layout and SVG, PNG, or JPEG format, optionally types a caption directly into the preview, and exports with one action. All records and generated files remain local.
 
 ## Final Decision
 
@@ -57,9 +57,11 @@ A user works across several Obsidian windows and project folders. Activity Map a
 
 ### Metrics and Extensibility
 
-- Version 1 of the event model supports `activeMs`, `editingMs`, and `openCount`.
-- Reserve an independent `typed-input` event family for `typedChars`; do not infer it from arbitrary document diffs.
-- Count future text input by grapheme cluster and exclude paste, drop, undo/redo, programmatic edits, and external file writes.
+- The event model supports `activeMs`, `editingMs`, `openCount`, and the independent `typed-input` family for `typedChars`.
+- `typedChars` counts each committed Unicode grapheme cluster from a trusted `beforeinput` `insertText` event or the final trusted IME composition commit in the active, eligible foreground editor.
+- Exclude paste, drop, history undo/redo, replacement caused by a non-text input type, programmatic edits, external file writes, and input from a non-current window, leaf, or non-editor control.
+- Persist the number and a non-content source class only. Never persist the inserted string, composition buffer, selection, clipboard, or document diff.
+- Deletions are out of scope for this version and do not subtract from `typedChars`.
 - All metrics share `deviceId`, `fileId`, event timestamps, local date, event-time path, filters, aggregation, and export boundaries.
 
 ### Persistence and Retention
@@ -79,15 +81,19 @@ A user works across several Obsidian windows and project folders. Activity Map a
 - Keep presentation surfaces on the same immutable distribution/query semantics, stable file identity, and full-path activation contract. UI grouping may change projection only; it cannot change scope totals, vault totals, Deleted history, or raw evidence.
 - Persist the last successful Header Popover path/file grouping choice as a small validated setting. A persistence failure cannot silently establish a new default.
 - Project the current unclosed interval for live presentation only within the trusted idle boundary; presentation updates cannot rewrite persisted evidence.
-- Keep export independent from mounted DOM, escape user-derived strings, and include accessible metadata in standalone SVG output.
+- The Popover control group contains an export action immediately to the right of pause/resume. It opens a dedicated modal rather than a nested menu or confirmation dialog.
+- The modal renders a large, complete poster preview from the immutable current query/distribution snapshot. It offers `Portrait`, `Wide`, and `Compact` layouts; `SVG`, `PNG`, and `JPEG` output; and an optional caption edited in place at the bottom center of the preview. The caption starts empty and no generated summary candidates are offered.
+- Export produces one local automatic download from the selected snapshot. It does not capture the mounted Popover, current screen, or note content, and it does not show a second confirmation modal.
+- Use the packaged Activity Map wordmark in the poster. The current PNG wordmark may later be replaced by an SVG without changing the export contract.
+- Keep export independent from mounted DOM, escape user-derived strings, include accessible metadata in standalone SVG output, and rasterize from the same SVG source for PNG/JPEG parity.
 - The [PRD Header Popover section](../../docs/PRD.md#环形图浮层) is the single source for current UI structure, controls, labels, visual hierarchy, and interaction behavior. Active Specs own temporary implementation deltas and acceptance evidence; this Constitution retains only stable product and data boundaries.
 
 ### Privacy and Network Boundary
 
 - Keep settings, event shards, summaries, file registry, and checkpoints in the plugin data area under the vault configuration directory.
-- Do not store note content, selected text, or actual typed strings.
+- Do not store note content, selected text, composition buffers, clipboard payloads, or actual typed strings.
 - Do not add analytics, telemetry, accounts, remote APIs, or data upload in `v0.1`.
-- When the later data modal exposes export, treat exported paths and filenames as user-selected local output and disclose their inclusion before export.
+- Treat poster exports and any later raw-data exports as user-selected local output; disclose their scope and filenames before download.
 
 ## Invariants
 
@@ -142,7 +148,7 @@ interface EventEnvelope<TType extends string, TPayload> {
 }
 ```
 
-`session` payloads contain start, end, `activeMs`, `editingMs`, `openCount`, and closure reason. `adjustment` payloads reference a target session or interval, store signed metric deltas, and record the user decision reason. A future `typed-input` payload stores counts and source classification without content.
+`session` payloads contain start, end, `activeMs`, `editingMs`, `openCount`, and closure reason. `adjustment` payloads reference a target session or interval, store signed metric deltas, and record the user decision reason. `typed-input` payloads store a non-negative `typedChars` count and a finite source classification without content.
 
 ### Write and Recovery Rules
 
@@ -160,7 +166,7 @@ interface EventEnvelope<TType extends string, TPayload> {
 - Session state owns activity, editing bursts, idle transitions, pause, and correction candidates.
 - Persistence owns append, checkpoint, rebuild, retention, corruption isolation, and export data reads.
 - Query owns date denominators, current-path projection, directory grouping, top-eight selection, “other”, and deleted-file grouping.
-- Presentation consumes query results and cannot rewrite raw activity evidence directly.
+- Presentation consumes query results and cannot rewrite raw activity evidence directly. Poster export consumes a frozen query/distribution snapshot and its local caption only.
 
 ## Alternatives
 
@@ -213,3 +219,5 @@ Rejected because keyboard interaction, accessible semantics, and standalone vect
 | 2026-07-22 | Persisted the Header Popover path/file grouping preference in plugin settings. | Reopening the Popover or restarting the plugin must preserve the user's last successful display choice. |
 | 2026-07-22 | Consolidated current Header Popover UI and interaction detail into the PRD. | Keep Constitution and Architecture focused on stable boundaries and module flow, with one current UX source of truth. |
 | 2026-07-22 | Removed the global left-toolbar icon and command entry; the file-header donut is the sole Activity Map interaction surface. | Keep everyday interaction close to the active note. Export, rebuild, and deletion controls move to a future explicit header modal. |
+| 2026-07-23 | Adopted `typedChars` as a trusted, content-free grapheme count with an independent raw event family and query metric. | Make the already reserved metric useful without collecting text or conflating it with `editingMs`. |
+| 2026-07-23 | Adopted an editable local poster export modal in the Header Popover, with Portrait/Wide/Compact layouts and SVG/PNG/JPEG output. | Export the current data snapshot as a complete shareable poster without screenshotting the application or adding a confirmation dialog. |

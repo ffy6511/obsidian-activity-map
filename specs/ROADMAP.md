@@ -10,7 +10,7 @@
 ## Version Index
 
 - [ ] `v0.1` — Trustworthy local activity map
-- [ ] `v0.2` — Human-input metrics and multi-device hardening
+- [ ] `v0.2` — Human-input metrics, poster export, and multi-device hardening
 
 ## v0.1 — Trustworthy local activity map
 
@@ -55,25 +55,28 @@ The three-round joint Critic budget ended with three P1 findings. An owner-direc
 
 ### Follow-up TODO
 
-- [ ] `v0.2`: implement trustworthy `typedChars` and separate deletion metrics.
+- [ ] `v0.2`: implement separate deletion metrics.
 - [ ] `v0.2`: add explicit multi-device conflict diagnostics, deduplication, and merge controls.
 - [ ] `v0.2`: evaluate historical aggregation by `pathAtEvent` and richer trend comparisons.
-- [ ] `v0.2`: surface raw/SVG export, aggregate rebuild, and scoped deletion in an explicit header data modal.
+- [ ] `v0.2`: surface raw export, aggregate rebuild, and scoped deletion in a dedicated data modal.
 
-## v0.2 — Human-input metrics and multi-device hardening
+## v0.2 — Human-input metrics, poster export, and multi-device hardening
 
 ### Goal
 
-Extend the trusted activity model with user-interface input metrics and explicit multi-device reconciliation.
+Extend trusted activity reporting with privacy-preserving input metrics, local poster export, and explicit multi-device reconciliation.
 
 ### Design
 
 - [Reserved metric semantics](../docs/PRD.md#交互输入字符-typedchars)
-- [Cross-version data boundaries](constitution/2026-07-21-activity-map-product-and-data.md#technical-boundaries)
+- [Cross-version product and data boundaries](constitution/2026-07-21-activity-map-product-and-data.md#final-decision)
+- [Spec 06 — typedChars](active/06-typed-character-metric-plan.md)
+- [Spec 07 — poster export](active/07-poster-export-plan.md)
 
 ### Key Deliverables
 
 - [ ] Trusted text-input and IME final-commit capture with grapheme-cluster counts and explicit source exclusions.
+- [ ] Current-query poster export with Portrait, Wide, and Compact layouts; an editable empty caption; and SVG, PNG, or JPEG automatic downloads.
 - [ ] Separate deletion metrics that do not reduce the input count.
 - [ ] Multi-device overlap diagnostics, deterministic deduplication policy, and user-controlled conflict resolution.
 - [ ] Optional event-time path analysis and richer range comparison views.
@@ -81,6 +84,7 @@ Extend the trusted activity model with user-interface input metrics and explicit
 ### Acceptance Criteria
 
 - [ ] Input tests cover Latin text, CJK IME, combining marks, emoji, paste, drop, undo/redo, programmatic edits, and external writes.
+- [ ] Export tests prove frozen-query data parity, wordmark inclusion, escaping, all layout/format choices, and unavailable-download handling; a real desktop journey covers editing the preview caption and each download format.
 - [ ] Multi-device fixtures cover independent shards, simultaneous activity, duplicates, conflicts, and interrupted reconciliation.
 - [ ] Metrics remain local, do not store typed content, and expose their accuracy limitations in product help.
 - [ ] Migration, compatibility, documentation, automated gates, and independent Critic evaluation pass.
