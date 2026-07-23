@@ -1,5 +1,5 @@
 import type { DistributionItem, DistributionResult } from '../../query/distribution-query';
-import { formatMetric, formatPercent } from '../format';
+import { formatMetric, formatMetricFull, formatPercent } from '../format';
 import { isTrustedPrimaryClick } from '../file-hover-preview';
 
 export interface ChartItem extends DistributionItem {
@@ -94,7 +94,7 @@ export function renderDonutChart(args: {
 			candidate.path.classList.toggle('is-dimmed', item !== null && item.id !== id);
 		}
 		if (item && tooltip) {
-			tooltip.textContent = `${item.label} · ${formatPercent(item.percentOfScope)} · ${formatMetric(item.value, distribution.query.metric, distribution.denominatorDays)}`;
+			tooltip.textContent = `${item.label} · ${formatPercent(item.percentOfScope)} · ${formatMetricFull(item.value, distribution.query.metric, distribution.denominatorDays)}`;
 			tooltip.removeAttribute('hidden');
 		} else if (tooltip) {
 			tooltip.textContent = '';
@@ -105,7 +105,7 @@ export function renderDonutChart(args: {
 	const updatePath = (item: ChartItem, entry: { path: SVGPathElement; title: SVGTitleElement }): void => {
 		entry.path.setAttribute('d', donutPath(120, 120, 92, 56, item.startAngle, item.endAngle));
 		entry.path.setAttribute('fill', item.color);
-		const label = `${item.label}, ${formatPercent(item.percentOfScope)}, ${formatMetric(item.value, distribution.query.metric, distribution.denominatorDays)}`;
+		const label = `${item.label}, ${formatPercent(item.percentOfScope)}, ${formatMetricFull(item.value, distribution.query.metric, distribution.denominatorDays)}`;
 		entry.path.setAttribute('aria-label', label);
 		entry.title.textContent = label;
 	};

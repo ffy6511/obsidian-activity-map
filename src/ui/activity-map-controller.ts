@@ -1,10 +1,10 @@
 import type { TrackingSnapshot } from '../domain/activity';
-import type { ActivityMapSettings } from '../domain/settings';
+import type { ActivityMapSettings, HeaderPopoverRange } from '../domain/settings';
 import type { TrackingObserver } from '../tracking/ports';
 import type { DistributionGrouping, DistributionQuery, DistributionResult } from '../query/distribution-query';
 import type { MetricKey } from '../query/path-projection';
 import type { RangeMode } from '../query/date-range';
-import { initialViewModel, type ActivityMapViewModel } from './view-model';
+import { headerPopoverDefaultQuery, initialViewModel, type ActivityMapViewModel } from './view-model';
 import { localDateFor } from '../platform/clock';
 
 export interface QueryService {
@@ -43,6 +43,7 @@ export class ActivityMapController implements TrackingObserver {
 	private readonly listeners = new Set<(model: ActivityMapViewModel) => void>();
 	private generation = 0;
 	private groupingRevision = 0;
+	private popoverPreferenceQueue: Promise<void> = Promise.resolve();
 	private stopped = false;
 	private today: string;
 
@@ -63,13 +64,7 @@ export class ActivityMapController implements TrackingObserver {
 
 	/** Default query for a newly opened header chart popover. */
 	getHeaderDefaultQuery(): DistributionQuery {
-		return {
-			metric: 'activeMs',
-			range: { mode: 'day', localDate: this.today },
-			path: '',
-			view: 'children',
-			groupBy: this.model.settings.headerPopoverGrouping,
-		};
+		return headerPopoverDefaultQuery(this.model.settings, this.today);
 	}
 
 	/** Dedicated data read for the persistent header miniature. */
@@ -151,8 +146,11 @@ export class ActivityMapController implements TrackingObserver {
 				return;
 			}
 			case 'set-range':
-				this.model = { ...this.model, query: { ...this.model.query, range: intent.range } };
-				break;
+				await this.queuePopoverPreference(
+					{ headerPopoverRange: preferenceForRange(intent.range) },
+					(query) => ({ ...query, range: intent.range }),
+				);
+				return;
 			case 'set-path':
 				this.model = {
 					...this.model,
@@ -163,8 +161,11 @@ export class ActivityMapController implements TrackingObserver {
 				await this.setGrouping(intent.groupBy);
 				return;
 			case 'set-metric':
-				this.model = { ...this.model, query: { ...this.model.query, metric: intent.metric } };
-				break;
+				await this.queuePopoverPreference(
+					{ headerPopoverMetric: intent.metric },
+					(query) => ({ ...query, metric: intent.metric }),
+				);
+				return;
 			case 'set-query':
 				this.model = { ...this.model, query: { ...intent.query, range: { ...intent.query.range } } };
 				break;
@@ -236,8 +237,59 @@ export class ActivityMapController implements TrackingObserver {
 		}
 	}
 
+	private queuePopoverPreference(
+		patch: Pick<ActivityMapSettings, 'headerPopoverMetric'> | Pick<ActivityMapSettings, 'headerPopoverRange'>,
+		updateQuery: (query: DistributionQuery) => DistributionQuery,
+	): Promise<void> {
+		// Popover controls dispatch without awaiting the previous change. Serialize
+		// their settings commits so a quick metric/range pair cannot write two
+		// patches derived from the same stale settings snapshot.
+		const operation = this.popoverPreferenceQueue.then(() => this.setPopoverPreference(patch, updateQuery));
+		this.popoverPreferenceQueue = operation.catch(() => undefined);
+		return operation;
+	}
+
+	private async setPopoverPreference(
+		patch: Pick<ActivityMapSettings, 'headerPopoverMetric'> | Pick<ActivityMapSettings, 'headerPopoverRange'>,
+		updateQuery: (query: DistributionQuery) => DistributionQuery,
+	): Promise<void> {
+		const previousQuery = this.model.query;
+		const previousSettings = this.model.settings;
+		this.model = {
+			...this.model,
+			query: updateQuery(this.model.query),
+			settings: { ...this.model.settings, ...patch },
+		};
+		const refresh = this.refresh();
+		try {
+			const settings = await this.settingsService.update(patch);
+			this.publish({ ...this.model, settings });
+			await refresh;
+		} catch (error) {
+			// A persisted preference is the only reopening default. Invalidate the
+			// optimistic query before restoring the last durable selection.
+			this.generation += 1;
+			this.publish({
+				...this.model,
+				query: previousQuery,
+				settings: previousSettings,
+				loadState: 'error',
+				error: error instanceof Error ? error.message : String(error),
+			});
+		}
+	}
+
 	private publish(model: ActivityMapViewModel): void {
 		this.model = model;
 		for (const listener of this.listeners) listener(model);
 	}
+}
+
+function preferenceForRange(range: RangeMode): HeaderPopoverRange {
+	if (range.mode === 'day') return 'day';
+	if (range.mode === 'all') return 'all';
+	if (range.days === 7) return 'average-7';
+	if (range.days === 30) return 'average-30';
+	if (range.days === 90) return 'average-90';
+	return 'average-all';
 }

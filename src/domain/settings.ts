@@ -10,6 +10,12 @@
 /** Rolling-average windows supported by the query engine. `all` performs no division for totals. */
 export type AverageWindowDays = 7 | 30 | 90 | 'all';
 
+/** Persisted metric choice for a newly opened Header Popover. */
+export type HeaderPopoverMetric = 'activeMs' | 'editingMs' | 'openCount' | 'typedChars';
+
+/** Persisted range choice; a day always resolves to the current local day when reopened. */
+export type HeaderPopoverRange = 'day' | 'average-7' | 'average-30' | 'average-90' | 'average-all' | 'all';
+
 /**
  * Runtime-validated plugin settings. Persisted JSON is normalized through
  * {@link normalizeSettings} before this type is ever constructed.
@@ -20,6 +26,8 @@ export interface ActivityMapSettings {
 	trackingEnabled: boolean;
 	manuallyPaused: boolean;
 	headerPopoverGrouping: 'path' | 'file';
+	headerPopoverMetric: HeaderPopoverMetric;
+	headerPopoverRange: HeaderPopoverRange;
 	idleThresholdMs: number;
 	recoveryLimitMs: number;
 	editSilenceMs: number;
@@ -38,6 +46,8 @@ export const DEFAULT_SETTINGS: ActivityMapSettings = {
 	trackingEnabled: true,
 	manuallyPaused: false,
 	headerPopoverGrouping: 'path',
+	headerPopoverMetric: 'activeMs',
+	headerPopoverRange: 'day',
 	// 180 s — PRD default idle threshold; adjustable 30–1800 s.
 	idleThresholdMs: 180_000,
 	// 30 min — gaps up to here surface a pending include/exclude decision.
@@ -75,6 +85,14 @@ function isAverageWindow(value: unknown): value is AverageWindowDays {
 	return value === 7 || value === 30 || value === 90 || value === 'all';
 }
 
+function isHeaderPopoverMetric(value: unknown): value is HeaderPopoverMetric {
+	return value === 'activeMs' || value === 'editingMs' || value === 'openCount' || value === 'typedChars';
+}
+
+function isHeaderPopoverRange(value: unknown): value is HeaderPopoverRange {
+	return value === 'day' || value === 'average-7' || value === 'average-30' || value === 'average-90' || value === 'average-all' || value === 'all';
+}
+
 /**
  * Normalize unknown persisted JSON into trusted settings. Applies defaults
  * field by field so one corrupt field cannot reset the whole object, and clamps
@@ -98,6 +116,12 @@ export function normalizeSettings(input: unknown): ActivityMapSettings {
 			source.headerPopoverGrouping === 'file' || source.headerPopoverGrouping === 'path'
 				? source.headerPopoverGrouping
 				: DEFAULT_SETTINGS.headerPopoverGrouping,
+		headerPopoverMetric: isHeaderPopoverMetric(source.headerPopoverMetric)
+			? source.headerPopoverMetric
+			: DEFAULT_SETTINGS.headerPopoverMetric,
+		headerPopoverRange: isHeaderPopoverRange(source.headerPopoverRange)
+			? source.headerPopoverRange
+			: DEFAULT_SETTINGS.headerPopoverRange,
 		idleThresholdMs: clampNumber(
 			source.idleThresholdMs,
 			RANGES.idleThresholdMs,

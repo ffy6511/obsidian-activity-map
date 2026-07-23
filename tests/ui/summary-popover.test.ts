@@ -70,13 +70,14 @@ describe('summary popover fixed layout', () => {
 		expect(css.includes('width: calc(10ch + var(--size-4-3))')).toBeTrue();
 		expect(css.includes('.activity-map-control-actions')).toBeTrue();
 		expect(css.includes('justify-self: end')).toBeTrue();
-		expect(css.includes('grid-template-columns: 0.75rem minmax(0, 1fr) 7ch 4ch')).toBeTrue();
 		expect(css.includes('text-overflow: ellipsis')).toBeTrue();
 		expect(css.includes("font-family: Georgia, 'Times New Roman', serif")).toBeTrue();
 		expect(css.includes('background: transparent !important')).toBeTrue();
 		expect(css.includes('cursor: pointer')).toBeTrue();
 		expect(css.includes('margin-bottom: var(--size-4-2)')).toBeTrue();
 		expect(css.includes('padding: var(--size-2-1) var(--size-4-2)')).toBeTrue();
+		expect(css.includes('grid-template-columns: 0.75rem minmax(0, 1fr) 11ch 4ch')).toBeTrue();
+		expect(css.includes('font-variant-numeric: tabular-nums')).toBeTrue();
 		expect(css.includes('.activity-map-popover-path .activity-map-breadcrumb:disabled')).toBeTrue();
 		expect(css.includes('.activity-map-chart-legend-row:hover .activity-map-chart-legend-label')).toBeTrue();
 		expect(css.includes('.activity-map-chart-popover.is-query-pending')).toBeTrue();

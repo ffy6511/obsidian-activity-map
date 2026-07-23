@@ -1,5 +1,5 @@
 import type { DistributionItem, DistributionResult } from '../../query/distribution-query';
-import { formatMetric, formatPercent } from '../format';
+import { formatMetric, formatMetricFull, formatPercent } from '../format';
 import { stableColor } from './donut-chart';
 import { isTrustedPrimaryClick } from '../file-hover-preview';
 
@@ -35,7 +35,11 @@ export function renderChartLegend(args: {
 	for (const item of currentItems) {
 		const row = list.createEl('button', {
 			cls: 'activity-map-chart-legend-row',
-			attr: { role: 'listitem', 'data-activity-map-id': `legend-${item.id}` },
+			attr: {
+				role: 'listitem',
+				'data-activity-map-id': `legend-${item.id}`,
+				'aria-label': legendRowLabel(item, distribution),
+			},
 		});
 		const swatch = row.createSpan({ cls: 'activity-map-detail-swatch' });
 		swatch.style.setProperty('--activity-map-item-color', stableColor(item.id));
@@ -80,10 +84,15 @@ export function renderChartLegend(args: {
 				entry.label.textContent = item.label;
 				entry.percent.textContent = formatPercent(item.percentOfScope);
 				entry.value.textContent = formatMetric(item.value, distribution.query.metric, distribution.denominatorDays);
+				entry.row.setAttribute('aria-label', legendRowLabel(item, distribution));
 			}
 			return true;
 		},
 	};
+}
+
+function legendRowLabel(item: DistributionItem, distribution: DistributionResult): string {
+	return `${item.label}, ${formatMetricFull(item.value, distribution.query.metric, distribution.denominatorDays)}, ${formatPercent(item.percentOfScope)}`;
 }
 
 function setHighlight(

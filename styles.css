@@ -404,7 +404,7 @@
 
 .activity-map-chart-legend-row {
 	display: grid;
-	grid-template-columns: 0.75rem minmax(0, 1fr) 7ch 4ch;
+	grid-template-columns: 0.75rem minmax(0, 1fr) 11ch 4ch;
 	gap: var(--size-4-2);
 	align-items: center;
 	width: 100%;
@@ -466,6 +466,7 @@
 .activity-map-chart-legend-value {
 	white-space: nowrap;
 	text-align: right;
+	font-variant-numeric: tabular-nums;
 }
 
 .activity-map-popover button:not(:disabled),

@@ -175,6 +175,52 @@ describe('activity map controller', () => {
 		expect(controller.getViewModel().distribution?.detailItems[0]?.id).toBe('x');
 	});
 
+	it('persists the Header Popover metric and range, then restores them for the next opening', async () => {
+		const settings = normalizeSettings({ deviceId: 'd1' });
+		let persisted = settings;
+		const controller = new ActivityMapController(
+			settings,
+			{ run: async (query) => result(query, 0) },
+			{ update: async (patch) => { persisted = normalizeSettings({ ...persisted, ...patch }); return persisted; } },
+			tracking(),
+			'2026-07-21',
+		);
+		await controller.dispatch({ kind: 'set-metric', metric: 'openCount' });
+		await controller.dispatch({ kind: 'set-range', range: { mode: 'average', days: 30, today: '2026-07-21' } });
+		expect(persisted.headerPopoverMetric).toBe('openCount');
+		expect(persisted.headerPopoverRange).toBe('average-30');
+
+		const reopened = new ActivityMapController(
+			persisted,
+			{ run: async (query) => result(query, 0) },
+			{ update: async () => persisted },
+			tracking(),
+			'2026-07-22',
+		);
+		expect(reopened.getHeaderDefaultQuery()).toEqual({
+			metric: 'openCount',
+			range: { mode: 'average', days: 30, today: '2026-07-22' },
+			path: '',
+			view: 'children',
+			groupBy: 'path',
+		});
+	});
+
+	it('rolls back an unpersisted Header Popover metric preference', async () => {
+		const settings = normalizeSettings({ deviceId: 'd1' });
+		const controller = new ActivityMapController(
+			settings,
+			{ run: async (query) => result(query, 0) },
+			{ update: async () => { throw new Error('save-failed'); } },
+			tracking(),
+			'2026-07-21',
+		);
+		await controller.dispatch({ kind: 'set-metric', metric: 'openCount' });
+		expect(controller.getViewModel().query.metric).toBe('activeMs');
+		expect(controller.getViewModel().settings.headerPopoverMetric).toBe('activeMs');
+		expect(controller.getViewModel().loadState).toBe('error');
+	});
+
 	it('rolls back an optimistic grouping when preference persistence fails', async () => {
 		const settings = normalizeSettings({ deviceId: 'd1' });
 		const controller = new ActivityMapController(
