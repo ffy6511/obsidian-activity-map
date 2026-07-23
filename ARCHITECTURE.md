@@ -242,10 +242,12 @@ Trusted activity refreshes a bounded live checkpoint, including collapsed comple
 
 ## typedChars Input Boundary
 
-`TrackingCoordinator` keeps a classifier per owner window. It accepts only trusted `beforeinput` `insertText` from a CodeMirror/Markdown editor while that same window owns the active tracked target. It records a grapheme count and a source class; no committed text crosses the classifier boundary. IME composition updates are ignored, while `compositionend` is held for one microtask so a following final `insertText` replaces it rather than creating a double count.
+`ActivityMapPlugin` registers a public CodeMirror 6 `ViewPlugin` through Obsidian's `registerEditorExtension()`. The bridge reads each editor's `editorInfoField`, which may be the active `MarkdownEditView` rather than its enclosing `MarkdownView`, and matches that object to the current Markdown leaf before minting window/leaf provenance. It accepts only applied document-changing transactions marked `input.type`, immediately converts their inserted text to a grapheme count at that platform boundary, and sends only `{ windowId, leafId, typedChars, source }` to `TrackingCoordinator`.
+
+`input.type.compose` transactions are provisional after a trusted `compositionstart`. A bounded two-frame finalization window accepts a trailing applied `input.type` or `input.type.compose` transaction first. On hosts where CodeMirror exposes its end observer as untrusted, that observer cannot contribute its datum; it only settles the last numeric composition transaction already seen after the trusted start. A final zero transaction cancels this provisional value. A trusted end may instead use its non-empty datum as a numeric fallback, while a trusted empty end cancels. Two frames place fallback after CodeMirror's post-end microtask and its Android animation-frame flush, without touching private CodeMirror internals. Paste, drop, history, completion, programmatic changes, deletions, background leaves, and non-current windows do not cross the bridge.
 
 ```text
-trusted editor input -> TypedInputClassifier -> TypedInputRecord
+CodeMirror input.type transaction -> grapheme count -> TrackingCoordinator -> TypedInputRecord
                      -> TrackingRecordSink.appendTypedInputs
                      -> per-device/date NDJSON typed-input envelope
                      -> DailySummary.metricsByFileId.typedChars

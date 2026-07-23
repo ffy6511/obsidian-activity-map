@@ -8,7 +8,7 @@
 | Scope | Trusted input boundary, raw event schema, daily aggregate, distribution query, metric control |
 | Type | feat |
 | Priority | P1 |
-| Status | review |
+| Status | in-progress |
 | Completed | pending |
 | Dependencies | [Product requirements](../../docs/PRD.md#交互输入字符-typedchars), [Constitution](../constitution/2026-07-21-activity-map-product-and-data.md#metrics-and-extensibility), [Architecture](../../ARCHITECTURE.md#dependency-direction) |
 | Decisions | [Input metric decision](../constitution/2026-07-21-activity-map-product-and-data.md#metrics-and-extensibility), [Privacy boundary](../constitution/2026-07-21-activity-map-product-and-data.md#privacy-and-network-boundary) |
@@ -17,6 +17,8 @@
 
 - [x] Phase 0: persist trusted typed-input evidence and rebuild aggregates
 - [x] Phase 1: query and display the `typedChars` metric
+- [x] Phase 2: explore DOM IME final-commit variants (superseded by real-input evidence)
+- [ ] Phase 3: use applied CodeMirror transactions as the IME authority
 
 ## Background
 
@@ -30,7 +32,7 @@ Count trusted editor text commits by Unicode grapheme cluster, persist only a nu
 
 ### Key Insight
 
-`beforeinput` expresses the browser's semantic input type before the document mutation. It can exclude paste, drop, history and replacement classes without inspecting note content; IME must be counted only at its final trusted composition commit so intermediate composition updates do not inflate the count.
+`beforeinput` expresses browser intent before a document mutation, but Obsidian's CodeMirror host can flush a final IME mutation after `compositionend`. The applied CodeMirror `input.type` transaction is therefore the counting authority. The bridge must keep IME changes provisional until finalization, then discard all text after converting the one committed insertion to a grapheme count.
 
 ## Design
 
@@ -41,9 +43,10 @@ Count trusted editor text commits by Unicode grapheme cluster, persist only a nu
 ### Control Flow
 
 ```text
-trusted editor beforeinput / IME final commit
-  -> coordinator verifies active target, owning window, editor surface and input kind
-  -> grapheme counter emits a content-free TypedInputRecord
+CodeMirror input.type transaction / IME finalization
+  -> bridge resolves the actual editor leaf and converts inserted text to a numeric grapheme count
+  -> coordinator verifies active target, owning window, and leaf
+  -> content-free TypedInputRecord
   -> serialized DataServices append to the target local-date shard
   -> existing shard-change rebuild invalidates query cache
   -> query reads typedChars from DailySummary and Popover renders the selected metric
@@ -98,13 +101,72 @@ Evidence: `npm run check`, `npm run lint`, and `npm test -- --run` passed on 202
 
 Evidence: `npm run check`, `npm run lint`, and `npm test -- --run` passed on 2026-07-23 (254 tests); `npm run build`, strict specs validation, and `git diff --check` also passed. Focused coverage proves the fourth metric's independent projection, `Typed chars` selector and keyboard icon, and controller preservation of range, path, grouping, and detail identity.
 
+## Phase 2: explore DOM IME final-commit variants (superseded by real-input evidence)
+
+### Tasks
+
+- [x] Treat a trusted post-`compositionend` `beforeinput` as the one IME final commit when it is `insertText` or `insertCompositionText`, including hosts that still set `isComposing: true`; keep every pre-end composition update excluded.
+- [x] Add classifier and coordinator-to-sink event-sequence tests for Pinyin updates, candidate confirmation, multi-character submission, and cancellation; prove each accepted commit persists once and cancellation persists nothing.
+- [x] Restrict the production DOM boundary to CodeMirror's editable content and prove text controls inside a Markdown leaf are rejected before coordinator attribution.
+- [x] Route composition lifecycle events from the same CodeMirror editor wrapper and clear a stale composition state when a fresh non-composing text insert proves ordinary typing resumed.
+
+### Files
+
+- `src/tracking/typed-input.ts`
+- `src/main.ts`
+- `tests/tracking/typed-input.test.ts`
+- `tests/tracking/tracking-coordinator.test.ts`
+- `ARCHITECTURE.md`
+- `specs/active/06-typed-character-metric-plan.md`
+
+### Acceptance Criteria
+
+- [x] A final `insertCompositionText` remains attributable only when it immediately follows the same eligible editor's `compositionend`; it creates one `ime-commit` with the submitted grapheme count even if `isComposing` stays true.
+- [x] Pinyin intermediate updates, paste/drop/history inputs, cancelled composition, stale leaf/window input, and delayed fallback paths create no extra count.
+- [x] A composition lifecycle target outside editable content cannot permanently suppress later trusted English input; Markdown-leaf text controls remain excluded.
+
+Evidence: `npm run check`, `npm run lint`, `npm test -- --run` (278 passed), `npm run build`, and `python3 "${SPEC_DRIVEN_DELIVERY_DIR:?set SPEC_DRIVEN_DELIVERY_DIR}/scripts/validate_specs_workspace.py" . --strict` passed on 2026-07-23. The candidate-confirmation fixture traces Pinyin `insertCompositionText` updates, `compositionend`, then final `insertCompositionText` with `isComposing: true` through the coordinator into one numeric record; the cancellation fixture emits no record. DOM-boundary fixtures accept `beforeinput` only from CodeMirror editable content, permit composition lifecycle events from the same CodeMirror wrapper, reject textarea/input controls inside the same Markdown leaf, and prove an unobservable completion cannot suppress a later English insert. Owner UAT then showed confirmed Chinese still created no count, so this fixture model is historical investigation evidence rather than an accepted production boundary.
+
+## Phase 3: use applied CodeMirror transactions as the IME authority
+
+### Tasks
+
+- [x] Replace global DOM `beforeinput` counting with an Obsidian `registerEditorExtension()` CodeMirror 6 `ViewPlugin` that observes applied document-changing `input.type` transactions.
+- [x] Resolve the source leaf from `editorInfoField`, and pass only window ID, leaf ID, numeric grapheme count, and source class into `TrackingCoordinator`.
+- [x] Keep `input.type.compose` provisional after trusted composition start. A generation-guarded two-frame finalizer prefers a trailing CodeMirror transaction, uses trusted non-empty `compositionend.data` only as a numeric fallback, and lets an untrusted host-delivered end settle prior numeric transaction evidence without trusting its datum; an ending zero discards cancellation.
+- [x] Cover Pinyin updates, candidate confirmation, multi-character submission, delayed post-end transaction, cancellation, later English input, paste/drop/history/completion/programmatic/deletion exclusion, stale targets, and the no-content persistence boundary.
+- [x] Accept the public `MarkdownFileInfo` editor-mode variant when it belongs to the active Markdown leaf, and use a temporary content-free console trace to establish the real Obsidian event order before removing it after owner UAT.
+
+### Files
+
+- `src/main.ts`
+- `src/platform/codemirror-typed-input.ts`
+- `src/tracking/typed-input.ts`
+- `src/tracking/tracking-coordinator.ts`
+- `tests/tracking/typed-input.test.ts`
+- `tests/tracking/tracking-coordinator.test.ts`
+- `ARCHITECTURE.md`
+- `specs/constitution/2026-07-21-activity-map-product-and-data.md`
+- `specs/active/06-typed-character-metric-plan.md`
+
+### Acceptance Criteria
+
+- [x] One applied `input.type` transaction records its inserted grapheme count once when its editor owns the active tracked target.
+- [x] Pinyin updates remain uncounted until candidate confirmation; confirmed multi-character CJK input records once when CodeMirror flushes its final transaction after `compositionend`.
+- [x] Cancellation, paste, drop, history, completion, programmatic changes, deletion, a background leaf/window, and a non-editor control create no typed-input record.
+- [ ] Real Obsidian desktop evidence separately validates Pinyin input, candidate confirmation, multi-character submission, mid-composition cancellation, later English input, and no retained typed content.
+
+Evidence: the pre-UAT bridge passed `npm run check`, `npm run lint`, `npm test -- --run` (277 passed), `npm run build`, strict Specs validation, and `git diff --check` on 2026-07-23, but owner UAT still found Chinese candidate confirmation uncounted. The follow-up accepts `MarkdownFileInfo`'s documented active editor-mode variant. A temporary content-free console trace then established that a trusted start precedes numeric `input.type.compose` transactions, while the host reports the end observer as untrusted; it was removed after owner UAT confirmed the corrected candidate-confirmation path. On 2026-07-23, the final source without diagnostics passed `npm run check`, `npm run lint`, `npm test -- --run` (282 passed), `npm run build`, strict Specs validation (0 errors, 0 warnings), and `git diff --check`; the rebuilt bundle was byte-identical to the locally installed Obsidian plugin bundle. Focused fixtures exercise direct `input.type` filtering and inserted grapheme counting, Pinyin's repeated provisional composition updates, pre- and post-end final commits, trusted and untrusted end fallback, cancellation, rapid next composition, stale generations, subsequent English, invalid numeric commits, persistence failure, stale window/leaf rejection, and editor-mode provenance. These are controlled CodeMirror fixtures, not real Obsidian desktop evidence.
+
 ## Risks and Mitigations
 
-IME event order differs by browser, so the classifier explicitly tests both composition-end-plus-insertText and composition-end-only flows. Browser event metadata cannot reliably distinguish every assistive or simulated keyboard source; product help retains that accuracy limit. Summary compatibility is additive: a missing historical field becomes zero instead of invalidating retained activity evidence.
+IME event order differs by browser and host, so the bridge tests applied CodeMirror transaction ordering rather than treating `beforeinput` as the source of truth. CodeMirror can flush a final composition mutation after `compositionend`; the finalizer therefore waits two frames and uses generation guards to prevent stale fallback emission. Browser event metadata still cannot reliably distinguish every assistive or simulated keyboard source; product help retains that accuracy limit. Summary compatibility is additive: a missing historical field becomes zero instead of invalidating retained activity evidence.
 
 ## Post-Critic Acceptance
 
-- [ ] Owner validates real Obsidian input with Latin, CJK IME, combining characters, emoji, paste, undo/redo, and a non-editor text box.
+- [ ] Owner validates real Obsidian input with Latin, CJK IME Pinyin updates, candidate confirmation, multi-character submission, mid-composition cancellation, combining characters, emoji, paste, undo/redo, and a non-editor text box. Record the four IME outcomes separately without retaining typed content in plugin data or test artifacts.
+
+Round 3 used the final independent Critic review. Owner UAT has invalidated the DOM-event solution, so the Spec returns to `in-progress`; no Critic round remains for a later independent re-review.
 
 ## Evaluation Record
 
@@ -131,6 +193,29 @@ IME event order differs by browser, so the classifier explicitly tests both comp
 - Deferred findings: none; the former P2 support-text accuracy item was resolved by the 2026-07-23 PRD and bilingual README correction.
 - Validation rerun: Critic independently ran `npm run check`; `npm run lint`; `npm test -- --run` (261 passed); strict Specs validation (0 errors, 0 warnings); and `git diff --check`. `npm run build` was not rerun because source was unchanged after the Round 1 production build; the current bundle's PNG data URL was statically confirmed.
 - Verdict: pass-with-follow-ups.
+
+### Round 3
+
+- Critic: `typedchars_critic` (fresh, read-only review of Spec 06)
+- Review scope: full
+- Evidence reviewed: current worktree including the IME final-commit correction, its classifier/coordinator fixtures, `src/main.ts` DOM boundary, Architecture and Spec lifecycle; the Critic independently ran `npm run check`, `npm run lint`, `npm test -- --run` (275 passed before the correction batch), strict Specs validation, and `git diff --check`.
+- Findings: P1 — the production selector admitted any target inside `.markdown-source-view`, allowing a textarea/input control in a tracked Markdown leaf to persist typed counts; P2 — Phase 2 recorded 274 rather than 275 tests; P3 — Architecture described classifier ownership as per window although runtime keys it by source window/leaf.
+- Selected fixes: P1 production DOM boundary plus regression test; P2 exact evidence correction; P3 ownership wording correction.
+- Executor fixes: extracted the production target predicate, restricted `beforeinput` to CodeMirror editable content, explicitly excluded native form controls and `contenteditable="false"`, and added a DOM fixture for accepted editor text plus rejected Markdown-leaf textarea/input. Updated the Phase 2 test count and Architecture ownership wording.
+- Deferred findings: none.
+- Post-Critic owner evidence: the owner reported that starting Chinese input left later English and Chinese input counts blocked. The report invalidated the assumed composition-lifecycle target boundary.
+- Executor follow-up: composition lifecycle events now accept the same CodeMirror editor wrapper while `beforeinput` remains content-only; a new non-composing `insertText` also clears a stale composing state. Added classifier and coordinator-to-sink regressions for the blocked-English path.
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (278 passed); `npm run build`; `python3 "${SPEC_DRIVEN_DELIVERY_DIR:?set SPEC_DRIVEN_DELIVERY_DIR}/scripts/validate_specs_workspace.py" . --strict` (0 errors, 0 warnings); `git diff --check`.
+- Verdict: changes-required. The selected correction batch is implemented and technically validated, but the three-round Critic budget is exhausted before an independent re-review; no final Critic pass is claimed.
+
+### Phase 3 correction
+
+- Owner UAT: Chinese candidate confirmation still created no `typedChars` record, though later English input was no longer blocked.
+- Root cause: CodeMirror can dispatch the committed IME mutation as `input.type.compose` after `compositionend`; the global DOM listener and its microtask fallback can finalize before CodeMirror applies the document change.
+- Adopted correction: a public Obsidian CodeMirror `ViewPlugin` becomes the counting authority. DOM composition events only delimit finalization or cancellation. Prior DOM fixtures remain non-acceptance evidence.
+- Runtime trace after the bridge correction: an ordinary `input.type` transaction reached target resolution and the coordinator as `accepted`. The CJK sequence had a trusted `compositionstart`, only `input.type.compose` transactions, then an untrusted `compositionend`; the last numeric composition transaction arrived before that end and no trailing input transaction followed. The prior trusted-end guard therefore discarded the only settlement boundary. No input string was logged or retained.
+- Current correction: after a trusted start, the untrusted end closes only the existing composition state and can settle the last already-reduced numeric CodeMirror transaction. Its datum is ignored. A final zero transaction clears that numeric provisional state, preserving cancellation semantics.
+- Owner follow-up UAT: the corrected Chinese candidate-confirmation path increments `typedChars`. The temporary console trace was removed immediately after this confirmation; its logs were never persisted.
 
 ### Documentation follow-up
 

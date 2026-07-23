@@ -10,9 +10,9 @@ import {
 	TrackingCoordinator,
 	type ActivityEventSource,
 	type EditorChangeSource,
+	type TypedInputCommit,
 	type WorkspaceSource,
 } from '../../src/tracking/tracking-coordinator';
-import type { TypedInputObservation } from '../../src/tracking/typed-input';
 import { InMemoryCheckpointPort, InMemoryTrackingSink } from '../../src/tracking/ports';
 import { createFakeClock, type FakeClock } from '../helpers/fake-clock';
 import { DEFAULT_SETTINGS, normalizeSettings } from '../../src/domain/settings';
@@ -85,19 +85,13 @@ function fakeWorkspace(initialLeaf: ResolvedLeaf | null): {
 function fakeActivitySource(): ActivityEventSource & {
 	fireActivity(type?: string): void;
 	fireBlur(): void;
-	fireTypedInput(observation: TypedInputObservation): void;
 } {
 	const blurCbs = new Set<() => void>();
 	const activityCbs = new Set<(event: { isTrusted?: boolean; type?: string }) => void>();
-	const typedInputCbs = new Set<(observation: TypedInputObservation) => void>();
 	return {
 		attachActivityListeners: (cb) => {
 			activityCbs.add(cb);
 			return () => activityCbs.delete(cb);
-		},
-		attachTypedInputListeners: (cb) => {
-			typedInputCbs.add(cb);
-			return () => typedInputCbs.delete(cb);
 		},
 		onBlur: (cb) => {
 			blurCbs.add(cb);
@@ -109,9 +103,6 @@ function fakeActivitySource(): ActivityEventSource & {
 		fireBlur() {
 			for (const cb of blurCbs) cb();
 		},
-		fireTypedInput(observation) {
-			for (const cb of typedInputCbs) cb(observation);
-		},
 	};
 }
 
@@ -119,8 +110,11 @@ function leaf(leafId: string, path: string | null): ResolvedLeaf {
 	return { leafId, windowId: 'main', file: path ? { path } : null };
 }
 
-function typedInput(observation: Omit<TypedInputObservation, 'leafId'>, leafId = 'front'): TypedInputObservation {
-	return { ...observation, leafId };
+function typedCommit(
+	commit: Partial<Omit<TypedInputCommit, 'windowId' | 'leafId'>>,
+	leafId = 'front',
+): TypedInputCommit {
+	return { windowId: 'main', leafId, typedChars: 1, source: 'insert-text', ...commit };
 }
 
 function makeCoordinator(opts: {
@@ -376,21 +370,13 @@ describe('tracking coordinator lifecycle', () => {
 		expect(sink.sessions[0]?.editingMs).toBe(5_000);
 	});
 
-	it('persists trusted foreground editor input without retaining its text', async () => {
+	it('persists a content-free foreground CodeMirror commit', async () => {
 		const clock = createFakeClock();
 		const ws = fakeWorkspace(leaf('front', 'notes/a.md'));
-		const { coordinator, sink, mainSource } = makeCoordinator({ clock, workspace: ws.source });
+		const { coordinator, sink } = makeCoordinator({ clock, workspace: ws.source });
 		coordinator.start();
 		await flush(clock, 5_000);
-		mainSource.fireTypedInput(typedInput({
-			kind: 'beforeinput', isTrusted: true, isEditor: true, inputType: 'insertText', data: '你e\u0301', isComposing: false,
-		}));
-		mainSource.fireTypedInput(typedInput({
-			kind: 'beforeinput', isTrusted: true, isEditor: false, inputType: 'insertText', data: 'not-counted', isComposing: false,
-		}));
-		mainSource.fireTypedInput(typedInput({
-			kind: 'beforeinput', isTrusted: true, isEditor: true, inputType: 'insertFromPaste', data: 'not-counted', isComposing: false,
-		}));
+		coordinator.onTypedInputCommit(typedCommit({ typedChars: 2 }));
 		await flush(clock);
 		expect(sink.typedInputs).toHaveLength(1);
 		expect(sink.typedInputs[0]).toMatchObject({
@@ -408,70 +394,66 @@ describe('tracking coordinator lifecycle', () => {
 		await coordinator.stop();
 	});
 
-	it('counts an IME commit once and degrades on typed-input persistence failure', async () => {
+	it('persists one final IME numeric commit', async () => {
+		const clock = createFakeClock();
+		const ws = fakeWorkspace(leaf('front', 'notes/a.md'));
+		const { coordinator, sink } = makeCoordinator({ clock, workspace: ws.source });
+		coordinator.start();
+		await flush(clock, 5_000);
+		coordinator.onTypedInputCommit(typedCommit({ typedChars: 2, source: 'ime-commit' }));
+		await flush(clock);
+		expect(sink.typedInputs).toHaveLength(1);
+		expect(sink.typedInputs[0]).toMatchObject({ typedChars: 2, source: 'ime-commit' });
+		await coordinator.stop();
+	});
+
+	it('rejects invalid numeric bridge commits', async () => {
+		const clock = createFakeClock();
+		const ws = fakeWorkspace(leaf('front', 'notes/a.md'));
+		const { coordinator, sink } = makeCoordinator({ clock, workspace: ws.source });
+		coordinator.start();
+		await flush(clock, 5_000);
+		for (const typedChars of [0, -1, 1.5]) coordinator.onTypedInputCommit(typedCommit({ typedChars }));
+		coordinator.onTypedInputCommit(typedCommit({ source: 'invalid-source' as TypedInputCommit['source'] }));
+		await flush(clock);
+		expect(sink.typedInputs).toHaveLength(0);
+		await coordinator.stop();
+	});
+
+	it('degrades after a typed-input persistence failure', async () => {
 		const clock = createFakeClock();
 		const ws = fakeWorkspace(leaf('front', 'notes/a.md'));
 		const sink = new InMemoryTrackingSink({ failAppendTypedInputsAfter: 1 });
-		const { coordinator, mainSource, snapshots } = makeCoordinator({ clock, workspace: ws.source, sink });
+		const { coordinator, snapshots } = makeCoordinator({ clock, workspace: ws.source, sink });
 		coordinator.start();
 		await flush(clock, 5_000);
-		mainSource.fireTypedInput(typedInput({ kind: 'compositionstart', isTrusted: true, isEditor: true }));
-		mainSource.fireTypedInput(typedInput({ kind: 'compositionend', isTrusted: true, isEditor: true, data: '中文' }));
-		mainSource.fireTypedInput(typedInput({
-			kind: 'beforeinput', isTrusted: true, isEditor: true, inputType: 'insertText', data: '中文', isComposing: false,
-		}));
+		coordinator.onTypedInputCommit(typedCommit({ typedChars: 2, source: 'ime-commit' }));
 		await flush(clock);
 		expect(sink.typedInputs).toHaveLength(1);
-		expect(sink.typedInputs[0]?.typedChars).toBe(2);
-		mainSource.fireTypedInput(typedInput({
-			kind: 'beforeinput', isTrusted: true, isEditor: true, inputType: 'insertText', data: 'x', isComposing: false,
-		}));
+		coordinator.onTypedInputCommit(typedCommit({ typedChars: 1 }));
 		await flush(clock);
 		expect(snapshots.some((snapshot) => snapshot.state === 'degraded')).toBeTrue();
 		await coordinator.stop();
 	});
 
-	it('rejects input from a same-window background leaf and a leaf-switch race', async () => {
+	it('rejects background and stale leaf commits, including delayed IME finalization', async () => {
 		const clock = createFakeClock();
 		const ws = fakeWorkspace(leaf('front', 'notes/a.md'));
-		const { coordinator, sink, mainSource } = makeCoordinator({ clock, workspace: ws.source });
+		const { coordinator, sink } = makeCoordinator({ clock, workspace: ws.source });
 		coordinator.start();
 		await flush(clock, 5_000);
-
-		// The workspace has already switched to `next`, but its asynchronous target
-		// refresh has not run yet. The stale `front` target must not receive input.
 		ws.setActiveLeaf(leaf('next', 'notes/b.md'));
-		mainSource.fireTypedInput(typedInput({
-			kind: 'beforeinput', isTrusted: true, isEditor: true, inputType: 'insertText', data: 'b', isComposing: false,
-		}, 'next'));
+		coordinator.onTypedInputCommit(typedCommit({ typedChars: 2, source: 'ime-commit' }));
 		await flush(clock);
 		expect(sink.typedInputs).toHaveLength(0);
 
 		ws.fireActiveLeafChange();
 		await flush(clock, 5_000);
-		mainSource.fireTypedInput(typedInput({
-			kind: 'beforeinput', isTrusted: true, isEditor: true, inputType: 'insertText', data: 'a', isComposing: false,
-		}, 'front'));
-		mainSource.fireTypedInput(typedInput({
-			kind: 'beforeinput', isTrusted: true, isEditor: true, inputType: 'insertText', data: 'b', isComposing: false,
-		}, 'next'));
+		coordinator.onTypedInputCommit(typedCommit({ typedChars: 1 }, 'front'));
+		coordinator.onTypedInputCommit(typedCommit({ typedChars: 1 }, 'next'));
 		await flush(clock);
 		expect(sink.typedInputs).toHaveLength(1);
 		expect(sink.typedInputs[0]).toMatchObject({ fileId: 'file-2', pathAtEvent: 'notes/b.md', typedChars: 1 });
-		await coordinator.stop();
-	});
-
-	it('rechecks an IME fallback commit after a leaf switch', async () => {
-		const clock = createFakeClock();
-		const ws = fakeWorkspace(leaf('front', 'notes/a.md'));
-		const { coordinator, sink, mainSource } = makeCoordinator({ clock, workspace: ws.source });
-		coordinator.start();
-		await flush(clock, 5_000);
-		mainSource.fireTypedInput(typedInput({ kind: 'compositionstart', isTrusted: true, isEditor: true }));
-		mainSource.fireTypedInput(typedInput({ kind: 'compositionend', isTrusted: true, isEditor: true, data: '你' }));
-		ws.setActiveLeaf(leaf('next', 'notes/b.md'));
-		await flush(clock);
-		expect(sink.typedInputs).toHaveLength(0);
 		await coordinator.stop();
 	});
 

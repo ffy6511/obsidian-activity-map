@@ -1,8 +1,10 @@
 import {
 	FileView,
+	MarkdownView,
 	Plugin,
 	TFolder,
 	type EventRef,
+	type MarkdownFileInfo,
 	type TAbstractFile,
 	type WorkspaceLeaf,
 } from 'obsidian';
@@ -25,6 +27,7 @@ import { ActivityMapController } from './ui/activity-map-controller';
 import { ActivityMapSettingsTab } from './ui/settings-tab';
 import { HeaderActionManager } from './ui/header-action-manager';
 import { ACTIVITY_MAP_HOVER_SOURCE } from './ui/file-hover-preview';
+import { belongsToMarkdownEditor, createCodeMirrorTypedInputExtension } from './platform/codemirror-typed-input';
 
 export default class ActivityMapPlugin extends Plugin {
 	private controller: ActivityMapController | null = null;
@@ -79,6 +82,10 @@ export default class ActivityMapPlugin extends Plugin {
 			observers,
 		});
 		this.coordinator = coordinator;
+		this.registerEditorExtension(createCodeMirrorTypedInputExtension({
+			resolveTarget: (info) => this.resolveTypedInputTarget(info),
+			onTypedInput: (commit) => coordinator.onTypedInputCommit(commit),
+		}));
 		const queryService = new LocalQueryService(inventory, summaries, registry, () => settings);
 		const controller = new ActivityMapController(
 			settings,
@@ -178,6 +185,17 @@ export default class ActivityMapPlugin extends Plugin {
 		return { leafId, windowId, file: file ? { path: file.path } : null };
 	}
 
+	/**
+	 * Obsidian's editorInfoField can identify a MarkdownEditView rather than the
+	 * enclosing MarkdownView. Match that public editor object to the active leaf
+	 * before minting provenance; a same-file background editor still cannot count.
+	 */
+	private resolveTypedInputTarget(info: MarkdownFileInfo): ResolvedLeaf | null {
+		const leaf = this.app.workspace.getMostRecentLeaf();
+		if (!(leaf?.view instanceof MarkdownView)) return null;
+		return belongsToMarkdownEditor(info, leaf.view) ? this.resolveLeaf(leaf) : null;
+	}
+
 	private createActivityEventSource(windowId: string): ActivityEventSource {
 		const win = this.windowById.get(windowId) ?? window;
 		return {
@@ -207,59 +225,11 @@ export default class ActivityMapPlugin extends Plugin {
 					for (const event of events) win.removeEventListener(event, handler, { capture: true });
 				};
 			},
-			attachTypedInputListeners: (callback) => {
-				const isEditor = (target: EventTarget | null): boolean => {
-					const element = target as { closest?: (selector: string) => Element | null } | null;
-					return typeof element?.closest === 'function' &&
-						element.closest('.cm-editor, .markdown-source-view') !== null;
-				};
-				const observe = (event: Event, kind: 'beforeinput' | 'compositionstart' | 'compositionend') => {
-					const input = event as InputEvent;
-					const editor = isEditor(event.target);
-					const leaf = editor ? this.resolveTypedInputLeaf(event.target, windowId) : null;
-					callback({
-						kind,
-						isTrusted: event.isTrusted,
-						isEditor: editor,
-						leafId: leaf?.leafId,
-						inputType: kind === 'beforeinput' ? input.inputType : undefined,
-						data: (event as InputEvent).data,
-						isComposing: kind === 'beforeinput' ? input.isComposing : undefined,
-					});
-				};
-				const beforeInput = (event: Event) => observe(event, 'beforeinput');
-				const compositionStart = (event: Event) => observe(event, 'compositionstart');
-				const compositionEnd = (event: Event) => observe(event, 'compositionend');
-				win.addEventListener('beforeinput', beforeInput, { capture: true, passive: true });
-				win.addEventListener('compositionstart', compositionStart, { capture: true, passive: true });
-				win.addEventListener('compositionend', compositionEnd, { capture: true, passive: true });
-				return () => {
-					win.removeEventListener('beforeinput', beforeInput, { capture: true });
-					win.removeEventListener('compositionstart', compositionStart, { capture: true });
-					win.removeEventListener('compositionend', compositionEnd, { capture: true });
-				};
-			},
 			onBlur: (callback) => {
 				win.addEventListener('blur', callback);
 				return () => win.removeEventListener('blur', callback);
 			},
 		};
-	}
-
-	private resolveTypedInputLeaf(target: EventTarget | null, windowId: string): ResolvedLeaf | null {
-		const source = target as Node | null;
-		const owner = this.windowById.get(windowId);
-		if (!source || !owner) return null;
-		const leaf = this.app.workspace.getMostRecentLeaf();
-		if (
-			!leaf ||
-			leaf.getContainer().win !== owner ||
-			!(leaf.view instanceof FileView) ||
-			!leaf.view.containerEl.contains(source)
-		) {
-			return null;
-		}
-		return this.resolveLeaf(leaf);
 	}
 
 	private registerPopoutEvents(coordinator: TrackingCoordinator): void {

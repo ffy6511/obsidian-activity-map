@@ -1,77 +1,137 @@
-/**
- * Trusted text-input classification.
- *
- * The browser exposes an IME composition through several intermediate input
- * events. We retain only a pending numeric commit until the current microtask:
- * a following final `insertText` replaces it, while composition engines that
- * emit no such event still produce one count. The committed string never
- * leaves this module.
- */
-
 import type { TypedInputRecord } from '../domain/activity';
 
-export interface TypedInputObservation {
-	isTrusted?: boolean;
-	kind: 'beforeinput' | 'compositionstart' | 'compositionend';
-	isEditor: boolean;
-	/** Ephemeral source identity used only to verify the currently active leaf. */
-	leafId?: string;
-	inputType?: string;
-	data?: string | null;
-	isComposing?: boolean;
-}
-
+/** Numeric, content-free evidence emitted by the CodeMirror platform bridge. */
 export type TypedInputCount = Pick<TypedInputRecord, 'typedChars' | 'source'>;
 
-/** Stateful classifier for a single owner window. */
-export class TypedInputClassifier {
+/**
+ * A CodeMirror transaction has already applied its document change. Its text
+ * has been reduced to this number at the platform boundary and cannot reach
+ * the tracking or persistence layers.
+ */
+export interface AppliedTypedInput {
+	typedChars: number;
+	isComposition: boolean;
+}
+
+/** Narrow public surface needed to identify a CodeMirror typed transaction. */
+export interface AppliedTransactionKind {
+	docChanged: boolean;
+	isUserEvent(event: string): boolean;
+}
+
+/** A typed transaction excludes paste, drop, completion, history, and non-input edits. */
+export function isAppliedTypedInput(transaction: AppliedTransactionKind): boolean {
+	return transaction.docChanged && transaction.isUserEvent('input.type');
+}
+
+interface PendingComposition {
+	generation: number;
+	fallback: TypedInputCount | null;
+}
+
+export interface CompositionEnd {
+	fallbackChars: number;
+	isTrusted: boolean;
+}
+
+/**
+ * Resolves composition transactions without retaining their text or candidate
+ * buffer. CodeMirror may apply the final IME change on either side of
+ * `compositionend`, so the tracker retains only the latest numeric provisional
+ * value until a trailing transaction or bounded finalization settles it.
+ */
+export class ImeCommitTracker {
+	private generation = 0;
+	private pending: PendingComposition | null = null;
 	private composing = false;
-	private pendingComposition: TypedInputCount | null = null;
+	private provisional: TypedInputCount | null = null;
 
-	observe(observation: TypedInputObservation): TypedInputCount | null {
-		if (observation.isTrusted !== true || !observation.isEditor) return null;
-		if (observation.kind === 'compositionstart') {
-			this.composing = true;
-			return null;
-		}
-		if (observation.kind === 'compositionend') {
-			this.composing = false;
-			const typedChars = countGraphemes(observation.data ?? '');
-			this.pendingComposition = typedChars > 0 ? { typedChars, source: 'ime-commit' } : null;
-			return null;
-		}
-		if (observation.inputType !== 'insertText' || observation.isComposing === true || this.composing) {
-			return null;
-		}
-		const typedChars = countGraphemes(observation.data ?? '');
-		if (this.pendingComposition) {
-			// Final insertText wins because it is the browser's completed commit.
-			// Clearing the pending value guarantees that one IME sequence emits once.
-			this.pendingComposition = null;
-			return typedChars > 0 ? { typedChars, source: 'ime-commit' } : null;
-		}
-		return typedChars > 0 ? { typedChars, source: 'insert-text' } : null;
+	/** Start a new composition and settle any prior completed fallback first. */
+	beginComposition(): TypedInputCount | null {
+		const settled = this.pending?.fallback ?? null;
+		this.generation += 1;
+		this.pending = null;
+		this.composing = true;
+		this.provisional = null;
+		return settled;
 	}
 
-	/** Emits a composition commit only when no final insertText arrived this turn. */
-	flushPendingComposition(): TypedInputCount | null {
-		const pending = this.pendingComposition;
-		this.pendingComposition = null;
-		return pending;
+	/**
+	 * Start a finalization window after a trusted composition start. An untrusted
+	 * end notification is allowed to close that existing window because CM6 can
+	 * surface it that way; its datum never becomes a count. It may settle only a
+	 * prior numeric transaction that the bridge already observed.
+	 */
+	endComposition(end: CompositionEnd): number | null {
+		if (!this.composing) return null;
+		this.composing = false;
+		const generation = ++this.generation;
+		const eventFallback = validTypedChars(end.fallbackChars) && end.fallbackChars > 0
+			? { typedChars: end.fallbackChars, source: 'ime-commit' as const }
+			: null;
+		this.pending = {
+			generation,
+			// A trusted empty end means cancellation. An untrusted end's datum cannot
+			// be trusted, so use only the already-reduced CM transaction evidence.
+			fallback: end.isTrusted ? eventFallback : this.provisional,
+		};
+		this.provisional = null;
+		return generation;
 	}
+
+	/**
+	 * Classify an already-applied CodeMirror input transaction. Composition
+	 * updates remain provisional. The final composition mutation may precede the
+	 * end observer, while the first trailing mutation after an end still wins.
+	 */
+	observeTransaction(input: AppliedTypedInput): TypedInputCount | null {
+		if (!validTypedChars(input.typedChars)) return null;
+		if (input.isComposition) {
+			if (this.pending) {
+				this.pending = null;
+				return input.typedChars > 0 ? { typedChars: input.typedChars, source: 'ime-commit' } : null;
+			}
+			if (this.composing) {
+				this.provisional = input.typedChars > 0
+					? { typedChars: input.typedChars, source: 'ime-commit' }
+					: null;
+			}
+			return null;
+		}
+		if (this.pending) {
+			this.pending = null;
+			return input.typedChars > 0 ? { typedChars: input.typedChars, source: 'ime-commit' } : null;
+		}
+		if (input.typedChars === 0) return null;
+		return { typedChars: input.typedChars, source: 'insert-text' };
+	}
+
+	/** Emit the numeric fallback only if the scheduled generation is current. */
+	finalize(generation: number): TypedInputCount | null {
+		if (this.pending?.generation !== generation) return null;
+		const pending = this.pending;
+		this.pending = null;
+		return pending.fallback;
+	}
+
+	/** Drop any unfinished composition during editor teardown. */
+	cancel(): void {
+		this.generation += 1;
+		this.pending = null;
+		this.composing = false;
+		this.provisional = null;
+	}
+}
+
+function validTypedChars(value: number): boolean {
+	return Number.isSafeInteger(value) && value >= 0;
 }
 
 /** Count user-perceived Unicode characters without persisting their content. */
 export function countGraphemes(value: string): number {
 	type Segmenter = { segment(input: string): Iterable<unknown> };
-	type SegmenterConstructor = new (
-		locales?: string | readonly string[],
-		options?: { granularity: 'grapheme' },
-	) => Segmenter;
-	const Segmenter = (Intl as unknown as { Segmenter?: SegmenterConstructor }).Segmenter;
-	const segmenter = Segmenter ? new Segmenter(undefined, { granularity: 'grapheme' }) : null;
-	if (segmenter) return [...segmenter.segment(value)].length;
-	// Array.from keeps surrogate pairs together; this conservative fallback is
-	// only for hosts without Intl.Segmenter and never stores the source value.
-	return Array.from(value.normalize('NFC')).length;
+	const SegmenterCtor = (Intl as typeof Intl & { Segmenter?: new (locales?: string | string[], options?: { granularity: 'grapheme' }) => Segmenter }).Segmenter;
+	if (SegmenterCtor) return [...new SegmenterCtor(undefined, { granularity: 'grapheme' }).segment(value)].length;
+	// Fallback keeps combining marks with their base when Intl.Segmenter is absent.
+	return [...value.normalize('NFC')].length;
 }

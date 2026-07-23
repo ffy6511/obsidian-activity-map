@@ -43,7 +43,7 @@ import type {
 	TrackingRecordSink,
 } from './ports';
 import { TransitionQueue } from './transition-queue';
-import { TypedInputClassifier, type TypedInputCount, type TypedInputObservation } from './typed-input';
+import type { TypedInputCount } from './typed-input';
 
 /** Source of workspace/leaf observations, abstracted so tests can fake it. */
 export interface WorkspaceSource {
@@ -63,14 +63,18 @@ export interface EditorChangeSource {
 	windowId?: string;
 }
 
-/** Source of trusted DOM activity events for one window. */
+/** Source of trusted activity events for one window. */
 export interface ActivityEventSource {
 	/** Register trusted keyboard/composition/pointer/wheel/touch/focus listeners. */
 	attachActivityListeners(onActivity: (event: { isTrusted?: boolean; type?: string }) => void): () => void;
-	/** Subscribe to trusted editor input observations for content-free counting. */
-	attachTypedInputListeners(onInput: (observation: TypedInputObservation) => void): () => void;
 	/** Subscribe to window blur. */
 	onBlur(cb: () => void): () => void;
+}
+
+/** A CodeMirror bridge commit with exact editor provenance and no text content. */
+export interface TypedInputCommit extends TypedInputCount {
+	windowId: string;
+	leafId: string;
 }
 
 export interface TrackingCoordinatorOptions {
@@ -96,7 +100,6 @@ export class TrackingCoordinator {
 	private lastSnapshot: TrackingSnapshot | null = null;
 	private restored = false;
 	private settings: ActivityMapSettings;
-	private readonly typedInputClassifiers = new Map<string, TypedInputClassifier>();
 	private nextTypedInputId = 1;
 
 	constructor(opts: TrackingCoordinatorOptions) {
@@ -167,7 +170,6 @@ export class TrackingCoordinator {
 			}
 		}
 		this.unsubs.length = 0;
-		this.typedInputClassifiers.clear();
 		this.engine.submit({ kind: 'stop', sample: this.opts.clock.now() });
 		await this.queue.idle();
 	}
@@ -196,6 +198,22 @@ export class TrackingCoordinator {
 	/** Wait until all persistence triggered before this call has settled. */
 	settle(): Promise<void> {
 		return this.queue.idle();
+	}
+
+	/**
+	 * Persist a numeric CodeMirror input commit only while its originating editor
+	 * still owns the active tracking target. The platform bridge has already
+	 * discarded the inserted string before calling this boundary.
+	 */
+	onTypedInputCommit(commit: TypedInputCommit): void {
+		if (
+			!Number.isSafeInteger(commit.typedChars) ||
+			commit.typedChars <= 0 ||
+			(commit.source !== 'insert-text' && commit.source !== 'ime-commit')
+		) return;
+		const target = this.currentTypedTarget(commit.windowId, commit.leafId);
+		if (!target) return;
+		this.appendTypedInput(commit, target, this.opts.clock.now());
 	}
 
 	/** Enter a safe degraded pause for a startup or persistence boundary error. */
@@ -281,9 +299,6 @@ export class TrackingCoordinator {
 				}
 			}),
 		);
-		this.unsubs.push(mainSource.attachTypedInputListeners((observation) => {
-			this.onTypedInputObservation('main', observation);
-		}));
 		this.unsubs.push(
 			mainSource.onBlur(() => {
 				this.engine.submit({ kind: 'blur', sample: this.opts.clock.now() });
@@ -302,14 +317,9 @@ export class TrackingCoordinator {
 		const offBlur = source.onBlur(() => {
 			this.engine.submit({ kind: 'blur', sample: this.opts.clock.now() });
 		});
-		const offTypedInput = source.attachTypedInputListeners((observation) => {
-			this.onTypedInputObservation(winId, observation);
-		});
 		const unsub = () => {
 			offActivity();
 			offBlur();
-			offTypedInput();
-			this.typedInputClassifiers.delete(winId);
 		};
 		this.unsubs.push(unsub);
 		return unsub;
@@ -330,31 +340,6 @@ export class TrackingCoordinator {
 		}
 		if (event.type === 'focus') void this.refreshTarget(sample, true);
 		this.engine.submit({ kind: 'activity', sample });
-	}
-
-	private onTypedInputObservation(windowId: string, observation: TypedInputObservation): void {
-		const classifierKey = `${windowId}:${observation.leafId ?? 'unknown'}`;
-		const target = this.currentTypedTarget(windowId, observation.leafId);
-		if (!target) {
-			// A composition can end after its editor loses focus. Drop that pending
-			// state rather than allowing a later input in the leaf to inherit it.
-			if (observation.kind === 'compositionend') this.typedInputClassifiers.delete(classifierKey);
-			return;
-		}
-		const classifier = this.typedInputClassifiers.get(classifierKey) ?? new TypedInputClassifier();
-		this.typedInputClassifiers.set(classifierKey, classifier);
-		const counted = classifier.observe(observation);
-		if (counted) this.appendTypedInput(counted, target, this.opts.clock.now());
-		if (observation.kind === 'compositionend') {
-			void Promise.resolve().then(() => {
-				const pending = classifier.flushPendingComposition();
-				// Do not capture the target before this microtask. A leaf switch can
-				// occur between compositionend and its fallback commit, so rechecking
-				// prevents the delayed count from landing on the previous file.
-				const currentTarget = this.currentTypedTarget(windowId, observation.leafId);
-				if (pending && currentTarget) this.appendTypedInput(pending, currentTarget, this.opts.clock.now());
-			});
-		}
 	}
 
 	private appendTypedInput(
@@ -383,11 +368,10 @@ export class TrackingCoordinator {
 		});
 	}
 
-	private currentTypedTarget(windowId: string, leafId: string | undefined): TrackingSnapshot['currentTarget'] {
+	private currentTypedTarget(windowId: string, leafId: string): TrackingSnapshot['currentTarget'] {
 		const activeLeaf = this.opts.workspace.getActiveLeaf();
 		const snapshot = this.lastSnapshot;
 		if (
-			!leafId ||
 			activeLeaf?.windowId !== windowId ||
 			activeLeaf.leafId !== leafId ||
 			snapshot?.state !== 'active' ||
