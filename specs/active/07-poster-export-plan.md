@@ -15,7 +15,7 @@
 
 ## Phases
 
-- [ ] Phase 0: render deterministic complete posters from an immutable query snapshot
+- [x] Phase 0: render deterministic complete posters from an immutable query snapshot
 - [ ] Phase 1: open the export modal and download the selected format
 
 ## Background
@@ -59,9 +59,9 @@ The renderer consumes only `DistributionQuery`, `DistributionResult`, layout, ca
 
 ### Tasks
 
-- [ ] Define the three layout contracts and produce accessible, escaped SVG posters including wordmark, current-path data, donut, legend, percentages, and optional caption.
-- [ ] Package the supplied wordmark as a data URL and add SVG-to-raster conversion plus a download boundary that supports binary blobs.
-- [ ] Replace tests for the old chart-only/infographic modes with renderer, escaping, layout, format, raster failure, filename, and data-parity tests.
+- [x] Define the three layout contracts and produce accessible, escaped SVG posters including wordmark, current-path data, donut, legend, percentages, and optional caption.
+- [x] Package the supplied wordmark as a data URL and add SVG-to-raster conversion plus a download boundary that supports binary blobs.
+- [x] Replace tests for the old chart-only/infographic modes with renderer, escaping, layout, format, raster failure, filename, and data-parity tests.
 
 ### Files
 
@@ -72,9 +72,11 @@ The renderer consumes only `DistributionQuery`, `DistributionResult`, layout, ca
 
 ### Acceptance Criteria
 
-- [ ] Each layout is a complete poster, contains the wordmark and only the supplied query data, and renders an absent caption as empty.
-- [ ] SVG has title/description and escaped user-derived strings; raster formats originate from its SVG representation without screenshotting the application.
-- [ ] Every output filename is bounded, safe, layout-aware, and format-aware.
+- [x] Each layout is a complete poster, contains the wordmark and only the supplied query data, and renders an absent caption as empty.
+- [x] SVG has title/description and escaped user-derived strings; raster formats originate from its SVG representation without screenshotting the application.
+- [x] Every output filename is bounded, safe, layout-aware, and format-aware.
+
+Evidence: `npm run check`, `npm run lint`, `npm test -- --run` (255 tests), `npm run build`, strict specs validation, and `git diff --check` passed on 2026-07-23. Export tests cover all layouts, wordmark inclusion, exact values and percentages, escaping, omitted captions, bounded filenames, MIME parity, Blob download, and unavailable rasterization.
 
 ## Phase 1: open the export modal and download the selected format
 

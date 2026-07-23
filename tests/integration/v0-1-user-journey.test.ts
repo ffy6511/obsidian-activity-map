@@ -17,7 +17,7 @@ import { LocalQueryService } from '../../src/query/query-service';
 import { RawExportService } from '../../src/data/raw-export-service';
 import { RebuildService } from '../../src/data/rebuild-service';
 import { DeletionService } from '../../src/data/deletion-service';
-import { exportSvg } from '../../src/export/svg-exporter';
+import { renderPoster } from '../../src/export/poster-exporter';
 import type { RangeMode } from '../../src/query/date-range';
 
 function flush(): Promise<void> {
@@ -100,11 +100,9 @@ describe('v0.1 integrated local journey', () => {
 		const files = await query.run({ metric: 'activeMs', range: selectedDay, path: 'notes', view: 'children', groupBy: 'path' });
 		expect(files.detailItems[0]?.path).toBe('notes/a.md');
 
-		for (const mode of ['infographic', 'chart-only'] as const) {
-			const exported = exportSvg({ mode, title: 'Activity Map', query: files.query, distribution: files });
-			expect(exported.svg.includes('<title id="activity-map-title">')).toBeTrue();
-			expect(exported.svg.includes('1m 30s')).toBeTrue();
-		}
+		const exported = renderPoster({ layout: 'portrait', query: files.query, distribution: files, wordmarkDataUrl: 'data:image/png;base64,d29yZG1hcms=' });
+		expect(exported.svg.includes('<title id="activity-map-poster-title">')).toBeTrue();
+		expect(exported.svg.includes('1m 30s')).toBeTrue();
 		const raw = new RawExportService(inventory, data.getShardStore(), adapter);
 		const rawResult = await raw.export({ scope: { kind: 'all' }, nowIso: '2026-07-21T11:00:00.000Z' });
 		expect(rawResult.records.length).toBeGreaterThanOrEqual(2);

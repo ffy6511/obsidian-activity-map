@@ -1,7 +1,9 @@
 import { describe, expect, it } from '../helpers/test-harness';
 
 import type { DistributionItem, DistributionResult } from '../../src/query/distribution-query';
-import { exportSvg, inlineChartColor, safeSvgFilename } from '../../src/export/svg-exporter';
+import { inlineChartColor, posterMimeType, renderPoster, safePosterFilename } from '../../src/export/poster-exporter';
+
+const wordmark = 'data:image/png;base64,d29yZG1hcms=';
 
 function distribution(label = 'Projects'): DistributionResult {
 	const item: DistributionItem = {
@@ -20,37 +22,49 @@ function distribution(label = 'Projects'): DistributionResult {
 	};
 }
 
-describe('standalone SVG exporter', () => {
-	it('renders both modes with accessible metadata, inline colors, and exact values', () => {
-		for (const mode of ['infographic', 'chart-only'] as const) {
+describe('poster exporter', () => {
+	it('renders every layout as an accessible complete poster with the supplied wordmark', () => {
+		for (const layout of ['portrait', 'wide', 'compact'] as const) {
 			const source = distribution();
-			const result = exportSvg({ mode, title: 'Activity Map', query: source.query, distribution: source });
+			const result = renderPoster({ layout, query: source.query, distribution: source, wordmarkDataUrl: wordmark });
 			expect(result.svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBeTrue();
 			expect(result.svg.endsWith('</svg>')).toBeTrue();
-			expect(result.svg.includes('<title id="activity-map-title">Activity Map</title>')).toBeTrue();
-			expect(result.svg.includes('<desc id="activity-map-desc">')).toBeTrue();
+			expect(result.svg.includes('<title id="activity-map-poster-title">Activity Map Activity poster</title>')).toBeTrue();
+			expect(result.svg.includes('<desc id="activity-map-poster-desc">')).toBeTrue();
+			expect(result.svg.includes(`href="${wordmark}"`)).toBeTrue();
+			expect(result.svg.includes('Vault / work/projects')).toBeTrue();
 			expect(result.svg.includes('1m 30s')).toBeTrue();
 			expect(result.svg.includes('75%')).toBeTrue();
 			for (const item of result.chart.items) expect(result.svg.includes(`fill="${inlineChartColor(item.color)}"`)).toBeTrue();
 			expect(result.svg.includes('var(--')).toBeFalse();
+			expect(result.filename.endsWith(`-${layout}.svg`)).toBeTrue();
 		}
 	});
 
-	it('escapes adversarial labels and paths so markup cannot be injected', () => {
+	it('escapes all user-derived strings and omits an absent caption', () => {
 		const source = distribution('</text><script>alert("x")</script><text>');
 		source.query.path = '../../<svg onload="alert(1)">';
-		const result = exportSvg({ mode: 'infographic', title: '<img src=x onerror=alert(1)>', query: source.query, distribution: source });
+		const result = renderPoster({
+			layout: 'portrait', query: source.query, distribution: source, wordmarkDataUrl: wordmark,
+			caption: '<img src=x onerror=alert(1)>',
+		});
 		expect(result.svg.includes('<script>')).toBeFalse();
 		expect(result.svg.includes('<img')).toBeFalse();
 		expect(result.svg.includes('onload="alert(1)"')).toBeFalse();
 		expect(result.svg.includes('&lt;script&gt;')).toBeTrue();
+		expect(result.svg.includes('&lt;img')).toBeTrue();
 		expect(result.filename.includes('/')).toBeFalse();
-		expect(result.filename.endsWith('.svg')).toBeTrue();
+		const withoutCaption = renderPoster({ layout: 'compact', query: source.query, distribution: source, wordmarkDataUrl: wordmark });
+		expect(withoutCaption.svg.includes('Optional caption')).toBeFalse();
 	});
 
-	it('builds bounded filenames from metric, range, and path', () => {
+	it('uses bounded layout-aware filenames and matching MIME types', () => {
 		const query = distribution().query;
 		query.path = '项目 / Quarterly Review';
-		expect(safeSvgFilename(query, 'chart-only')).toBe('activity-map-activeMs-2026-07-21-Quarterly-Review-chart-only.svg');
+		expect(safePosterFilename(query, 'wide', 'jpg')).toBe('activity-map-activeMs-2026-07-21-Quarterly-Review-wide.jpg');
+		expect(safePosterFilename({ ...query, path: 'x'.repeat(200) }, 'portrait', 'png').length).toBeLessThanOrEqual(120);
+		expect(posterMimeType('svg')).toBe('image/svg+xml');
+		expect(posterMimeType('png')).toBe('image/png');
+		expect(posterMimeType('jpg')).toBe('image/jpeg');
 	});
 });

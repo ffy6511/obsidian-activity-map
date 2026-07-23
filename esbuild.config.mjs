@@ -34,6 +34,9 @@ const context = await esbuild.context({
 	],
 	format: 'cjs',
 	target: 'es2021',
+	loader: {
+		'.png': 'dataurl',
+	},
 	logLevel: 'info',
 	sourcemap: production ? false : 'inline',
 	treeShaking: true,

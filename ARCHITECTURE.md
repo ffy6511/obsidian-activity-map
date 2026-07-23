@@ -127,8 +127,9 @@ src/
 │   └── components/                 # Range, breadcrumb, donut, and detail renderers.
 │
 └── export/                         # Spec 03: deterministic standalone artifacts.
-    ├── svg-exporter.ts             # ChartModel -> escaped standalone SVG.
-    └── export-destination.ts       # Capability-detected local download boundary.
+    ├── poster-exporter.ts          # Query snapshot -> escaped Portrait/Wide/Compact SVG.
+    ├── poster-wordmark.ts          # Bundled PNG wordmark data URL.
+    └── export-destination.ts       # Capability-gated Blob download and SVG rasterization.
 
 tests/
 ├── helpers/                        # Fake clock, adapter, windows, and fixed history.
@@ -327,7 +328,7 @@ DistributionResult
   -> LiveDistributionProjection     # Pure, idle-bounded presentation projection.
   -> ChartModel                     # Shared semantic chart representation.
        ├── DonutChart               # DOM presentation adapter.
-       └── SvgExporter              # Standalone serialization; never snapshots live DOM.
+       └── PosterExporter           # Standalone serialization; never snapshots live DOM.
 ```
 
 The Header Popover grouping preference crosses the settings port before becoming the default for a newly opened Popover. Grouping remains a query presentation axis: it changes item projection without changing scope or vault totals. Persistence failure rolls back the optimistic preference and invalidates its in-flight query.
