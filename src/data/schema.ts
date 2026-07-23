@@ -90,7 +90,7 @@ export function validateMetrics(value: unknown): {
 }
 
 /** Allowed event payload discriminators for schema version 1. */
-export type EventPayloadKind = 'session' | 'adjustment';
+export type EventPayloadKind = 'session' | 'adjustment' | 'typed-input';
 
 /** A validated session payload record. */
 export interface ValidatedSessionPayload {
@@ -113,7 +113,14 @@ export interface ValidatedAdjustmentPayload {
 	automatic: boolean;
 }
 
-export type ValidatedPayload = ValidatedSessionPayload | ValidatedAdjustmentPayload;
+/** A content-free committed input count. */
+export interface ValidatedTypedInputPayload {
+	kind: 'typed-input';
+	typedChars: number;
+	source: 'insert-text' | 'ime-commit';
+}
+
+export type ValidatedPayload = ValidatedSessionPayload | ValidatedAdjustmentPayload | ValidatedTypedInputPayload;
 
 /** A validated event envelope (schema version 1). */
 export interface ValidatedEventEnvelope {
@@ -140,7 +147,7 @@ export function validateEventEnvelope(value: unknown): ValidatedEventEnvelope {
 		);
 	}
 	const type = value.type as EventPayloadKind;
-	if (type !== 'session' && type !== 'adjustment') {
+	if (type !== 'session' && type !== 'adjustment' && type !== 'typed-input') {
 		throw new SchemaError('invalid-envelope', `unknown event type ${String(value.type)}`);
 	}
 	const payload = validatePayload(value.payload, type);
@@ -178,6 +185,19 @@ function validatePayload(value: unknown, type: EventPayloadKind): ValidatedPaylo
 			closureReason: isString(value.closureReason) ? value.closureReason : 'unknown',
 		};
 	}
+	if (type === 'typed-input') {
+		if (!Number.isSafeInteger(value.typedChars) || (value.typedChars as number) < 0) {
+			throw new SchemaError('invalid-payload', 'typedChars must be a non-negative safe integer');
+		}
+		if (value.source !== 'insert-text' && value.source !== 'ime-commit') {
+			throw new SchemaError('invalid-payload', 'typed-input source is invalid');
+		}
+		return {
+			kind: 'typed-input',
+			typedChars: value.typedChars as number,
+			source: value.source,
+		};
+	}
 	// adjustment
 	if (
 		typeof value.deltaMs !== 'number' ||
@@ -200,6 +220,12 @@ export function validateDailyFileMetrics(value: unknown): {
 	activeMs: number;
 	editingMs: number;
 	openCount: number;
+	typedChars: number;
 } {
-	return validateMetrics(value);
+	const metrics = validateMetrics(value);
+	const typedChars = (value as { typedChars?: unknown }).typedChars;
+	if (!Number.isSafeInteger(typedChars) || (typedChars as number) < 0) {
+		throw new SchemaError('invalid-metrics', 'typedChars must be a non-negative safe integer');
+	}
+	return { ...metrics, typedChars: typedChars as number };
 }

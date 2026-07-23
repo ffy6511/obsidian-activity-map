@@ -55,6 +55,19 @@ export interface ClosedSessionSegment {
 	closureReason: SessionClosureReason;
 }
 
+/** Numeric evidence of one committed human text-input action. */
+export interface TypedInputRecord {
+	/** Process-unique key retained so an uncertain append can be retried safely. */
+	recordId: string;
+	fileId: string;
+	pathAtEvent: string;
+	occurredAt: string;
+	localDate: string;
+	typedChars: number;
+	/** Semantic browser source; never carries the committed string. */
+	source: 'insert-text' | 'ime-commit';
+}
+
 /**
  * A short, uncertain idle interval the user may explicitly re-include.
  *

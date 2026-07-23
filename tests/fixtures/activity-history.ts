@@ -78,29 +78,29 @@ export function sampleSummaries(): DailySummary[] {
 	const by = (date: string, m: DailySummary['metricsByFileId']) => summary('dev1', date, m);
 	return [
 		by('2026-07-14', {
-			'file-a': { activeMs: 60_000, editingMs: 30_000, openCount: 1 },
-			'file-b': { activeMs: 20_000, editingMs: 0, openCount: 1 },
-			'file-c': { activeMs: 10_000, editingMs: 0, openCount: 1 },
-			'file-root': { activeMs: 5_000, editingMs: 0, openCount: 1 },
+			'file-a': { activeMs: 60_000, editingMs: 30_000, openCount: 1, typedChars: 0 },
+			'file-b': { activeMs: 20_000, editingMs: 0, openCount: 1, typedChars: 0 },
+			'file-c': { activeMs: 10_000, editingMs: 0, openCount: 1, typedChars: 0 },
+			'file-root': { activeMs: 5_000, editingMs: 0, openCount: 1, typedChars: 0 },
 		}),
 		by('2026-07-15', {
-			'file-a': { activeMs: 40_000, editingMs: 10_000, openCount: 1 },
+			'file-a': { activeMs: 40_000, editingMs: 10_000, openCount: 1, typedChars: 0 },
 		}),
 		by('2026-07-16', {
-			'file-a': { activeMs: 30_000, editingMs: 0, openCount: 1 },
-			'file-b': { activeMs: 10_000, editingMs: 0, openCount: 1 },
+			'file-a': { activeMs: 30_000, editingMs: 0, openCount: 1, typedChars: 0 },
+			'file-b': { activeMs: 10_000, editingMs: 0, openCount: 1, typedChars: 0 },
 		}),
 		// 2026-07-17 zero-use day (no summary).
 		by('2026-07-18', {
-			'file-a': { activeMs: 50_000, editingMs: 20_000, openCount: 1 },
+			'file-a': { activeMs: 50_000, editingMs: 20_000, openCount: 1, typedChars: 0 },
 		}),
 		by('2026-07-19', {
-			'file-a': { activeMs: 20_000, editingMs: 0, openCount: 1 },
-			'file-root': { activeMs: 8_000, editingMs: 0, openCount: 1 },
+			'file-a': { activeMs: 20_000, editingMs: 0, openCount: 1, typedChars: 0 },
+			'file-root': { activeMs: 8_000, editingMs: 0, openCount: 1, typedChars: 0 },
 		}),
 		by('2026-07-20', {
-			'file-a': { activeMs: 70_000, editingMs: 40_000, openCount: 1 },
-			'file-b': { activeMs: 15_000, editingMs: 5_000, openCount: 1 },
+			'file-a': { activeMs: 70_000, editingMs: 40_000, openCount: 1, typedChars: 0 },
+			'file-b': { activeMs: 15_000, editingMs: 5_000, openCount: 1, typedChars: 0 },
 		}),
 	];
 }

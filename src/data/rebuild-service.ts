@@ -94,8 +94,8 @@ export class RebuildService {
 
 /** Structural equality of two metrics maps (used to detect no-op rebuilds). */
 function sameMetrics(
-	a: Record<string, { activeMs: number; editingMs: number; openCount: number }>,
-	b: Record<string, { activeMs: number; editingMs: number; openCount: number }>,
+	a: Record<string, { activeMs: number; editingMs: number; openCount: number; typedChars: number }>,
+	b: Record<string, { activeMs: number; editingMs: number; openCount: number; typedChars: number }>,
 ): boolean {
 	const aKeys = Object.keys(a);
 	const bKeys = Object.keys(b);
@@ -108,7 +108,7 @@ function sameMetrics(
 		if (!av || !bv) {
 			return false;
 		}
-		if (av.activeMs !== bv.activeMs || av.editingMs !== bv.editingMs || av.openCount !== bv.openCount) {
+		if (av.activeMs !== bv.activeMs || av.editingMs !== bv.editingMs || av.openCount !== bv.openCount || av.typedChars !== bv.typedChars) {
 			return false;
 		}
 	}

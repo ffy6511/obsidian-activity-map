@@ -206,6 +206,35 @@ export default class ActivityMapPlugin extends Plugin {
 					for (const event of events) win.removeEventListener(event, handler, { capture: true });
 				};
 			},
+			attachTypedInputListeners: (callback) => {
+				const isEditor = (target: EventTarget | null): boolean => {
+					const element = target as { closest?: (selector: string) => Element | null } | null;
+					return typeof element?.closest === 'function' &&
+						element.closest('.cm-editor, .markdown-source-view') !== null;
+				};
+				const observe = (event: Event, kind: 'beforeinput' | 'compositionstart' | 'compositionend') => {
+					const input = event as InputEvent;
+					callback({
+						kind,
+						isTrusted: event.isTrusted,
+						isEditor: isEditor(event.target),
+						inputType: kind === 'beforeinput' ? input.inputType : undefined,
+						data: (event as InputEvent).data,
+						isComposing: kind === 'beforeinput' ? input.isComposing : undefined,
+					});
+				};
+				const beforeInput = (event: Event) => observe(event, 'beforeinput');
+				const compositionStart = (event: Event) => observe(event, 'compositionstart');
+				const compositionEnd = (event: Event) => observe(event, 'compositionend');
+				win.addEventListener('beforeinput', beforeInput, { capture: true, passive: true });
+				win.addEventListener('compositionstart', compositionStart, { capture: true, passive: true });
+				win.addEventListener('compositionend', compositionEnd, { capture: true, passive: true });
+				return () => {
+					win.removeEventListener('beforeinput', beforeInput, { capture: true });
+					win.removeEventListener('compositionstart', compositionStart, { capture: true });
+					win.removeEventListener('compositionend', compositionEnd, { capture: true });
+				};
+			},
 			onBlur: (callback) => {
 				win.addEventListener('blur', callback);
 				return () => win.removeEventListener('blur', callback);

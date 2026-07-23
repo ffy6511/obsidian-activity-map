@@ -49,6 +49,7 @@ describe('v0.1 integrated local journey', () => {
 		const activity: { callback: ((event: { isTrusted?: boolean; type?: string }) => void) | null } = { callback: null };
 		const activitySource: ActivityEventSource = {
 			attachActivityListeners(callback) { activity.callback = callback; return () => { activity.callback = null; }; },
+			attachTypedInputListeners: () => () => {},
 			onBlur: () => () => {},
 		};
 		const activeLeaf: ResolvedLeaf = { leafId: 'leaf-1', windowId: 'main', file: { path: 'notes/a.md' } };

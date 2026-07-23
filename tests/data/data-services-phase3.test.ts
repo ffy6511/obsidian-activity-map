@@ -388,7 +388,7 @@ describe('deletion service', () => {
 				generatedAt: '2026-07-20T00:00:00.000Z',
 				sourceRecordCount: 1,
 				sourceFingerprint: 'retained-source',
-				metricsByFileId: { f1: { activeMs: 10_000, editingMs: 0, openCount: 1 } },
+				metricsByFileId: { f1: { activeMs: 10_000, editingMs: 0, openCount: 1, typedChars: 0 } },
 				warnings: [],
 			},
 		});
@@ -406,7 +406,7 @@ describe('deletion service', () => {
 			summary: {
 				...current,
 				generatedAt: '2026-07-21T00:00:30.000Z',
-				metricsByFileId: { f1: { activeMs: 20_000, editingMs: 0, openCount: 1 } },
+				metricsByFileId: { f1: { activeMs: 20_000, editingMs: 0, openCount: 1, typedChars: 0 } },
 			},
 		});
 		const executed = await service.executeDeletion({ plan, nowIso: '2026-07-21T00:01:00.000Z' });

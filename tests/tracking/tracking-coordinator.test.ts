@@ -12,6 +12,7 @@ import {
 	type EditorChangeSource,
 	type WorkspaceSource,
 } from '../../src/tracking/tracking-coordinator';
+import type { TypedInputObservation } from '../../src/tracking/typed-input';
 import { InMemoryCheckpointPort, InMemoryTrackingSink } from '../../src/tracking/ports';
 import { createFakeClock, type FakeClock } from '../helpers/fake-clock';
 import { DEFAULT_SETTINGS, normalizeSettings } from '../../src/domain/settings';
@@ -84,13 +85,19 @@ function fakeWorkspace(initialLeaf: ResolvedLeaf | null): {
 function fakeActivitySource(): ActivityEventSource & {
 	fireActivity(type?: string): void;
 	fireBlur(): void;
+	fireTypedInput(observation: TypedInputObservation): void;
 } {
 	const blurCbs = new Set<() => void>();
 	const activityCbs = new Set<(event: { isTrusted?: boolean; type?: string }) => void>();
+	const typedInputCbs = new Set<(observation: TypedInputObservation) => void>();
 	return {
 		attachActivityListeners: (cb) => {
 			activityCbs.add(cb);
 			return () => activityCbs.delete(cb);
+		},
+		attachTypedInputListeners: (cb) => {
+			typedInputCbs.add(cb);
+			return () => typedInputCbs.delete(cb);
 		},
 		onBlur: (cb) => {
 			blurCbs.add(cb);
@@ -101,6 +108,9 @@ function fakeActivitySource(): ActivityEventSource & {
 		},
 		fireBlur() {
 			for (const cb of blurCbs) cb();
+		},
+		fireTypedInput(observation) {
+			for (const cb of typedInputCbs) cb(observation);
 		},
 	};
 }
@@ -360,6 +370,61 @@ describe('tracking coordinator lifecycle', () => {
 		expect(sink.sessions[0]?.editingMs).toBeGreaterThan(0);
 		// Only the matching foreground edit opens a burst at 15s.
 		expect(sink.sessions[0]?.editingMs).toBe(5_000);
+	});
+
+	it('persists trusted foreground editor input without retaining its text', async () => {
+		const clock = createFakeClock();
+		const ws = fakeWorkspace(leaf('front', 'notes/a.md'));
+		const { coordinator, sink, mainSource } = makeCoordinator({ clock, workspace: ws.source });
+		coordinator.start();
+		await flush(clock, 5_000);
+		mainSource.fireTypedInput({
+			kind: 'beforeinput', isTrusted: true, isEditor: true, inputType: 'insertText', data: '你e\u0301', isComposing: false,
+		});
+		mainSource.fireTypedInput({
+			kind: 'beforeinput', isTrusted: true, isEditor: false, inputType: 'insertText', data: 'not-counted', isComposing: false,
+		});
+		mainSource.fireTypedInput({
+			kind: 'beforeinput', isTrusted: true, isEditor: true, inputType: 'insertFromPaste', data: 'not-counted', isComposing: false,
+		});
+		await flush(clock);
+		expect(sink.typedInputs).toHaveLength(1);
+		expect(sink.typedInputs[0]).toMatchObject({
+			fileId: 'file-1', pathAtEvent: 'notes/a.md', typedChars: 2, source: 'insert-text',
+		});
+		expect(JSON.stringify(sink.typedInputs[0])).toBe(JSON.stringify({
+			recordId: sink.typedInputs[0]?.recordId,
+			fileId: 'file-1',
+			pathAtEvent: 'notes/a.md',
+			occurredAt: sink.typedInputs[0]?.occurredAt,
+			localDate: sink.typedInputs[0]?.localDate,
+			typedChars: 2,
+			source: 'insert-text',
+		}));
+		await coordinator.stop();
+	});
+
+	it('counts an IME commit once and degrades on typed-input persistence failure', async () => {
+		const clock = createFakeClock();
+		const ws = fakeWorkspace(leaf('front', 'notes/a.md'));
+		const sink = new InMemoryTrackingSink({ failAppendTypedInputsAfter: 1 });
+		const { coordinator, mainSource, snapshots } = makeCoordinator({ clock, workspace: ws.source, sink });
+		coordinator.start();
+		await flush(clock, 5_000);
+		mainSource.fireTypedInput({ kind: 'compositionstart', isTrusted: true, isEditor: true });
+		mainSource.fireTypedInput({ kind: 'compositionend', isTrusted: true, isEditor: true, data: '中文' });
+		mainSource.fireTypedInput({
+			kind: 'beforeinput', isTrusted: true, isEditor: true, inputType: 'insertText', data: '中文', isComposing: false,
+		});
+		await flush(clock);
+		expect(sink.typedInputs).toHaveLength(1);
+		expect(sink.typedInputs[0]?.typedChars).toBe(2);
+		mainSource.fireTypedInput({
+			kind: 'beforeinput', isTrusted: true, isEditor: true, inputType: 'insertText', data: 'x', isComposing: false,
+		});
+		await flush(clock);
+		expect(snapshots.some((snapshot) => snapshot.state === 'degraded')).toBeTrue();
+		await coordinator.stop();
 	});
 
 	it('pause and resume flow through the controller', async () => {

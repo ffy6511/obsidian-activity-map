@@ -9,7 +9,7 @@
  * lines.
  */
 
-import type { ClosedSessionSegment, RecoveryDecision } from '../domain/activity';
+import type { ClosedSessionSegment, RecoveryDecision, TypedInputRecord } from '../domain/activity';
 import { validateEventEnvelope, type ValidatedEventEnvelope } from './schema';
 
 /** Build a `session` envelope from one closed segment. */
@@ -73,6 +73,28 @@ export function buildAdjustmentEnvelope(
 		},
 	};
 	return validateEventEnvelope(envelope);
+}
+
+/** Build a content-free `typed-input` envelope from one committed input count. */
+export function buildTypedInputEnvelope(
+	record: TypedInputRecord,
+	deviceId: string,
+): ValidatedEventEnvelope {
+	return validateEventEnvelope({
+		schemaVersion: 1,
+		recordId: `typed-input:${record.recordId}`,
+		type: 'typed-input',
+		deviceId,
+		fileId: record.fileId,
+		pathAtEvent: record.pathAtEvent,
+		occurredAt: record.occurredAt,
+		localDate: record.localDate,
+		payload: {
+			kind: 'typed-input',
+			typedChars: record.typedChars,
+			source: record.source,
+		},
+	});
 }
 
 /** Serialize a validated envelope as one complete NDJSON line (with newline). */

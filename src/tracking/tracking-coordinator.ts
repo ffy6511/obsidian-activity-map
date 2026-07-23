@@ -24,9 +24,10 @@ import type {
 	RecoveryDecision,
 	RuntimeCheckpoint,
 	TrackingSnapshot,
+	TypedInputRecord,
 } from '../domain/activity';
 import type { ActivityMapSettings } from '../domain/settings';
-import type { Clock } from '../platform/clock';
+import { localDateFor, type Clock } from '../platform/clock';
 import { ActivityEngine, type EngineEmissions } from './activity-engine';
 import { reconcileCheckpoint, type ReconcileResult } from './checkpoint-reconciler';
 import {
@@ -42,6 +43,7 @@ import type {
 	TrackingRecordSink,
 } from './ports';
 import { TransitionQueue } from './transition-queue';
+import { TypedInputClassifier, type TypedInputCount, type TypedInputObservation } from './typed-input';
 
 /** Source of workspace/leaf observations, abstracted so tests can fake it. */
 export interface WorkspaceSource {
@@ -65,6 +67,8 @@ export interface EditorChangeSource {
 export interface ActivityEventSource {
 	/** Register trusted keyboard/composition/pointer/wheel/touch/focus listeners. */
 	attachActivityListeners(onActivity: (event: { isTrusted?: boolean; type?: string }) => void): () => void;
+	/** Subscribe to trusted editor input observations for content-free counting. */
+	attachTypedInputListeners(onInput: (observation: TypedInputObservation) => void): () => void;
 	/** Subscribe to window blur. */
 	onBlur(cb: () => void): () => void;
 }
@@ -92,6 +96,8 @@ export class TrackingCoordinator {
 	private lastSnapshot: TrackingSnapshot | null = null;
 	private restored = false;
 	private settings: ActivityMapSettings;
+	private readonly typedInputClassifiers = new Map<string, TypedInputClassifier>();
+	private nextTypedInputId = 1;
 
 	constructor(opts: TrackingCoordinatorOptions) {
 		this.opts = opts;
@@ -161,6 +167,7 @@ export class TrackingCoordinator {
 			}
 		}
 		this.unsubs.length = 0;
+		this.typedInputClassifiers.clear();
 		this.engine.submit({ kind: 'stop', sample: this.opts.clock.now() });
 		await this.queue.idle();
 	}
@@ -274,6 +281,9 @@ export class TrackingCoordinator {
 				}
 			}),
 		);
+		this.unsubs.push(mainSource.attachTypedInputListeners((observation) => {
+			this.onTypedInputObservation('main', observation);
+		}));
 		this.unsubs.push(
 			mainSource.onBlur(() => {
 				this.engine.submit({ kind: 'blur', sample: this.opts.clock.now() });
@@ -292,9 +302,14 @@ export class TrackingCoordinator {
 		const offBlur = source.onBlur(() => {
 			this.engine.submit({ kind: 'blur', sample: this.opts.clock.now() });
 		});
+		const offTypedInput = source.attachTypedInputListeners((observation) => {
+			this.onTypedInputObservation(winId, observation);
+		});
 		const unsub = () => {
 			offActivity();
 			offBlur();
+			offTypedInput();
+			this.typedInputClassifiers.delete(winId);
 		};
 		this.unsubs.push(unsub);
 		return unsub;
@@ -315,6 +330,56 @@ export class TrackingCoordinator {
 		}
 		if (event.type === 'focus') void this.refreshTarget(sample, true);
 		this.engine.submit({ kind: 'activity', sample });
+	}
+
+	private onTypedInputObservation(windowId: string, observation: TypedInputObservation): void {
+		const classifier = this.typedInputClassifiers.get(windowId) ?? new TypedInputClassifier();
+		this.typedInputClassifiers.set(windowId, classifier);
+		const counted = classifier.observe(observation);
+		if (counted) this.appendTypedInput(windowId, counted);
+		if (observation.kind === 'compositionend') {
+			const target = this.currentTypedTarget(windowId);
+			const sample = target ? this.opts.clock.now() : null;
+			void Promise.resolve().then(() => {
+				const pending = classifier.flushPendingComposition();
+				if (pending && target && sample) this.appendTypedInput(windowId, pending, target, sample);
+			});
+		}
+	}
+
+	private appendTypedInput(
+		windowId: string,
+		counted: TypedInputCount,
+		target = this.currentTypedTarget(windowId),
+		sample = target ? this.opts.clock.now() : null,
+	): void {
+		if (!target || !sample || counted.typedChars === 0) return;
+		const record: TypedInputRecord = {
+			recordId: `${target.fileId}-${String(sample.wallMs)}-${String(this.nextTypedInputId++)}`,
+			fileId: target.fileId,
+			pathAtEvent: target.path,
+			occurredAt: new Date(sample.wallMs).toISOString(),
+			localDate: localDateFor(sample.wallMs, sample.timeZone),
+			typedChars: counted.typedChars,
+			source: counted.source,
+		};
+		void this.queue.enqueue(async () => {
+			try {
+				await this.opts.sink.appendTypedInputs([record]);
+			} catch (error) {
+				// Text has already been committed in the editor. Persisting an
+				// unverifiable partial count would mislead users, so stop safely.
+				this.enterDegradedFromError(error);
+			}
+		});
+	}
+
+	private currentTypedTarget(windowId: string): TrackingSnapshot['currentTarget'] {
+		const snapshot = this.lastSnapshot;
+		if (snapshot?.state !== 'active' || !snapshot.currentTarget || snapshot.currentTarget.windowId !== windowId) {
+			return null;
+		}
+		return snapshot.currentTarget;
 	}
 
 	private async refreshTarget(

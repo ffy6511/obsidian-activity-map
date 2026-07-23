@@ -15,7 +15,7 @@
 
 ## Phases
 
-- [ ] Phase 0: persist trusted typed-input evidence and rebuild aggregates
+- [x] Phase 0: persist trusted typed-input evidence and rebuild aggregates
 - [ ] Phase 1: query and display the `typedChars` metric
 
 ## Background
@@ -57,9 +57,9 @@ trusted editor beforeinput / IME final commit
 
 ### Tasks
 
-- [ ] Add a narrow trusted input observation port, grapheme counter, and IME final-commit de-duplication in the tracking boundary.
-- [ ] Extend validated envelopes, DataServices, daily-summary rebuild/validation, and related deletion/export paths for numeric `typed-input` events.
-- [ ] Add deterministic tests for Latin, CJK IME, combining marks, emoji, synthetic events, non-editor input, paste/drop/history/programmatic exclusion, wrong-window/leaf rejection, append failure, and rebuild.
+- [x] Add a narrow trusted input observation port, grapheme counter, and IME final-commit de-duplication in the tracking boundary.
+- [x] Extend validated envelopes, DataServices, daily-summary rebuild/validation, and related deletion/export paths for numeric `typed-input` events.
+- [x] Add deterministic tests for Latin, CJK IME, combining marks, emoji, synthetic events, non-editor input, paste/drop/history/programmatic exclusion, wrong-window/leaf rejection, append failure, and rebuild.
 
 ### Files
 
@@ -71,9 +71,11 @@ trusted editor beforeinput / IME final commit
 
 ### Acceptance Criteria
 
-- [ ] Every accepted source creates one content-free count record for the current target's local date; composition updates and a following duplicate `insertText` do not double-count.
-- [ ] Any rejected source leaves shards and summaries unchanged; a persistence failure reaches the existing degraded safety boundary.
-- [ ] A shard rebuild derives exact typed counts while old records and old summaries remain readable with zero counts.
+- [x] Every accepted source creates one content-free count record for the current target's local date; composition updates and a following duplicate `insertText` do not double-count.
+- [x] Any rejected source leaves shards and summaries unchanged; a persistence failure reaches the existing degraded safety boundary.
+- [x] A shard rebuild derives exact typed counts while old records and old summaries remain readable with zero counts.
+
+Evidence: `npm run check`, `npm run lint`, and `npm test -- --run` passed on 2026-07-23 (253 tests). Focused coverage validates grapheme segmentation, IME final-commit de-duplication, source exclusion, content-free envelopes, old-summary normalization, shard rebuild, and persistence-failure degradation.
 
 ## Phase 1: query and display the `typedChars` metric
 

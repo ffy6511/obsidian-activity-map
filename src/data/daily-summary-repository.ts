@@ -20,6 +20,7 @@ export interface DailyFileMetrics {
 	activeMs: number;
 	editingMs: number;
 	openCount: number;
+	typedChars: number;
 }
 
 /** The persisted daily summary (schema version 1). */
@@ -182,7 +183,7 @@ export function aggregateMetrics(
 	const byFile: Record<string, DailyFileMetrics> = {};
 	const seenAdjustments = new Set<string>();
 	for (const record of records) {
-		const bucket = (byFile[record.fileId] ??= { activeMs: 0, editingMs: 0, openCount: 0 });
+		const bucket = (byFile[record.fileId] ??= { activeMs: 0, editingMs: 0, openCount: 0, typedChars: 0 });
 		if (record.type === 'session') {
 			const payload = record.payload;
 			if (payload.kind === 'session') {
@@ -204,6 +205,9 @@ export function aggregateMetrics(
 				seenAdjustments.add(adjustmentKey);
 				bucket.activeMs += payload.deltaMs;
 			}
+		} else if (record.type === 'typed-input') {
+			const payload = record.payload;
+			if (payload.kind === 'typed-input') bucket.typedChars += payload.typedChars;
 		}
 	}
 	// Invariant enforcement: editingMs must not exceed activeMs; reject negatives.
@@ -222,6 +226,10 @@ export function aggregateMetrics(
 		}
 		metrics.activeMs = Math.round(metrics.activeMs);
 		metrics.editingMs = Math.round(metrics.editingMs);
+		if (!Number.isSafeInteger(metrics.typedChars) || metrics.typedChars < 0) {
+			warnings.push({ code: 'invalid-metrics', message: `invalid typedChars for ${fileId}` });
+			metrics.typedChars = 0;
+		}
 	}
 	return byFile;
 }
@@ -261,10 +269,12 @@ function validateSummary(
 	if (Array.isArray(obj.metricsByFileId)) {
 		throw new Error('summary-invalid-metrics-map');
 	}
+	const metricsByFileId: Record<string, DailyFileMetrics> = {};
 	for (const [fileId, metrics] of Object.entries(obj.metricsByFileId as Record<string, unknown>)) {
 		if (fileId.length === 0 || !isDailyFileMetrics(metrics)) {
 			throw new Error(`summary-invalid-metrics-${fileId || 'empty-file-id'}`);
 		}
+		metricsByFileId[fileId] = normalizeDailyFileMetrics(metrics);
 	}
 	for (const warning of obj.warnings) {
 		if (
@@ -279,7 +289,7 @@ function validateSummary(
 			throw new Error('summary-invalid-warning');
 		}
 	}
-	return raw as DailySummary;
+	return { ...raw as Omit<DailySummary, 'metricsByFileId'>, metricsByFileId };
 }
 
 function isDailyFileMetrics(raw: unknown): raw is DailyFileMetrics {
@@ -298,8 +308,18 @@ function isDailyFileMetrics(raw: unknown): raw is DailyFileMetrics {
 		typeof metrics.openCount === 'number' &&
 		Number.isFinite(metrics.openCount) &&
 		Number.isInteger(metrics.openCount) &&
-		metrics.openCount >= 0
+		metrics.openCount >= 0 &&
+		(metrics.typedChars === undefined || (
+			typeof metrics.typedChars === 'number' &&
+			Number.isSafeInteger(metrics.typedChars) &&
+			metrics.typedChars >= 0
+		))
 	);
+}
+
+/** Schema-1 summaries predating typedChars remain readable as zero. */
+function normalizeDailyFileMetrics(raw: DailyFileMetrics | (Omit<DailyFileMetrics, 'typedChars'> & { typedChars?: number })): DailyFileMetrics {
+	return { ...raw, typedChars: raw.typedChars ?? 0 };
 }
 
 /** Stable evidence fingerprint used by retention and deletion drift checks. */

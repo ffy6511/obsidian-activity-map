@@ -11,14 +11,14 @@
  * checkpoint work proceeds.
  */
 
-import type { ClosedSessionSegment, RecoveryDecision } from '../domain/activity';
+import type { ClosedSessionSegment, RecoveryDecision, TypedInputRecord } from '../domain/activity';
 import type { ActivityMapSettings } from '../domain/settings';
 import type {
 	FileIdentityPort,
 	TrackingRecordSink,
 } from '../tracking/ports';
 import { localDateFor } from '../platform/clock';
-import { buildAdjustmentEnvelope, buildSessionEnvelope } from './event-envelope';
+import { buildAdjustmentEnvelope, buildSessionEnvelope, buildTypedInputEnvelope } from './event-envelope';
 import { FileRegistry } from './file-registry';
 import { NdjsonShardStore } from './ndjson-shard-store';
 import { sessionShardPath, type PathAdapter } from './paths';
@@ -100,6 +100,20 @@ export class DataServices implements TrackingRecordSink, FileIdentityPort {
 		const path = sessionShardPath(this.pathAdapter, this.deviceId, localDate);
 		await this.shardStore.append(path, envelopes);
 		await this.onShardChanged?.(this.deviceId, localDate);
+	}
+
+	async appendTypedInputs(records: readonly TypedInputRecord[]): Promise<void> {
+		const byDate = new Map<string, TypedInputRecord[]>();
+		for (const record of records) {
+			const bucket = byDate.get(record.localDate) ?? [];
+			bucket.push(record);
+			byDate.set(record.localDate, bucket);
+		}
+		for (const [localDate, bucket] of byDate) {
+			const path = sessionShardPath(this.pathAdapter, this.deviceId, localDate);
+			await this.shardStore.append(path, bucket.map((record) => buildTypedInputEnvelope(record, this.deviceId)));
+			await this.onShardChanged?.(this.deviceId, localDate);
+		}
 	}
 
 	// --- FileIdentityPort ----------------------------------------------

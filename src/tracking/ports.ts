@@ -12,6 +12,7 @@ import type {
 	RecoveryDecision,
 	RuntimeCheckpoint,
 	TrackingSnapshot,
+	TypedInputRecord,
 } from '../domain/activity';
 
 /**
@@ -22,6 +23,7 @@ import type {
 export interface TrackingRecordSink {
 	appendSessions(records: readonly ClosedSessionSegment[]): Promise<void>;
 	appendRecoveryDecision(decision: RecoveryDecision): Promise<void>;
+	appendTypedInputs(records: readonly TypedInputRecord[]): Promise<void>;
 }
 
 /** Recoverable in-flight snapshot store. Used once at startup and on each flush. */
@@ -49,17 +51,24 @@ export interface TrackingObserver {
 export class InMemoryTrackingSink implements TrackingRecordSink {
 	readonly sessions: ClosedSessionSegment[] = [];
 	readonly decisions: RecoveryDecision[] = [];
+	readonly typedInputs: TypedInputRecord[] = [];
 	private readonly failures: ReadonlyArray<keyof TrackingRecordSink> | null;
 	private calls = 0;
 
-	constructor(opts: { failAppendSessionsAfter?: number } = {}) {
+	constructor(opts: { failAppendSessionsAfter?: number; failAppendTypedInputsAfter?: number } = {}) {
 		this.failures =
-			opts.failAppendSessionsAfter !== undefined
-				? (['appendSessions'] as const)
+			opts.failAppendSessionsAfter !== undefined || opts.failAppendTypedInputsAfter !== undefined
+				? ([
+					...(opts.failAppendSessionsAfter !== undefined ? ['appendSessions'] : []),
+					...(opts.failAppendTypedInputsAfter !== undefined ? ['appendTypedInputs'] : []),
+				] as Array<keyof TrackingRecordSink>)
 				: null;
 		this.failThreshold = opts.failAppendSessionsAfter ?? Infinity;
+		this.typedFailThreshold = opts.failAppendTypedInputsAfter ?? Infinity;
 	}
 	private failThreshold: number;
+	private typedFailThreshold: number;
+	private typedCalls = 0;
 
 	async appendSessions(records: readonly ClosedSessionSegment[]): Promise<void> {
 		if (
@@ -76,6 +85,14 @@ export class InMemoryTrackingSink implements TrackingRecordSink {
 
 	async appendRecoveryDecision(decision: RecoveryDecision): Promise<void> {
 		this.decisions.push(decision);
+	}
+
+	async appendTypedInputs(records: readonly TypedInputRecord[]): Promise<void> {
+		if (this.failures?.includes('appendTypedInputs') && this.typedCalls >= this.typedFailThreshold) {
+			throw new Error('injected appendTypedInputs failure');
+		}
+		this.typedCalls += 1;
+		this.typedInputs.push(...records);
 	}
 }
 
