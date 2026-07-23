@@ -39,9 +39,15 @@ Activity Map is an Obsidian plugin that shows how you spend focused time across 
 - **Detailed, accessible charts** — The donut chart and detail list share the same data, support keyboard interaction, retain stable colors, and keep every item available in the list even when smaller chart slices are grouped as “Other”.
 - **Local settings** — Configure excluded paths and timing thresholds. Export, rebuild, and deletion controls will return in a later explicit header data modal.
 
-### Install from a GitHub Release
+### Install
 
-Activity Map is not currently listed in the official Obsidian Community Plugins directory. Install it manually from a [GitHub Release](https://github.com/ffy6511/obsidian-activity-map/releases/latest).
+#### 1. From Obsidian Community Plugins
+
+In Obsidian, open **Settings → Community plugins → Browse**, search for **Activity Map**, then select **Install** and **Enable**. Disable Restricted Mode first if Obsidian asks you to do so.
+
+#### 2. Manual installation from a GitHub Release
+
+Alternatively, install manually from a [GitHub Release](https://github.com/ffy6511/obsidian-activity-map/releases/latest).
 
 1. Download these three release assets:
 
@@ -60,7 +66,7 @@ Activity Map is not currently listed in the official Obsidian Community Plugins 
    If your vault uses a custom Obsidian configuration directory, replace `.obsidian` with that directory name.
 
 3. Copy all three downloaded files into that `activity-map` folder.
-4. Reload Obsidian, then enable **Activity Map** under **Settings → Community plugins**. Disable Restricted Mode first if Obsidian asks you to do so.
+4. Reload Obsidian, then enable **Activity Map** under **Settings → Community plugins**.
 
 > Requires Obsidian 1.7.2 or later.
 
@@ -103,9 +109,15 @@ Activity Map 是一款本地优先的 Obsidian 活动统计插件。它帮助你
 - **清晰且可访问的图表**：环形图和明细列表使用同一份数据，支持键盘操作与稳定配色；即使图表把较小项目合并为“其他”，明细列表仍会保留全部项目。
 - **本地设置**：可设置排除路径和时间阈值。导出、重建和删除控制将在后续显式页眉数据 modal 中提供。
 
-### 从 GitHub Release 安装
+### 安装
 
-Activity Map 目前尚未上架 Obsidian 官方插件市场，请从 [GitHub Release](https://github.com/ffy6511/obsidian-activity-map/releases/latest) 手动安装。
+#### 1. 从 Obsidian 插件市场安装
+
+在 Obsidian 中打开 **设置 → 第三方插件（Community plugins）→ 浏览**，搜索 **Activity Map**，然后点击 **安装** 并 **启用**。如果 Obsidian 提示，请先关闭受限模式（Restricted Mode）。
+
+#### 2. 从 GitHub Release 手动安装
+
+也可以从 [GitHub Release](https://github.com/ffy6511/obsidian-activity-map/releases/latest) 手动安装。
 
 1. 下载 Release 中的三个文件：`main.js`、`manifest.json` 和 `styles.css`。
 2. 在 vault 中创建目录：
@@ -117,7 +129,7 @@ Activity Map 目前尚未上架 Obsidian 官方插件市场，请从 [GitHub Rel
    如果 vault 使用了自定义 Obsidian 配置目录，请将 `.obsidian` 替换为实际目录名。
 
 3. 将这三个文件全部复制到 `activity-map` 目录。
-4. 重载 Obsidian，在 **设置 → 第三方插件（Community plugins）** 中启用 **Activity Map**。如果 Obsidian 提示，请先关闭受限模式（Restricted Mode）。
+4. 重载 Obsidian，在 **设置 → 第三方插件（Community plugins）** 中启用 **Activity Map**。
 
 > 需要 Obsidian 1.7.2 或更高版本
 
