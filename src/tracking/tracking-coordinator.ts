@@ -333,27 +333,36 @@ export class TrackingCoordinator {
 	}
 
 	private onTypedInputObservation(windowId: string, observation: TypedInputObservation): void {
-		const classifier = this.typedInputClassifiers.get(windowId) ?? new TypedInputClassifier();
-		this.typedInputClassifiers.set(windowId, classifier);
+		const classifierKey = `${windowId}:${observation.leafId ?? 'unknown'}`;
+		const target = this.currentTypedTarget(windowId, observation.leafId);
+		if (!target) {
+			// A composition can end after its editor loses focus. Drop that pending
+			// state rather than allowing a later input in the leaf to inherit it.
+			if (observation.kind === 'compositionend') this.typedInputClassifiers.delete(classifierKey);
+			return;
+		}
+		const classifier = this.typedInputClassifiers.get(classifierKey) ?? new TypedInputClassifier();
+		this.typedInputClassifiers.set(classifierKey, classifier);
 		const counted = classifier.observe(observation);
-		if (counted) this.appendTypedInput(windowId, counted);
+		if (counted) this.appendTypedInput(counted, target, this.opts.clock.now());
 		if (observation.kind === 'compositionend') {
-			const target = this.currentTypedTarget(windowId);
-			const sample = target ? this.opts.clock.now() : null;
 			void Promise.resolve().then(() => {
 				const pending = classifier.flushPendingComposition();
-				if (pending && target && sample) this.appendTypedInput(windowId, pending, target, sample);
+				// Do not capture the target before this microtask. A leaf switch can
+				// occur between compositionend and its fallback commit, so rechecking
+				// prevents the delayed count from landing on the previous file.
+				const currentTarget = this.currentTypedTarget(windowId, observation.leafId);
+				if (pending && currentTarget) this.appendTypedInput(pending, currentTarget, this.opts.clock.now());
 			});
 		}
 	}
 
 	private appendTypedInput(
-		windowId: string,
 		counted: TypedInputCount,
-		target = this.currentTypedTarget(windowId),
-		sample = target ? this.opts.clock.now() : null,
+		target: NonNullable<TrackingSnapshot['currentTarget']>,
+		sample: ReturnType<Clock['now']>,
 	): void {
-		if (!target || !sample || counted.typedChars === 0) return;
+		if (counted.typedChars === 0) return;
 		const record: TypedInputRecord = {
 			recordId: `${target.fileId}-${String(sample.wallMs)}-${String(this.nextTypedInputId++)}`,
 			fileId: target.fileId,
@@ -374,9 +383,18 @@ export class TrackingCoordinator {
 		});
 	}
 
-	private currentTypedTarget(windowId: string): TrackingSnapshot['currentTarget'] {
+	private currentTypedTarget(windowId: string, leafId: string | undefined): TrackingSnapshot['currentTarget'] {
+		const activeLeaf = this.opts.workspace.getActiveLeaf();
 		const snapshot = this.lastSnapshot;
-		if (snapshot?.state !== 'active' || !snapshot.currentTarget || snapshot.currentTarget.windowId !== windowId) {
+		if (
+			!leafId ||
+			activeLeaf?.windowId !== windowId ||
+			activeLeaf.leafId !== leafId ||
+			snapshot?.state !== 'active' ||
+			!snapshot.currentTarget ||
+			snapshot.currentTarget.windowId !== windowId ||
+			snapshot.currentTarget.leafId !== leafId
+		) {
 			return null;
 		}
 		return snapshot.currentTarget;

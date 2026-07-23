@@ -215,10 +215,13 @@ export default class ActivityMapPlugin extends Plugin {
 				};
 				const observe = (event: Event, kind: 'beforeinput' | 'compositionstart' | 'compositionend') => {
 					const input = event as InputEvent;
+					const editor = isEditor(event.target);
+					const leaf = editor ? this.resolveTypedInputLeaf(event.target, windowId) : null;
 					callback({
 						kind,
 						isTrusted: event.isTrusted,
-						isEditor: isEditor(event.target),
+						isEditor: editor,
+						leafId: leaf?.leafId,
 						inputType: kind === 'beforeinput' ? input.inputType : undefined,
 						data: (event as InputEvent).data,
 						isComposing: kind === 'beforeinput' ? input.isComposing : undefined,
@@ -241,6 +244,22 @@ export default class ActivityMapPlugin extends Plugin {
 				return () => win.removeEventListener('blur', callback);
 			},
 		};
+	}
+
+	private resolveTypedInputLeaf(target: EventTarget | null, windowId: string): ResolvedLeaf | null {
+		const source = target as Node | null;
+		const owner = this.windowById.get(windowId);
+		if (!source || !owner) return null;
+		const leaf = this.app.workspace.getMostRecentLeaf();
+		if (
+			!leaf ||
+			leaf.getContainer().win !== owner ||
+			!(leaf.view instanceof FileView) ||
+			!leaf.view.containerEl.contains(source)
+		) {
+			return null;
+		}
+		return this.resolveLeaf(leaf);
 	}
 
 	private registerPopoutEvents(coordinator: TrackingCoordinator): void {

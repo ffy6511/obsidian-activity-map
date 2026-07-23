@@ -4,11 +4,13 @@ import { BrowserExportDestination, BrowserSvgRasterizer } from '../export/export
 import { PosterExportSession, type PosterSnapshot } from '../export/poster-export-session';
 import { POSTER_WORDMARK_DATA_URL } from '../export/poster-wordmark';
 import type { PosterFormat, PosterLayout } from '../export/poster-exporter';
+import { renderPosterExportDetails, type PosterExportDetailsHandle } from './poster-export-details';
 
 /** A single-use export modal with volatile layout, format, and caption state. */
 export class PosterExportModal extends Modal {
 	private readonly session: PosterExportSession;
 	private previewImage: HTMLImageElement | null = null;
+	private exportDetails: PosterExportDetailsHandle | null = null;
 
 	constructor(
 		app: App,
@@ -45,7 +47,10 @@ export class PosterExportModal extends Modal {
 			format.createEl('option', { value, text: label });
 		}
 		format.value = this.session.getFormat();
-		format.addEventListener('change', () => this.session.setFormat(format.value as PosterFormat));
+		format.addEventListener('change', () => {
+			this.session.setFormat(format.value as PosterFormat);
+			this.exportDetails?.update();
+		});
 
 		const preview = this.contentEl.createDiv({ cls: 'activity-map-poster-preview' });
 		const image = preview.createEl('img', { cls: 'activity-map-poster-preview-image', attr: { alt: 'Activity poster preview' } });
@@ -66,6 +71,7 @@ export class PosterExportModal extends Modal {
 			this.refreshPreview();
 		});
 		this.refreshPreview();
+		this.exportDetails = renderPosterExportDetails({ container: this.contentEl, session: this.session });
 
 		const actions = this.contentEl.createDiv({ cls: 'activity-map-poster-actions' });
 		const status = actions.createSpan({ cls: 'activity-map-poster-status', attr: { 'aria-live': 'polite' } });
@@ -86,6 +92,7 @@ export class PosterExportModal extends Modal {
 		this.contentEl.empty();
 		this.modalEl.removeClass('activity-map-poster-modal');
 		this.previewImage = null;
+		this.exportDetails = null;
 		this.onClosed?.();
 		if (this.trigger.isConnected) this.trigger.focus();
 	}
@@ -95,6 +102,7 @@ export class PosterExportModal extends Modal {
 		if (!image) return;
 		const poster = this.session.preview();
 		image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(poster.svg)}`;
+		this.exportDetails?.update();
 	}
 
 	private async export(exportButton: HTMLButtonElement, closeButton: HTMLButtonElement, status: HTMLElement): Promise<void> {

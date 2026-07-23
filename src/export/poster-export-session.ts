@@ -2,6 +2,7 @@ import type { DistributionQuery, DistributionResult } from '../query/distributio
 import { BrowserExportDestination, type ExportDestinationResult, type SvgRasterizer } from './export-destination';
 import {
 	posterMimeType,
+	posterScopeDescription,
 	renderPoster,
 	safePosterFilename,
 	type PosterFormat,
@@ -52,6 +53,16 @@ export class PosterExportSession {
 		return this.caption;
 	}
 
+	/** Filename shown in the modal before the browser download begins. */
+	getFilename(): string {
+		return safePosterFilename(this.snapshot.query, this.layout, this.format);
+	}
+
+	/** Frozen metric, range, and path shown with the pending download. */
+	getScopeDescription(): string {
+		return posterScopeDescription(this.snapshot.query);
+	}
+
 	setLayout(layout: PosterLayout): void {
 		this.layout = layout;
 	}
@@ -88,7 +99,7 @@ export class PosterExportSession {
 			poster,
 			result: this.dependencies.destination.download(
 				blob,
-				safePosterFilename(this.snapshot.query, this.layout, this.format),
+				this.getFilename(),
 			),
 		};
 	}

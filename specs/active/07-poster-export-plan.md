@@ -113,4 +113,14 @@ Canvas rasterization can be unavailable in a host document, so it is capability-
 
 ## Evaluation Record
 
-Pending the joint review with Spec 06 after both implementation phases complete.
+### Round 1
+
+- Critic: `joint_critic` (fresh, read-only joint review of Specs 06 and 07)
+- Review scope: full
+- Evidence reviewed: commits `a6279e7`, `d393ac8`, `7ee4385`, and `c988d7f`; full diff from `930a7e0`; `npm run check`, `npm run lint`, `npm test -- --run` (258 passed), strict Specs validation, and `git diff --check` all passed before review.
+- Findings: P1 — the modal did not disclose the exact filename or frozen query scope until after Export was pressed. P1 — Roadmap acceptance incorrectly marked the real desktop poster journey complete while this Spec still requires owner UAT. P2 — PRD wording still describes SVG as unavailable from the header interface, and Spec 03 still names the superseded SVG exporter.
+- Selected fixes: both P1 export-disclosure and Roadmap-evidence corrections.
+- Executor fixes: the modal now renders the frozen metric/range/path plus the exact safe filename before download and updates the filename when layout or format changes; its DOM test asserts the disclosure and update. The Roadmap now separates automated export coverage from the open real-desktop caption and SVG/PNG/JPG journey.
+- Deferred findings: P2 documentation accuracy is routed to [`v0.2 documentation accuracy follow-up`](../ROADMAP.md#follow-up-todo).
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (261 passed); `npm run build`; `python3 "$SPEC_DRIVEN_DELIVERY_DIR/scripts/validate_specs_workspace.py" . --strict` (0 errors, 0 warnings); production bundle PNG data-URL check; `git diff --check`.
+- Verdict: changes-required; P1 correction batch is ready for the joint Round 2 review.

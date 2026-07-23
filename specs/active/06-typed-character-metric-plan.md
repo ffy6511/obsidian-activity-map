@@ -108,4 +108,14 @@ IME event order differs by browser, so the classifier explicitly tests both comp
 
 ## Evaluation Record
 
-Pending the joint review after Spec 07; no Critic is started for this Spec alone.
+### Round 1
+
+- Critic: `joint_critic` (fresh, read-only joint review of Specs 06 and 07)
+- Review scope: full
+- Evidence reviewed: commits `a6279e7`, `d393ac8`, `7ee4385`, and `c988d7f`; full diff from `930a7e0`; `npm run check`, `npm run lint`, `npm test -- --run` (258 passed), strict Specs validation, and `git diff --check` all passed before review.
+- Findings: P1 — the typed-input boundary provided only `windowId`, so a same-window background editor or a leaf switch before target refresh could persist a count against the stale target. P2 — support text does not yet state the limits for dictation, assistive technology, and simulated keyboards.
+- Selected fixes: P1 current-leaf provenance and IME fallback recheck.
+- Executor fixes: the DOM boundary now attaches an ephemeral source leaf ID only when the current file view contains the editor target; the coordinator requires matching active and snapshotted `windowId` plus `leafId`, keys composition state by source leaf, and rechecks the leaf before its delayed IME fallback. New deterministic tests cover a same-window background leaf, a target-refresh race, and an IME leaf-switch race.
+- Deferred findings: P2 support-text accuracy is routed to [`v0.2 documentation accuracy follow-up`](../ROADMAP.md#follow-up-todo).
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (261 passed); `npm run build`; `python3 "$SPEC_DRIVEN_DELIVERY_DIR/scripts/validate_specs_workspace.py" . --strict` (0 errors, 0 warnings); production bundle PNG data-URL check; `git diff --check`.
+- Verdict: changes-required; P1 correction batch is ready for the joint Round 2 review.

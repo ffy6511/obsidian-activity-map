@@ -90,6 +90,12 @@ export function safePosterFilename(query: DistributionQuery, layout: PosterLayou
 	return `activity-map-${query.metric}-${range}-${safePath}-${layout}.${format}`;
 }
 
+/** A human-readable description of the immutable aggregate disclosed before download. */
+export function posterScopeDescription(query: DistributionQuery): string {
+	const path = query.path ? `Vault / ${query.path}` : 'Vault';
+	return `${metricLabel(query.metric)} · ${rangeLabel(query)} · ${path}`;
+}
+
 /**
  * Serializes a full poster from an immutable distribution snapshot. It shares
  * chart math with the Popover but never examines the mounted chart or page DOM.

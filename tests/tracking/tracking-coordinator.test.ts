@@ -119,6 +119,10 @@ function leaf(leafId: string, path: string | null): ResolvedLeaf {
 	return { leafId, windowId: 'main', file: path ? { path } : null };
 }
 
+function typedInput(observation: Omit<TypedInputObservation, 'leafId'>, leafId = 'front'): TypedInputObservation {
+	return { ...observation, leafId };
+}
+
 function makeCoordinator(opts: {
 	clock: FakeClock;
 	workspace: WorkspaceSource;
@@ -378,15 +382,15 @@ describe('tracking coordinator lifecycle', () => {
 		const { coordinator, sink, mainSource } = makeCoordinator({ clock, workspace: ws.source });
 		coordinator.start();
 		await flush(clock, 5_000);
-		mainSource.fireTypedInput({
+		mainSource.fireTypedInput(typedInput({
 			kind: 'beforeinput', isTrusted: true, isEditor: true, inputType: 'insertText', data: '你e\u0301', isComposing: false,
-		});
-		mainSource.fireTypedInput({
+		}));
+		mainSource.fireTypedInput(typedInput({
 			kind: 'beforeinput', isTrusted: true, isEditor: false, inputType: 'insertText', data: 'not-counted', isComposing: false,
-		});
-		mainSource.fireTypedInput({
+		}));
+		mainSource.fireTypedInput(typedInput({
 			kind: 'beforeinput', isTrusted: true, isEditor: true, inputType: 'insertFromPaste', data: 'not-counted', isComposing: false,
-		});
+		}));
 		await flush(clock);
 		expect(sink.typedInputs).toHaveLength(1);
 		expect(sink.typedInputs[0]).toMatchObject({
@@ -411,19 +415,63 @@ describe('tracking coordinator lifecycle', () => {
 		const { coordinator, mainSource, snapshots } = makeCoordinator({ clock, workspace: ws.source, sink });
 		coordinator.start();
 		await flush(clock, 5_000);
-		mainSource.fireTypedInput({ kind: 'compositionstart', isTrusted: true, isEditor: true });
-		mainSource.fireTypedInput({ kind: 'compositionend', isTrusted: true, isEditor: true, data: '中文' });
-		mainSource.fireTypedInput({
+		mainSource.fireTypedInput(typedInput({ kind: 'compositionstart', isTrusted: true, isEditor: true }));
+		mainSource.fireTypedInput(typedInput({ kind: 'compositionend', isTrusted: true, isEditor: true, data: '中文' }));
+		mainSource.fireTypedInput(typedInput({
 			kind: 'beforeinput', isTrusted: true, isEditor: true, inputType: 'insertText', data: '中文', isComposing: false,
-		});
+		}));
 		await flush(clock);
 		expect(sink.typedInputs).toHaveLength(1);
 		expect(sink.typedInputs[0]?.typedChars).toBe(2);
-		mainSource.fireTypedInput({
+		mainSource.fireTypedInput(typedInput({
 			kind: 'beforeinput', isTrusted: true, isEditor: true, inputType: 'insertText', data: 'x', isComposing: false,
-		});
+		}));
 		await flush(clock);
 		expect(snapshots.some((snapshot) => snapshot.state === 'degraded')).toBeTrue();
+		await coordinator.stop();
+	});
+
+	it('rejects input from a same-window background leaf and a leaf-switch race', async () => {
+		const clock = createFakeClock();
+		const ws = fakeWorkspace(leaf('front', 'notes/a.md'));
+		const { coordinator, sink, mainSource } = makeCoordinator({ clock, workspace: ws.source });
+		coordinator.start();
+		await flush(clock, 5_000);
+
+		// The workspace has already switched to `next`, but its asynchronous target
+		// refresh has not run yet. The stale `front` target must not receive input.
+		ws.setActiveLeaf(leaf('next', 'notes/b.md'));
+		mainSource.fireTypedInput(typedInput({
+			kind: 'beforeinput', isTrusted: true, isEditor: true, inputType: 'insertText', data: 'b', isComposing: false,
+		}, 'next'));
+		await flush(clock);
+		expect(sink.typedInputs).toHaveLength(0);
+
+		ws.fireActiveLeafChange();
+		await flush(clock, 5_000);
+		mainSource.fireTypedInput(typedInput({
+			kind: 'beforeinput', isTrusted: true, isEditor: true, inputType: 'insertText', data: 'a', isComposing: false,
+		}, 'front'));
+		mainSource.fireTypedInput(typedInput({
+			kind: 'beforeinput', isTrusted: true, isEditor: true, inputType: 'insertText', data: 'b', isComposing: false,
+		}, 'next'));
+		await flush(clock);
+		expect(sink.typedInputs).toHaveLength(1);
+		expect(sink.typedInputs[0]).toMatchObject({ fileId: 'file-2', pathAtEvent: 'notes/b.md', typedChars: 1 });
+		await coordinator.stop();
+	});
+
+	it('rechecks an IME fallback commit after a leaf switch', async () => {
+		const clock = createFakeClock();
+		const ws = fakeWorkspace(leaf('front', 'notes/a.md'));
+		const { coordinator, sink, mainSource } = makeCoordinator({ clock, workspace: ws.source });
+		coordinator.start();
+		await flush(clock, 5_000);
+		mainSource.fireTypedInput(typedInput({ kind: 'compositionstart', isTrusted: true, isEditor: true }));
+		mainSource.fireTypedInput(typedInput({ kind: 'compositionend', isTrusted: true, isEditor: true, data: '你' }));
+		ws.setActiveLeaf(leaf('next', 'notes/b.md'));
+		await flush(clock);
+		expect(sink.typedInputs).toHaveLength(0);
 		await coordinator.stop();
 	});
 

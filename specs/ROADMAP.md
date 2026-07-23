@@ -84,7 +84,12 @@ Extend trusted activity reporting with privacy-preserving input metrics, local p
 ### Acceptance Criteria
 
 - [x] Input tests cover Latin text, CJK IME, combining marks, emoji, paste, drop, undo/redo, programmatic edits, and external writes.
-- [x] Export tests prove frozen-query data parity, wordmark inclusion, escaping, all layout/format choices, and unavailable-download handling; a real desktop journey covers editing the preview caption and each download format.
+- [x] Export tests prove frozen-query data parity, wordmark inclusion, escaping, all layout/format choices, and unavailable-download handling.
+- [ ] A real desktop journey covers editing the preview caption and each SVG, PNG, and JPG download format.
 - [ ] Multi-device fixtures cover independent shards, simultaneous activity, duplicates, conflicts, and interrupted reconciliation.
 - [x] Metrics remain local, do not store typed content, and expose their accuracy limitations in product help.
 - [ ] Migration, compatibility, documentation, automated gates, and independent Critic evaluation pass.
+
+### Follow-up TODO
+
+- [ ] `v0.2`: documentation accuracy follow-up — align typed-input caveats, the current poster export policy, and superseded SVG-exporter references before release review.

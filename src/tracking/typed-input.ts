@@ -14,6 +14,8 @@ export interface TypedInputObservation {
 	isTrusted?: boolean;
 	kind: 'beforeinput' | 'compositionstart' | 'compositionend';
 	isEditor: boolean;
+	/** Ephemeral source identity used only to verify the currently active leaf. */
+	leafId?: string;
 	inputType?: string;
 	data?: string | null;
 	isComposing?: boolean;
