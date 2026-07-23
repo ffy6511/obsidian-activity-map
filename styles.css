@@ -493,17 +493,22 @@
 	}
 }
 
-/* The preview is the exported standalone SVG at display scale; the caption
-   editor overlays its final bottom-center position rather than a separate form. */
+/* The inline editor is the preview's only caption layer; download restores the
+   same text in the standalone SVG so preview editing cannot paint it twice. */
 .activity-map-poster-modal {
-	width: min(94vw, 64rem);
-	max-width: 64rem;
+	width: min(90vw, 48rem);
+	max-width: 48rem;
+}
+
+.activity-map-poster-modal .modal-title {
+	font-size: var(--font-ui-medium);
+	font-weight: 600;
 }
 
 .activity-map-poster-modal .modal-content {
 	display: grid;
 	gap: var(--size-4-3);
-	max-height: min(82vh, 54rem);
+	max-height: min(76vh, 42rem);
 	overflow: auto;
 }
 
@@ -519,58 +524,139 @@
 	min-width: 9rem;
 }
 
-.activity-map-poster-preview {
-	position: relative;
+.activity-map-poster-details {
+	max-width: 32rem;
+}
+
+.activity-map-poster-filename-label {
 	display: grid;
-	place-items: center;
-	min-height: 22rem;
-	padding: var(--size-4-3);
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-m);
-	background: var(--background-secondary);
+	gap: var(--size-2-1);
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+.activity-map-poster-filename-label input {
+	width: 100%;
+}
+
+.activity-map-poster-preview-frame {
+	position: relative;
+	justify-self: center;
+	width: min(100%, 42rem);
+	aspect-ratio: 1440 / 760;
+	container-type: inline-size;
 }
 
 .activity-map-poster-preview-image {
 	display: block;
-	width: min(100%, 58rem);
-	max-height: min(62vh, 43rem);
+	width: 100%;
+	height: 100%;
+	max-height: min(52vh, 29rem);
 	object-fit: contain;
 	border-radius: var(--radius-s);
 	box-shadow: var(--shadow-s);
 }
 
-.activity-map-poster-caption-input {
+.activity-map-poster-caption-editor {
 	position: absolute;
-	bottom: 7.5%;
-	left: 12%;
-	width: 76%;
-	min-height: 2.15rem;
-	padding: var(--size-2-2) var(--size-4-2);
-	border: 1px solid var(--interactive-accent);
-	border-radius: var(--radius-s);
-	background: var(--background-primary);
-	box-shadow: var(--shadow-s);
+	bottom: var(--activity-map-poster-caption-bottom, 4.25%);
+	left: 50%;
+	box-sizing: border-box;
+	width: var(--activity-map-poster-caption-width, 41.6666666667%);
+	max-width: calc(100% - 3rem);
+	height: var(--activity-map-poster-caption-height, auto);
+	min-height: 1.3em;
+	padding: 0 0 var(--size-2-1);
+	appearance: none;
+	border: 0;
+	border-bottom: 1px dashed var(--text-faint);
+	border-radius: 0;
+	background: transparent !important;
+	box-shadow: none !important;
 	color: var(--text-normal);
+	font-family: Georgia, 'Times New Roman', 'Songti SC', STSong, SimSun, serif !important;
+	font-size: var(--activity-map-poster-caption-font-size, 3.3333333333cqw);
+	font-style: normal;
+	font-weight: 600;
+	font-synthesis: weight;
+	letter-spacing: 0.02em;
+	line-height: var(--activity-map-poster-caption-line-height, 1.1666666667);
 	text-align: center;
+	resize: none;
+	overflow-y: var(--activity-map-poster-caption-overflow, hidden);
+	overflow-wrap: anywhere;
+	transform: translateX(-50%);
+	transition: border-bottom-color 120ms ease, border-bottom-style 120ms ease;
 }
 
-.activity-map-poster-caption-input::placeholder {
+/* Chromium sizes a content field from its placeholder or current text. Keep the
+ * explicit width above as a fallback for older Obsidian runtimes. */
+@supports (field-sizing: content) {
+	.activity-map-poster-caption-editor {
+		width: auto;
+		max-width: min(var(--activity-map-poster-caption-width, 41.6666666667%), calc(100% - 3rem));
+		field-sizing: content;
+	}
+}
+
+.activity-map-poster-caption-editor:hover {
+	border-bottom-color: var(--text-muted);
+}
+
+.activity-map-poster-caption-editor:focus {
+	border-bottom: 2px solid var(--text-muted);
+	background: transparent !important;
+	box-shadow: none !important;
+	outline: none;
+}
+
+.activity-map-poster-caption-editor::placeholder {
 	color: var(--text-muted);
+	font-family: inherit;
+	font-size: inherit;
+	font-weight: inherit;
+	opacity: 0.72;
+}
+
+.activity-map-poster-caption-line-count {
+	position: absolute;
+	left: var(--activity-map-poster-caption-line-count-left, 0);
+	top: var(--activity-map-poster-caption-line-count-top, 0);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-variant-numeric: tabular-nums;
+	line-height: 1;
+	pointer-events: none;
+	transform: translateY(-100%);
+}
+
+.activity-map-poster-caption-line-count[hidden] {
+	display: none;
+}
+
+.activity-map-poster-caption-line-count.is-overflow {
+	color: var(--text-error);
 }
 
 .activity-map-poster-status {
-	flex: 1 1 14rem;
+	grid-column: 1 / -1;
 	color: var(--text-muted);
+}
+
+.activity-map-poster-footer {
+	display: grid;
+	grid-template-columns: 1fr;
+	align-items: center;
+	gap: var(--size-4-2);
+}
+
+.activity-map-poster-actions {
+	justify-self: end;
 }
 
 @media (max-width: 42rem) {
 	.activity-map-poster-modal {
 		width: calc(100vw - 1rem);
-	}
-
-	.activity-map-poster-preview {
-		min-height: 16rem;
-		padding: var(--size-4-2);
 	}
 
 	.activity-map-poster-preview-image {

@@ -21,6 +21,7 @@ describe('automated accessibility and platform presentation checks', () => {
 	it('preserves focus across header interactions and names transient controls', async () => {
 		const popover = await source('src/ui/summary-popover.ts');
 		const posterModal = await source('src/ui/poster-export-modal.ts');
+		const captionEditor = await source('src/ui/poster-caption-editor.ts');
 		const miniDonut = await source('src/ui/header-mini-donut.ts');
 		expect(popover.includes("event.key === 'Escape'")).toBeTrue();
 		expect(popover.includes('this.trigger.focus()')).toBeTrue();
@@ -32,11 +33,27 @@ describe('automated accessibility and platform presentation checks', () => {
 		expect(popover.includes("cls: 'activity-map-popover-result'")).toBeTrue();
 		expect(popover.includes('Chart area')).toBeFalse();
 		expect(popover.includes('List area')).toBeFalse();
-		expect(posterModal.includes("'aria-label': 'Optional poster caption'")).toBeTrue();
+		expect(posterModal.includes('renderPosterCaptionEditor')).toBeTrue();
+		expect(posterModal.includes("cls: 'activity-map-poster-preview-frame'")).toBeTrue();
+		expect(posterModal.includes("cls: 'activity-map-poster-preview'" )).toBeFalse();
+		expect(posterModal.includes('WIDE_POSTER_CAPTION_PREVIEW')).toBeTrue();
+		expect(captionEditor.includes("'aria-label': 'Optional poster caption'")).toBeTrue();
+		expect(captionEditor.includes("createEl('textarea'")).toBeTrue();
+		expect(captionEditor.includes("rows: '1'")).toBeTrue();
+		expect(captionEditor.includes('ensurePosterCaptionFont')).toBeFalse();
 		expect(posterModal.includes("'aria-live': 'polite'")).toBeTrue();
-		expect(posterModal.includes('caption.focus()')).toBeTrue();
+		expect(posterModal.includes('caption.focus()')).toBeFalse();
 		expect(posterModal.includes('this.trigger.focus()')).toBeTrue();
 		expect(posterModal.includes('ConfirmationModal')).toBeFalse();
+		expect(posterModal.includes('activity-map-poster-export-button')).toBeTrue();
+		expect(posterModal.includes('getExportLabel()')).toBeTrue();
+		expect(posterModal.includes("text: 'Download'")).toBeTrue();
+		expect(posterModal.includes("text: 'Cancel'")).toBeTrue();
+		expect(posterModal.indexOf("const frame = this.contentEl.createDiv")).toBeLessThan(posterModal.indexOf("const footer = this.contentEl.createDiv"));
+		expect(posterModal.includes("data-activity-map-id': 'poster-layout'")).toBeFalse();
+		expect(posterModal.includes("data-activity-map-id': 'poster-format'")).toBeFalse();
+		expect(posterModal.includes('renderPosterExportDetails')).toBeFalse();
+		expect(posterModal.includes('Frozen result:')).toBeFalse();
 		expect(miniDonut.includes("setAttribute('aria-hidden', 'true')")).toBeTrue();
 	});
 

@@ -1,7 +1,8 @@
 import { describe, expect, it } from '../helpers/test-harness';
 
 import type { DistributionItem, DistributionResult } from '../../src/query/distribution-query';
-import { PosterExportSession } from '../../src/export/poster-export-session';
+import { POSTER_PNG_RASTER_SCALE, PosterExportSession } from '../../src/export/poster-export-session';
+import { DEFAULT_POSTER_THEME } from '../../src/export/poster-theme';
 
 function distribution(): DistributionResult {
 	const item: DistributionItem = {
@@ -27,12 +28,13 @@ describe('poster export session', () => {
 		expect(preview.includes('Later label')).toBeFalse();
 	});
 
-	it('downloads exactly the current preview SVG for SVG, PNG, and JPG', async () => {
+	it('defaults to a high-resolution Wide PNG while retaining SVG and JPG export support', async () => {
 		const source = distribution();
 		const downloads: Array<{ blob: Blob; filename: string }> = [];
-		const rasterized: Array<{ svg: string; format: 'png' | 'jpg' }> = [];
+		const rasterized: Array<{ svg: string; width: number; height: number; format: 'png' | 'jpg' }> = [];
 		const session = new PosterExportSession({ query: source.query, distribution: source }, {
 			wordmarkDataUrl: 'data:image/png;base64,d29yZG1hcms=',
+			theme: DEFAULT_POSTER_THEME,
 			destination: {
 				download(blob, filename) {
 					downloads.push({ blob, filename });
@@ -41,37 +43,63 @@ describe('poster export session', () => {
 			},
 			rasterizer: {
 				async rasterize(args) {
-					rasterized.push({ svg: args.svg, format: args.format });
+					rasterized.push(args);
 					return new Blob([args.format], { type: args.format === 'png' ? 'image/png' : 'image/jpeg' });
 				},
 			},
 		});
+		expect(session.getLayout()).toBe('wide');
+		expect(session.getFormat()).toBe('png');
+		expect(session.getExportLabel()).toBe('Wide PNG');
 		session.setCaption('A focused caption');
+		const pngPreview = session.preview();
+		await session.download();
+		expect(rasterized[0]).toEqual({
+			svg: pngPreview.svg,
+			width: pngPreview.width * POSTER_PNG_RASTER_SCALE,
+			height: pngPreview.height * POSTER_PNG_RASTER_SCALE,
+			format: 'png',
+		});
+		expect(downloads[0]?.filename.endsWith('-wide.png')).toBeTrue();
+		expect(pngPreview.width * POSTER_PNG_RASTER_SCALE).toBe(2_880);
+		expect(pngPreview.height * POSTER_PNG_RASTER_SCALE).toBe(1_520);
+
+		session.setFormat('svg');
 		const svgPreview = session.preview().svg;
 		await session.download();
-		expect(await downloads[0]?.blob.text()).toBe(svgPreview);
-		expect(downloads[0]?.filename.endsWith('.svg')).toBeTrue();
-
-		session.setLayout('wide');
-		session.setFormat('png');
-		const pngPreview = session.preview().svg;
-		await session.download();
-		expect(rasterized[0]).toEqual({ svg: pngPreview, format: 'png' });
-		expect(downloads[1]?.filename.endsWith('-wide.png')).toBeTrue();
+		expect(await downloads[1]?.blob.text()).toBe(svgPreview);
+		expect(downloads[1]?.filename.endsWith('.svg')).toBeTrue();
 
 		session.setLayout('compact');
 		session.setFormat('jpg');
 		const jpgPreview = session.preview().svg;
 		await session.download();
-		expect(rasterized[1]).toEqual({ svg: jpgPreview, format: 'jpg' });
+		expect(rasterized[1]).toEqual({ svg: jpgPreview, width: 820, height: 1160, format: 'jpg' });
 		expect(downloads[2]?.filename.endsWith('-compact.jpg')).toBeTrue();
 		expect(downloads).toHaveLength(3);
+	});
+
+	it('omits the SVG caption only for the live editor preview, never the downloaded poster', () => {
+		const session = createSession(distribution());
+		session.setCaption('One visible caption');
+		expect(session.preview({ includeCaption: false }).svg.includes('One visible caption')).toBeFalse();
+		expect(session.preview().svg.includes('One visible caption')).toBeTrue();
+	});
+
+	it('keeps an editable safe file stem while its extension follows the selected format', () => {
+		const session = createSession(distribution());
+		expect(session.getFilename().endsWith('-wide.png')).toBeTrue();
+		session.setFilename('weekly\\activity/poster.png');
+		expect(session.getFilename()).toBe('weekly-activity-poster.png');
+		session.setFormat('jpg');
+		expect(session.getFilename()).toBe('weekly-activity-poster.jpg');
 	});
 });
 
 function createSession(source: DistributionResult): PosterExportSession {
 	return new PosterExportSession({ query: source.query, distribution: source }, {
 		wordmarkDataUrl: 'data:image/png;base64,d29yZG1hcms=',
+		theme: DEFAULT_POSTER_THEME,
 		destination: { download: () => ({ outcome: 'downloaded', message: 'Downloaded' }) },
 		rasterizer: { async rasterize() { return new Blob(); } },
 	});

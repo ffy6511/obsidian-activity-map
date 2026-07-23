@@ -116,7 +116,7 @@ IME event order differs by browser, so the classifier explicitly tests both comp
 - Findings: P1 — the typed-input boundary provided only `windowId`, so a same-window background editor or a leaf switch before target refresh could persist a count against the stale target. P2 — support text does not yet state the limits for dictation, assistive technology, and simulated keyboards.
 - Selected fixes: P1 current-leaf provenance and IME fallback recheck.
 - Executor fixes: the DOM boundary now attaches an ephemeral source leaf ID only when the current file view contains the editor target; the coordinator requires matching active and snapshotted `windowId` plus `leafId`, keys composition state by source leaf, and rechecks the leaf before its delayed IME fallback. New deterministic tests cover a same-window background leaf, a target-refresh race, and an IME leaf-switch race.
-- Deferred findings: P2 support-text accuracy is routed to [`v0.2 documentation accuracy follow-up`](../ROADMAP.md#follow-up-todo).
+- Deferred findings: at this point, P2 support-text accuracy was deferred. It was resolved on 2026-07-23 by the PRD and bilingual README wording for dictation, assistive technology, and simulated keyboards.
 - Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (261 passed); `npm run build`; `python3 "$SPEC_DRIVEN_DELIVERY_DIR/scripts/validate_specs_workspace.py" . --strict` (0 errors, 0 warnings); production bundle PNG data-URL check; `git diff --check`.
 - Verdict: changes-required; P1 correction batch is ready for the joint Round 2 review.
 
@@ -128,6 +128,11 @@ IME event order differs by browser, so the classifier explicitly tests both comp
 - Findings: no P0/P1 blocker. P2 support-text accuracy for dictation, assistive technology, and simulated keyboards remains.
 - Selected fixes: none.
 - Executor fixes: none; the completed P1 correction batch was reviewed as implemented.
-- Deferred findings: P2 support-text accuracy remains routed to [`v0.2 documentation accuracy follow-up`](../ROADMAP.md#follow-up-todo).
+- Deferred findings: none; the former P2 support-text accuracy item was resolved by the 2026-07-23 PRD and bilingual README correction.
 - Validation rerun: Critic independently ran `npm run check`; `npm run lint`; `npm test -- --run` (261 passed); strict Specs validation (0 errors, 0 warnings); and `git diff --check`. `npm run build` was not rerun because source was unchanged after the Round 1 production build; the current bundle's PNG data URL was statically confirmed.
 - Verdict: pass-with-follow-ups.
+
+### Documentation follow-up
+
+- Resolution: the PRD and bilingual README now describe the event-metadata limitation for dictation, assistive technology, and simulated keyboards.
+- Lifecycle: this documentation-only correction does not consume a new Critic round or change the open owner UAT criterion.

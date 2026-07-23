@@ -20,7 +20,7 @@ These requirements affect every release. They belong in a stable decision record
 
 ## User Narrative
 
-A user works across several Obsidian windows and project folders. Activity Map attributes time only to the trackable file in the focused window. When the user walks away, the plugin closes the session at the last trusted interaction. On return, a short uncertain interval can be explicitly included; a long sleep interval stays excluded. The user opens the file-header donut, navigates from the vault root into a project, changes from today to a 30-day average, inspects the exact file rows, and pauses or resumes tracking from the popover. While composing text in an eligible foreground editor, only the number of committed grapheme clusters is recorded. From the top control group, the user opens a large poster preview, selects its layout and SVG, PNG, or JPEG format, optionally types a caption directly into the preview, and exports with one action. All records and generated files remain local.
+A user works across several Obsidian windows and project folders. Activity Map attributes time only to the trackable file in the focused window. When the user walks away, the plugin closes the session at the last trusted interaction. On return, a short uncertain interval can be explicitly included; a long sleep interval stays excluded. The user opens the file-header donut, navigates from the vault root into a project, changes from today to a 30-day average, inspects the exact file rows, and pauses or resumes tracking from the popover. While composing text in an eligible foreground editor, only the number of committed grapheme clusters is recorded. From the top control group, the user opens a Wide poster preview, optionally types a bounded caption directly into the preview, and starts one local PNG download. The modal exposes no layout, format, filename, or destination control. All records and generated files remain local.
 
 ## Final Decision
 
@@ -82,10 +82,10 @@ A user works across several Obsidian windows and project folders. Activity Map a
 - Persist the last successful Header Popover path/file grouping choice as a small validated setting. A persistence failure cannot silently establish a new default.
 - Project the current unclosed interval for live presentation only within the trusted idle boundary; presentation updates cannot rewrite persisted evidence.
 - The Popover control group contains an export action immediately to the right of pause/resume. It opens a dedicated modal rather than a nested menu or confirmation dialog.
-- The modal renders a large, complete poster preview from the immutable current query/distribution snapshot. It offers `Portrait`, `Wide`, and `Compact` layouts; `SVG`, `PNG`, and `JPEG` output; and an optional caption edited in place at the bottom center of the preview. The caption starts empty and no generated summary candidates are offered.
+- The modal renders a large, complete `Wide` poster preview from the immutable current query/distribution snapshot. Its current user-facing action is one `PNG` download; layout, format, and filename controls are intentionally absent even though the renderer keeps its tested serialization variants. The optional caption starts empty, is edited in place at the bottom center, uses a system-serif stack, and is bounded to three exported lines.
 - Export produces one local automatic download from the selected snapshot. It does not capture the mounted Popover, current screen, or note content, and it does not show a second confirmation modal.
 - Use the packaged Activity Map wordmark in the poster. The current PNG wordmark may later be replaced by an SVG without changing the export contract.
-- Keep export independent from mounted DOM, escape user-derived strings, include accessible metadata in standalone SVG output, and rasterize from the same SVG source for PNG/JPEG parity.
+- Keep export independent from mounted DOM, resolve the current Obsidian theme into the standalone SVG, escape user-derived strings, include accessible metadata in that source SVG, and rasterize PNG from the same SVG source.
 - The [PRD Header Popover section](../../docs/PRD.md#环形图浮层) is the single source for current UI structure, controls, labels, visual hierarchy, and interaction behavior. Active Specs own temporary implementation deltas and acceptance evidence; this Constitution retains only stable product and data boundaries.
 
 ### Privacy and Network Boundary
@@ -93,7 +93,7 @@ A user works across several Obsidian windows and project folders. Activity Map a
 - Keep settings, event shards, summaries, file registry, and checkpoints in the plugin data area under the vault configuration directory.
 - Do not store note content, selected text, composition buffers, clipboard payloads, or actual typed strings.
 - Do not add analytics, telemetry, accounts, remote APIs, or data upload in `v0.1`.
-- Treat poster exports and any later raw-data exports as user-selected local output; disclose their scope and filenames before download.
+- Treat poster exports and any later raw-data exports as user-selected local output. The user explicitly starts the download; the browser owns its configured Downloads destination, while the modal exposes neither a filesystem path nor an editable filename.
 
 ## Invariants
 
@@ -221,3 +221,4 @@ Rejected because keyboard interaction, accessible semantics, and standalone vect
 | 2026-07-22 | Removed the global left-toolbar icon and command entry; the file-header donut is the sole Activity Map interaction surface. | Keep everyday interaction close to the active note. Export, rebuild, and deletion controls move to a future explicit header modal. |
 | 2026-07-23 | Adopted `typedChars` as a trusted, content-free grapheme count with an independent raw event family and query metric. | Make the already reserved metric useful without collecting text or conflating it with `editingMs`. |
 | 2026-07-23 | Adopted an editable local poster export modal in the Header Popover, with Portrait/Wide/Compact layouts and SVG/PNG/JPEG output. | Export the current data snapshot as a complete shareable poster without screenshotting the application or adding a confirmation dialog. |
+| 2026-07-23 | Refined the visible export flow to one themed Wide PNG with a three-line system-serif caption; renderer variants remain internal capabilities. | Match the Popover's visual hierarchy while removing controls that distracted from the poster preview. |

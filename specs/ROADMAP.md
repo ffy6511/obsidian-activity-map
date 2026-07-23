@@ -76,7 +76,7 @@ Extend trusted activity reporting with privacy-preserving input metrics, local p
 ### Key Deliverables
 
 - [x] Trusted text-input and IME final-commit capture with grapheme-cluster counts and explicit source exclusions.
-- [x] Current-query poster export with Portrait, Wide, and Compact layouts; an editable empty caption; and SVG, PNG, or JPEG automatic downloads.
+- [x] Current-query Wide PNG poster export with an editable empty caption, automatic local download, and no screen capture.
 - [ ] Separate deletion metrics that do not reduce the input count.
 - [ ] Multi-device overlap diagnostics, deterministic deduplication policy, and user-controlled conflict resolution.
 - [ ] Optional event-time path analysis and richer range comparison views.
@@ -84,12 +84,8 @@ Extend trusted activity reporting with privacy-preserving input metrics, local p
 ### Acceptance Criteria
 
 - [x] Input tests cover Latin text, CJK IME, combining marks, emoji, paste, drop, undo/redo, programmatic edits, and external writes.
-- [x] Export tests prove frozen-query data parity, wordmark inclusion, escaping, all layout/format choices, and unavailable-download handling.
-- [ ] A real desktop journey covers editing the preview caption and each SVG, PNG, and JPG download format.
+- [x] Export tests prove frozen-query data parity, wordmark inclusion, escaping, bounded three-line captions, default Wide PNG rasterization, and unavailable-download handling.
+- [x] Owner acceptance covers the themed Wide PNG preview, caption editing and wrapping, download, and a zero-data range.
 - [ ] Multi-device fixtures cover independent shards, simultaneous activity, duplicates, conflicts, and interrupted reconciliation.
 - [x] Metrics remain local, do not store typed content, and expose their accuracy limitations in product help.
-- [ ] Migration, compatibility, documentation, automated gates, and independent Critic evaluation pass.
-
-### Follow-up TODO
-
-- [ ] `v0.2`: documentation accuracy follow-up — align typed-input caveats, the current poster export policy, and superseded SVG-exporter references before release review.
+- [ ] Migration, compatibility, and independent Critic evaluation pass for the remaining multi-device work.

@@ -15,7 +15,7 @@ Authority links:
 
 ## Current Implementation
 
-The tracking, persistence, maintenance, query, controller, settings, and file-header/popover surfaces are implemented and covered by deterministic fixtures. Trusted editor input also produces content-free `typedChars` evidence and a fourth distribution metric. A ready Popover result can now open a local poster-export modal that freezes its query data, offers three layouts and SVG/PNG/JPG downloads, and embeds the bundled PNG wordmark as a data URL in the SVG. Rebuild and deletion remain tested local data-service boundaries pending their later data-modal controls.
+The tracking, persistence, maintenance, query, controller, settings, and file-header/popover surfaces are implemented and covered by deterministic fixtures. Trusted editor input also produces content-free `typedChars` evidence and a fourth distribution metric. A ready Popover result can now open a local poster-export modal that freezes its query data, previews one theme-resolved Wide poster, and downloads its PNG rasterization at 2× source dimensions. Its volatile caption editor reports visual lines only while focused and warns when the three-line export bound is exceeded. Renderer layouts and encodings remain tested internal capabilities; the modal exposes no selector. The bundled PNG wordmark is embedded as a data URL in the SVG. Rebuild and deletion remain tested local data-service boundaries pending their later data-modal controls.
 
 ```text
 src/
@@ -122,12 +122,16 @@ src/
 │   ├── activity-map-controller.ts  # Intent serialization and immutable view model.
 │   ├── file-hover-preview.ts       # Public Page Preview event and activation gate.
 │   ├── header-action-manager.ts    # Public FileView.addAction lifecycle.
+│   ├── poster-caption-editor.ts   # In-preview caption textarea and ephemeral line-bound feedback.
+│   ├── poster-export-modal.ts     # Wide PNG modal and local download action.
 │   ├── summary-popover.ts          # Owner-document-aware non-modal interaction.
 │   ├── settings-tab.ts             # Validated save-before-apply settings controls.
 │   └── components/                 # Range, breadcrumb, donut, and detail renderers.
 │
 └── export/                         # Spec 07: deterministic standalone poster artifacts.
     ├── poster-exporter.ts          # Query snapshot -> escaped Portrait/Wide/Compact SVG.
+│   ├── poster-export-session.ts   # Frozen snapshot, default Wide PNG, volatile caption.
+│   ├── poster-theme.ts            # Document theme tokens -> standalone SVG palette.
     ├── poster-wordmark.ts          # Bundled PNG wordmark data URL.
     └── export-destination.ts       # Capability-gated Blob download and SVG rasterization.
 
@@ -339,7 +343,7 @@ SummaryPopover ready distribution
 
 The Header Popover grouping preference crosses the settings port before becoming the default for a newly opened Popover. Grouping remains a query presentation axis: it changes item projection without changing scope or vault totals. Persistence failure rolls back the optimistic preference and invalidates its in-flight query.
 
-Header integration is capability-gated behind `HeaderActionManager` and is the only registered Activity Map interaction entry. The source contains no dockable Activity Map view or command registration. The trailing control group places poster export directly after pause/resume; it remains disabled without a ready query result. Opening it deep-copies the displayed distribution before later ticks or navigation can mutate controller state. The preview image, the SVG download, and PNG/JPG rasterization all derive from the same escaped standalone SVG; a missing canvas/download capability reports a modal error without claiming success. Rebuild and destructive data controls remain owned by the data layer until the later data modal introduces their controller boundary.
+Header integration is capability-gated behind `HeaderActionManager` and is the only registered Activity Map interaction entry. The source contains no dockable Activity Map view or command registration. The trailing control group places poster export directly after pause/resume; it remains disabled without a ready query result. Opening it deep-copies the displayed distribution before later ticks or navigation can mutate controller state. The current modal exposes only the default Wide PNG flow and a bounded in-preview caption; its preview image and PNG rasterization derive from the same escaped, theme-resolved standalone SVG. Renderer variants remain below this UI boundary. A missing canvas/download capability reports a modal error without claiming success. Rebuild and destructive data controls remain owned by the data layer until the later data modal introduces their controller boundary.
 
 File rows in the Header Popover register one `defaultMod` hover source and emit Obsidian's public `hover-link` event through `file-hover-preview.ts`. Page Preview owns the native preview lifecycle, so modifier hover never calls the file-opening path or changes the active tracking leaf. Because the native preview is mounted outside the Activity Map DOM, `SummaryPopover` treats the owning leaf's connected `hoverPopover.hoverEl` as a temporary interaction extension: it preserves the source row while the preview is open, excludes preview clicks from outside-click dismissal, and resumes delayed close after Obsidian removes the preview. Direct activation accepts only user-agent-issued primary clicks or the existing keyboard contract; synthetic DOM clicks cannot switch the foreground file. List and donut highlight transitions remain presentation-only and are disabled by the reduced-motion media query.
 

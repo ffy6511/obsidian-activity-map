@@ -2,6 +2,7 @@ import { describe, expect, it } from '../helpers/test-harness';
 
 import type { DistributionItem, DistributionResult } from '../../src/query/distribution-query';
 import { PosterExportSession } from '../../src/export/poster-export-session';
+import { DEFAULT_POSTER_THEME } from '../../src/export/poster-theme';
 import { renderPosterExportDetails } from '../../src/ui/poster-export-details';
 import { installDomEnvironment } from '../helpers/dom-environment';
 
@@ -18,27 +19,31 @@ function distribution(): DistributionResult {
 	};
 }
 
-describe('poster export disclosure', () => {
-	it('shows the frozen scope and updates the actual filename before download', () => {
+describe('poster export filename', () => {
+	it('edits the download name without displaying an export path or frozen-result summary', () => {
 		const { document } = installDomEnvironment();
 		const source = distribution();
 		const session = new PosterExportSession({ query: source.query, distribution: source }, {
 			wordmarkDataUrl: 'data:image/png;base64,d29yZG1hcms=',
+			theme: DEFAULT_POSTER_THEME,
 			destination: { download: () => ({ outcome: 'downloaded', message: 'Downloaded' }) },
 			rasterizer: { async rasterize() { return new Blob(); } },
 		});
 		const container = document.createElement('div');
 		document.body.appendChild(container);
 		const details = renderPosterExportDetails({ container, session });
-		expect(container.querySelector('[data-activity-map-id="poster-scope"]')?.textContent)
-			.toBe('Frozen result: Activity · 2026-07-21 · Vault / work/projects.');
-		expect(container.querySelector('[data-activity-map-id="poster-filename"]')?.textContent)
-			.toBe('Download: activity-map-activeMs-2026-07-21-work-projects-portrait.svg');
+		const filename = container.querySelector<HTMLInputElement>('[data-activity-map-id="poster-filename"]');
+		if (!filename) throw new Error('filename input missing');
+		expect(container.textContent?.includes('Frozen result:')).toBeFalse();
+		expect(filename.getAttribute('aria-label')).toBe('Export file name');
+		expect(filename.value).toBe('activity-map-activeMs-2026-07-21-work-projects-wide.png');
 
-		session.setLayout('wide');
-		session.setFormat('png');
+		filename.value = 'weekly\\activity/poster.svg';
+		filename.dispatchEvent(new Event('input'));
+		expect(session.getFilename()).toBe('weekly-activity-poster.png');
+
+		session.setFormat('svg');
 		details.update();
-		expect(container.querySelector('[data-activity-map-id="poster-filename"]')?.textContent)
-			.toBe('Download: activity-map-activeMs-2026-07-21-work-projects-wide.png');
+		expect(filename.value).toBe('weekly-activity-poster.svg');
 	});
 });

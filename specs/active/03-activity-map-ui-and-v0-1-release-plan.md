@@ -150,30 +150,15 @@ The settings tab owns documented defaults and ranges for tracking enabled, idle 
 - Show pending and recent recovery decisions without allowing the same candidate to be resolved twice.
 - Rebuild, export, and deletion remain local service capabilities. A later header data modal will show progress, per-date warnings, immutable deletion-plan confirmation, and stale-operation blocking.
 
-### SVG and JSON Export
+### Poster SVG and JSON Export
 
-The SVG exporter consumes the same immutable `ChartModel` and formatted metadata as the header popover; it never serializes the live DOM. It is not imported by the current plugin composition. A later header data modal will own its user-facing action.
+The current poster renderer consumes the same immutable distribution/query semantics as the Header Popover; it never serializes the live DOM. Spec 07 composes that renderer into the Header Popover's Wide PNG modal. The current modal does not expose its tested alternate serializer variants. A later header data modal will own the raw JSON service's user-facing action.
 
-```ts
-interface SvgExportRequest {
-	mode: 'infographic' | 'chart-only';
-	title: string;
-	query: DistributionQuery;
-	distribution: DistributionResult;
-	chart: ChartModel;
-	theme: ExportTheme;
-	generatedAt: string;
-}
-```
-
-- Infographic output includes title, range, path, metric, scope/vault totals, donut, legend, percentages, exact values, and generation time.
-- Chart-only output includes geometry plus `<title>` and `<desc>`.
-- Inline all required colors, typography fallbacks, dimensions, and accessibility metadata.
-- Escape every path and label as text; no raw string enters markup unsanitized.
-- Generate a filename from metric, range, and a sanitized path summary.
-- Use a standard `Blob` download capability on desktop. Capability-detect export elsewhere and show a precise unavailable message rather than silently failing.
+- The standalone SVG source includes wordmark, range, path, metric, donut, legend, percentages, exact values, and accessible `<title>`/`<desc>` metadata.
+- Inline required theme colors, typography fallbacks, and dimensions; escape every path and label before it enters markup.
+- Rasterize the exact standalone SVG through a capability-gated `Blob` download boundary. An unavailable capability reports a precise modal error instead of silently claiming success.
 - Raw JSON export uses Spec 02's stream/result and the same explicit download boundary.
-- Export contains paths and statistics selected by the user but never reads note text, selected text, or typed strings.
+- Export contains only the user-selected aggregate paths and statistics; it never reads note text, selected text, or typed strings.
 
 ### Platform and Accessibility Boundaries
 
@@ -293,7 +278,7 @@ Complete user-owned export, rebuild, and destructive data workflows.
 
 ### Tasks
 
-- [x] Implement deterministic infographic and chart-only SVG rendering from `ChartModel`.
+- [x] Implement deterministic standalone poster SVG rendering from immutable query/distribution data.
 - [x] Implement XML escaping, accessible metadata, inline styles, safe filenames, and export capability reporting.
 - [x] Implement raw JSON export progress and download handling.
 - [x] Implement rebuild progress/warnings and deletion-plan confirmation dialogs.
@@ -301,19 +286,19 @@ Complete user-owned export, rebuild, and destructive data workflows.
 
 ### Files
 
-- `src/export/svg-exporter.ts`
+- `src/export/poster-exporter.ts` *(Spec 07 supersedes the legacy two-mode SVG exporter.)*
 - `src/export/export-destination.ts`
 - `src/ui/data-controls.ts`
 - `src/ui/deletion-confirmation.ts`
 - `styles.css`
-- `tests/export/svg-exporter.test.ts`
+- `tests/export/poster-exporter.test.ts`
 - `tests/ui/data-controls.test.ts`
 
 ### Acceptance Criteria
 
-- [x] Both SVG modes parse as standalone SVG and contain `<title>`, `<desc>`, inline colors, and expected values. *(Automated fixtures plus `xmllint --noout` parsing cover both modes.)*
+- [x] The current poster SVG source parses as standalone SVG and contains `<title>`, `<desc>`, inline colors, and expected values. *(Automated fixtures plus `xmllint --noout` parsing cover the current source.)*
 - [x] Adversarial path/label fixtures cannot inject markup or scripts into exported SVG.
-- [x] Full infographic and live view use identical distribution values and item colors.
+- [x] The full poster and live view use identical distribution values and item colors.
 - [x] A deletion action displays and executes the same unexpired plan ID and reports partial failure accurately.
 - [x] Export and diagnostic logs contain no note content, selected text, or typed strings.
 
@@ -347,7 +332,7 @@ Real Obsidian desktop and mobile-viewer journeys require the technical and Criti
 
 ### Acceptance Criteria
 
-- [x] The integrated fixture journey covers foreground tracking, idle recovery, directory drill-down, all ranges, data controls, and both SVG modes.
+- [x] The integrated fixture journey covers foreground tracking, idle recovery, directory drill-down, all ranges, data controls, and the current poster SVG source.
 - [x] Automated accessibility checks cover keyboard operation, focus restoration, names, text alternatives, theme tokens, and reduced motion.
 - [x] The production bundle contains no Electron runtime dependency, telemetry endpoint, note-content capture, or hidden desktop-only requirement.
 - [x] `npm run check`, `npm run lint`, `npm test -- --run`, `npm run build`, strict specs validation, and Markdown link checks pass.

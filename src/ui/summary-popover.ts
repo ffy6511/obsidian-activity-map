@@ -46,7 +46,7 @@ export function createPosterExportAction(args: {
 	onExport(): void;
 }): RangeTrailingAction {
 	return {
-		icon: 'download',
+		icon: 'image-down',
 		label: 'Export activity poster',
 		id: 'poster-export',
 		disabled: !args.available,
