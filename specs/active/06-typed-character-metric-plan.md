@@ -119,3 +119,15 @@ IME event order differs by browser, so the classifier explicitly tests both comp
 - Deferred findings: P2 support-text accuracy is routed to [`v0.2 documentation accuracy follow-up`](../ROADMAP.md#follow-up-todo).
 - Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (261 passed); `npm run build`; `python3 "$SPEC_DRIVEN_DELIVERY_DIR/scripts/validate_specs_workspace.py" . --strict` (0 errors, 0 warnings); production bundle PNG data-URL check; `git diff --check`.
 - Verdict: changes-required; P1 correction batch is ready for the joint Round 2 review.
+
+### Round 2
+
+- Critic: `joint_critic` (same independent read-only joint reviewer)
+- Review scope: full
+- Evidence reviewed: current commit `4fab642`; source-level current-leaf and IME fallback controls; focused regression and disclosure tests; the preserved Round 1 production-build evidence.
+- Findings: no P0/P1 blocker. P2 support-text accuracy for dictation, assistive technology, and simulated keyboards remains.
+- Selected fixes: none.
+- Executor fixes: none; the completed P1 correction batch was reviewed as implemented.
+- Deferred findings: P2 support-text accuracy remains routed to [`v0.2 documentation accuracy follow-up`](../ROADMAP.md#follow-up-todo).
+- Validation rerun: Critic independently ran `npm run check`; `npm run lint`; `npm test -- --run` (261 passed); strict Specs validation (0 errors, 0 warnings); and `git diff --check`. `npm run build` was not rerun because source was unchanged after the Round 1 production build; the current bundle's PNG data URL was statically confirmed.
+- Verdict: pass-with-follow-ups.
