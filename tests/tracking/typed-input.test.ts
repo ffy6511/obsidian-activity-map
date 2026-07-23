@@ -1,10 +1,20 @@
 import { describe, expect, it } from '../helpers/test-harness';
 
-import { countGraphemes, ImeCommitTracker, isAppliedTypedInput } from '../../src/tracking/typed-input';
+import {
+	countGraphemes,
+	countInputGraphemes,
+	ImeCommitTracker,
+	isAppliedTypedInput,
+} from '../../src/tracking/typed-input';
 
 describe('CodeMirror typed-input finalizer', () => {
 	it('counts grapheme clusters rather than UTF-16 units', () => {
 		expect(countGraphemes('A你e\u0301👩‍💻')).toBe(4);
+	});
+
+	it('excludes standalone Unicode whitespace graphemes from typedChars', () => {
+		expect(countInputGraphemes(' \t\r\n\u00a0')).toBe(0);
+		expect(countInputGraphemes('A 你e\u0301👩‍💻')).toBe(4);
 	});
 
 	it('counts ordinary applied typed transactions immediately', () => {

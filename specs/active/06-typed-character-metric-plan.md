@@ -8,8 +8,8 @@
 | Scope | Trusted input boundary, raw event schema, daily aggregate, distribution query, metric control |
 | Type | feat |
 | Priority | P1 |
-| Status | in-progress |
-| Completed | pending |
+| Status | completed |
+| Completed | 2026-07-23 |
 | Dependencies | [Product requirements](../../docs/PRD.md#交互输入字符-typedchars), [Constitution](../constitution/2026-07-21-activity-map-product-and-data.md#metrics-and-extensibility), [Architecture](../../ARCHITECTURE.md#dependency-direction) |
 | Decisions | [Input metric decision](../constitution/2026-07-21-activity-map-product-and-data.md#metrics-and-extensibility), [Privacy boundary](../constitution/2026-07-21-activity-map-product-and-data.md#privacy-and-network-boundary) |
 
@@ -18,7 +18,7 @@
 - [x] Phase 0: persist trusted typed-input evidence and rebuild aggregates
 - [x] Phase 1: query and display the `typedChars` metric
 - [x] Phase 2: explore DOM IME final-commit variants (superseded by real-input evidence)
-- [ ] Phase 3: use applied CodeMirror transactions as the IME authority
+- [x] Phase 3: use applied CodeMirror transactions as the IME authority
 
 ## Background
 
@@ -28,7 +28,7 @@ The shipped metrics distinguish active time, editing bursts, and file entry coun
 
 ### Goals and Non-goals
 
-Count trusted editor text commits by Unicode grapheme cluster, persist only a numeric count plus source class, rebuild it from existing daily shards, and expose it as a fourth distribution metric. Do not retain strings, selection, clipboard data, deletions, document diffs, or input from an inactive/non-editor surface.
+Count trusted editor text commits by non-whitespace Unicode grapheme cluster, persist only a numeric count plus source class, rebuild it from existing daily shards, and expose it as a fourth distribution metric. Do not retain strings, selection, clipboard data, deletions, document diffs, or input from an inactive/non-editor surface. Historical numeric-only evidence is not backfilled when the capture rule changes.
 
 ### Key Insight
 
@@ -44,7 +44,7 @@ Count trusted editor text commits by Unicode grapheme cluster, persist only a nu
 
 ```text
 CodeMirror input.type transaction / IME finalization
-  -> bridge resolves the actual editor leaf and converts inserted text to a numeric grapheme count
+  -> bridge resolves the actual editor leaf and converts inserted text to a numeric non-whitespace grapheme count
   -> coordinator verifies active target, owning window, and leaf
   -> content-free TypedInputRecord
   -> serialized DataServices append to the target local-date shard
@@ -54,7 +54,7 @@ CodeMirror input.type transaction / IME finalization
 
 ### Data Flow
 
-`TypedInputRecord` contains `fileId`, `pathAtEvent`, timestamp/local date, `typedChars`, and `source` (`insert-text` or `ime-commit`). The record's string payload is discarded before the coordinator emits it. A `DailyFileMetrics` value gains a non-negative integer `typedChars`; old summaries missing this field normalize to zero for backward compatibility.
+`TypedInputRecord` contains `fileId`, `pathAtEvent`, timestamp/local date, `typedChars`, and `source` (`insert-text` or `ime-commit`). `typedChars` excludes standalone Unicode whitespace graphemes. The record's string payload is discarded before the coordinator emits it. A `DailyFileMetrics` value gains a non-negative integer `typedChars`; old summaries missing this field normalize to zero for backward compatibility.
 
 ## Phase 0: persist trusted typed-input evidence and rebuild aggregates
 
@@ -136,6 +136,7 @@ Evidence: `npm run check`, `npm run lint`, `npm test -- --run` (278 passed), `np
 - [x] Keep `input.type.compose` provisional after trusted composition start. A generation-guarded two-frame finalizer prefers a trailing CodeMirror transaction, uses trusted non-empty `compositionend.data` only as a numeric fallback, and lets an untrusted host-delivered end settle prior numeric transaction evidence without trusting its datum; an ending zero discards cancellation.
 - [x] Cover Pinyin updates, candidate confirmation, multi-character submission, delayed post-end transaction, cancellation, later English input, paste/drop/history/completion/programmatic/deletion exclusion, stale targets, and the no-content persistence boundary.
 - [x] Accept the public `MarkdownFileInfo` editor-mode variant when it belongs to the active Markdown leaf, and use a temporary content-free console trace to establish the real Obsidian event order before removing it after owner UAT.
+- [x] Exclude standalone Unicode whitespace graphemes at the CodeMirror boundary, including space, tab, line break, and non-breaking space, without revising retained numeric evidence.
 
 ### Files
 
@@ -153,10 +154,10 @@ Evidence: `npm run check`, `npm run lint`, `npm test -- --run` (278 passed), `np
 
 - [x] One applied `input.type` transaction records its inserted grapheme count once when its editor owns the active tracked target.
 - [x] Pinyin updates remain uncounted until candidate confirmation; confirmed multi-character CJK input records once when CodeMirror flushes its final transaction after `compositionend`.
-- [x] Cancellation, paste, drop, history, completion, programmatic changes, deletion, a background leaf/window, and a non-editor control create no typed-input record.
-- [ ] Real Obsidian desktop evidence separately validates Pinyin input, candidate confirmation, multi-character submission, mid-composition cancellation, later English input, and no retained typed content.
+- [x] Cancellation, standalone Unicode whitespace, paste, drop, history, completion, programmatic changes, deletion, a background leaf/window, and a non-editor control create no typed-input record.
+- [x] Real Obsidian desktop evidence separately validates Pinyin input, candidate confirmation, multi-character submission, mid-composition cancellation, later English input, and no retained typed content.
 
-Evidence: the pre-UAT bridge passed `npm run check`, `npm run lint`, `npm test -- --run` (277 passed), `npm run build`, strict Specs validation, and `git diff --check` on 2026-07-23, but owner UAT still found Chinese candidate confirmation uncounted. The follow-up accepts `MarkdownFileInfo`'s documented active editor-mode variant. A temporary content-free console trace then established that a trusted start precedes numeric `input.type.compose` transactions, while the host reports the end observer as untrusted; it was removed after owner UAT confirmed the corrected candidate-confirmation path. On 2026-07-23, the final source without diagnostics passed `npm run check`, `npm run lint`, `npm test -- --run` (282 passed), `npm run build`, strict Specs validation (0 errors, 0 warnings), and `git diff --check`; the rebuilt bundle was byte-identical to the locally installed Obsidian plugin bundle. Focused fixtures exercise direct `input.type` filtering and inserted grapheme counting, Pinyin's repeated provisional composition updates, pre- and post-end final commits, trusted and untrusted end fallback, cancellation, rapid next composition, stale generations, subsequent English, invalid numeric commits, persistence failure, stale window/leaf rejection, and editor-mode provenance. These are controlled CodeMirror fixtures, not real Obsidian desktop evidence.
+Evidence: the pre-UAT bridge passed `npm run check`, `npm run lint`, `npm test -- --run` (277 passed), `npm run build`, strict Specs validation, and `git diff --check` on 2026-07-23, but owner UAT still found Chinese candidate confirmation uncounted. The follow-up accepts `MarkdownFileInfo`'s documented active editor-mode variant. A temporary content-free console trace then established that a trusted start precedes numeric `input.type.compose` transactions, while the host reports the end observer as untrusted; it was removed after owner UAT confirmed the corrected candidate-confirmation path. On 2026-07-23, the final source without diagnostics passed `npm run check`, `npm run lint`, `npm test -- --run` (282 passed), `npm run build`, strict Specs validation (0 errors, 0 warnings), and `git diff --check`; the rebuilt bundle was byte-identical to the locally installed Obsidian plugin bundle. The whitespace rule then passed `npm run check`, `npm run lint`, `npm test -- --run` (284 passed), `npm run build`, strict Specs validation (0 errors, 0 warnings), and `git diff --check`. The owner then completed the named real-Obsidian desktop UAT and explicitly authorized completion. Focused fixtures exercise direct `input.type` filtering and inserted grapheme counting, standalone Unicode whitespace exclusion, Pinyin's repeated provisional composition updates, pre- and post-end final commits, trusted and untrusted end fallback, cancellation, rapid next composition, stale generations, subsequent English, invalid numeric commits, persistence failure, stale window/leaf rejection, and editor-mode provenance. These are controlled CodeMirror fixtures; the separately recorded owner UAT is the real desktop evidence.
 
 ## Risks and Mitigations
 
@@ -164,9 +165,9 @@ IME event order differs by browser and host, so the bridge tests applied CodeMir
 
 ## Post-Critic Acceptance
 
-- [ ] Owner validates real Obsidian input with Latin, CJK IME Pinyin updates, candidate confirmation, multi-character submission, mid-composition cancellation, combining characters, emoji, paste, undo/redo, and a non-editor text box. Record the four IME outcomes separately without retaining typed content in plugin data or test artifacts.
+- [x] Owner validates real Obsidian input with Latin, CJK IME Pinyin updates, candidate confirmation, multi-character submission, mid-composition cancellation, combining characters, emoji, standalone spaces/tabs/line breaks, paste, undo/redo, and a non-editor text box. Record the four IME outcomes separately without retaining typed content in plugin data or test artifacts.
 
-Round 3 used the final independent Critic review. Owner UAT has invalidated the DOM-event solution, so the Spec returns to `in-progress`; no Critic round remains for a later independent re-review.
+Round 3 used the final independent Critic review. The owner UAT subsequently invalidated the DOM-event solution, and no Critic round remained for an independent re-review of the replacement CodeMirror boundary. The owner completed the real-Obsidian acceptance and explicitly authorized this Spec's completion; that owner acceptance, rather than an unclaimed later Critic verdict, is the completion authority recorded below.
 
 ## Evaluation Record
 
@@ -221,3 +222,10 @@ Round 3 used the final independent Critic review. Owner UAT has invalidated the 
 
 - Resolution: the PRD and bilingual README now describe the event-metadata limitation for dictation, assistive technology, and simulated keyboards.
 - Lifecycle: this documentation-only correction does not consume a new Critic round or change the open owner UAT criterion.
+
+### Completion acceptance
+
+- Owner UAT: on 2026-07-23, the owner confirmed the completed real-Obsidian journey and authorized completion. Pinyin preedit created no count; candidate confirmation and multi-character submission each committed one numeric count; a cancelled composition created none; later Latin input continued to count. The same acceptance covered combining characters, emoji, standalone spaces/tabs/line breaks, paste, undo/redo, and a non-editor text box.
+- Privacy evidence: UAT used no persisted input strings, and the temporary console trace had already been removed.
+- Critic limitation: the three permitted Critic rounds were exhausted before this replacement CodeMirror boundary could receive another independent review. No additional Critic pass is claimed.
+- Lifecycle: the owner's explicit UAT acceptance is the recorded authority for `completed` on 2026-07-23.

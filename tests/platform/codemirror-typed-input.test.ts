@@ -19,6 +19,12 @@ describe('CodeMirror typed-input bridge', () => {
 		expect(insertedGraphemeCount(transaction)).toBe(0);
 	});
 
+	it('excludes standalone Unicode whitespace from an applied transaction', () => {
+		const state = EditorState.create();
+		const transaction = state.update({ changes: { from: 0, insert: ' \t\r\n\u00a0' } });
+		expect(insertedGraphemeCount(transaction)).toBe(0);
+	});
+
 	it('accepts the active Markdown editor mode as editorInfoField provenance', () => {
 		const mode = { file: { path: 'notes/a.md' } };
 		const view = { file: { path: 'notes/a.md' }, currentMode: mode };

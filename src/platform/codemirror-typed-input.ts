@@ -3,7 +3,7 @@ import { ViewPlugin, type EditorView, type ViewUpdate } from '@codemirror/view';
 import { editorInfoField, type MarkdownFileInfo, type MarkdownView } from 'obsidian';
 
 import {
-	countGraphemes,
+	countInputGraphemes,
 	ImeCommitTracker,
 	isAppliedTypedInput,
 	type TypedInputCount,
@@ -62,14 +62,14 @@ export function createCodeMirrorTypedInputExtension(options: CodeMirrorTypedInpu
 
 		onCompositionStart(event: Event): void {
 			if (!event.isTrusted) return;
-				this.cancelFrames();
-				const settled = this.ime.beginComposition();
-				if (settled) this.emit(settled);
-			}
+			this.cancelFrames();
+			const settled = this.ime.beginComposition();
+			if (settled) this.emit(settled);
+		}
 
 		onCompositionEnd(event: Event): void {
 			const data = (event as CompositionEvent).data;
-			const finalGraphemes = typeof data === 'string' ? countGraphemes(data) : 0;
+			const finalGraphemes = typeof data === 'string' ? countInputGraphemes(data) : 0;
 			this.cancelFrames();
 			const generation = this.ime.endComposition({ fallbackChars: finalGraphemes, isTrusted: event.isTrusted });
 			if (generation === null) return;
@@ -78,8 +78,8 @@ export function createCodeMirrorTypedInputExtension(options: CodeMirrorTypedInpu
 			// CM6 may schedule its own mutation flush after this observer. The end
 			// can be reported untrusted even after a trusted start; it only settles
 			// already-numeric transaction evidence, never its own composition datum.
-		// Two frames place finalization after both the normal microtask path and
-		// Android's requestAnimationFrame-based flush without private CM internals.
+			// Two frames place finalization after both the normal microtask path and
+			// Android's requestAnimationFrame-based flush without private CM internals.
 			this.firstFrame = ownerWindow.requestAnimationFrame(() => {
 				this.firstFrame = null;
 				this.secondFrame = ownerWindow.requestAnimationFrame(() => {
@@ -129,7 +129,7 @@ export function createCodeMirrorTypedInputExtension(options: CodeMirrorTypedInpu
 export function insertedGraphemeCount(transaction: Pick<Transaction, 'changes'>): number {
 	let count = 0;
 	transaction.changes.iterChanges((_fromA, _toA, _fromB, _toB, inserted) => {
-		count += countGraphemes(inserted.toString());
+		count += countInputGraphemes(inserted.toString());
 	});
 	return count;
 }

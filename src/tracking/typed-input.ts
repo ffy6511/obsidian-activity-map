@@ -135,3 +135,26 @@ export function countGraphemes(value: string): number {
 	// Fallback keeps combining marks with their base when Intl.Segmenter is absent.
 	return [...value.normalize('NFC')].length;
 }
+
+/**
+ * Count input-bearing graphemes while excluding standalone Unicode whitespace.
+ * This reduction happens at the editor boundary, so whitespace text cannot
+ * enter records and historical numeric evidence is never rewritten.
+ */
+export function countInputGraphemes(value: string): number {
+	type Segment = { segment: string };
+	type Segmenter = { segment(input: string): Iterable<Segment> };
+	const SegmenterCtor = (Intl as typeof Intl & { Segmenter?: new (locales?: string | string[], options?: { granularity: 'grapheme' }) => Segmenter }).Segmenter;
+	if (SegmenterCtor) {
+		let count = 0;
+		for (const part of new SegmenterCtor(undefined, { granularity: 'grapheme' }).segment(value)) {
+			if (!isWhitespaceGrapheme(part.segment)) count += 1;
+		}
+		return count;
+	}
+	return [...value.normalize('NFC')].filter((character) => !isWhitespaceGrapheme(character)).length;
+}
+
+function isWhitespaceGrapheme(value: string): boolean {
+	return /^\p{White_Space}+$/u.test(value);
+}
