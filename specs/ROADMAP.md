@@ -28,6 +28,8 @@ Deliver a local-first Obsidian plugin that measures trustworthy file activity an
 - [Spec 03 — Activity Map UI and v0.1 release](active/03-activity-map-ui-and-v0-1-release-plan.md)
 - [Spec 04 — Header Popover split layout](active/04-header-popover-split-layout-plan.md)
 - [Spec 05 — Header Popover file grouping](active/05-header-popover-file-grouping-plan.md)
+- [Spec 08 — Header Popover locate current file](active/08-header-popover-locate-current-file-plan.md)
+- [Spec 09 — Header Popover file activation](active/09-header-popover-file-activation-plan.md)
 
 ### Key Deliverables
 
