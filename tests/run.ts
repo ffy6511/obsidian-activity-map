@@ -53,7 +53,7 @@ async function main(): Promise<void> {
 	}
 }
 
-	await main();
+await main();
 // jiti's module-register hook keeps an open handle on Node 26 that prevents
 // clean exit; exit explicitly with the code main() established.
 process.exit(process.exitCode ?? 0);

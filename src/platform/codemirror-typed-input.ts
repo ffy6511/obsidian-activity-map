@@ -26,7 +26,10 @@ export interface CodeMirrorTypedInputOptions {
  * must not inherit that leaf merely because they reference the same file.
  */
 export function belongsToMarkdownEditor(info: MarkdownFileInfo, view: MarkdownView): boolean {
-	return info.file?.path === view.file?.path && (info === view || info === (view.currentMode as unknown));
+	return (
+		info.file?.path === view.file?.path &&
+		(info === view || info === (view.currentMode as unknown))
+	);
 }
 
 /**
@@ -35,7 +38,9 @@ export function belongsToMarkdownEditor(info: MarkdownFileInfo, view: MarkdownVi
  * extension API, so every callback belongs to the exact EditorView that
  * applied the transaction.
  */
-export function createCodeMirrorTypedInputExtension(options: CodeMirrorTypedInputOptions): Extension {
+export function createCodeMirrorTypedInputExtension(
+	options: CodeMirrorTypedInputOptions,
+): Extension {
 	class TypedInputViewPlugin {
 		private readonly ime = new ImeCommitTracker();
 		private readonly ownerWindow: Window | null;
@@ -50,7 +55,9 @@ export function createCodeMirrorTypedInputExtension(options: CodeMirrorTypedInpu
 		update(update: ViewUpdate): void {
 			for (const transaction of update.transactions) {
 				const isCompose = transaction.isUserEvent('input.type.compose');
-				const insertedGraphemes = transaction.docChanged ? insertedGraphemeCount(transaction) : 0;
+				const insertedGraphemes = transaction.docChanged
+					? insertedGraphemeCount(transaction)
+					: 0;
 				if (!isAppliedTypedInput(transaction)) continue;
 				const counted = this.ime.observeTransaction({
 					typedChars: insertedGraphemes,
@@ -71,7 +78,10 @@ export function createCodeMirrorTypedInputExtension(options: CodeMirrorTypedInpu
 			const data = (event as CompositionEvent).data;
 			const finalGraphemes = typeof data === 'string' ? countInputGraphemes(data) : 0;
 			this.cancelFrames();
-			const generation = this.ime.endComposition({ fallbackChars: finalGraphemes, isTrusted: event.isTrusted });
+			const generation = this.ime.endComposition({
+				fallbackChars: finalGraphemes,
+				isTrusted: event.isTrusted,
+			});
 			if (generation === null) return;
 			const ownerWindow = this.ownerWindow;
 			if (!ownerWindow) return;

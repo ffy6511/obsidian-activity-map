@@ -66,9 +66,10 @@ export class ImeCommitTracker {
 		if (!this.composing) return null;
 		this.composing = false;
 		const generation = ++this.generation;
-		const eventFallback = validTypedChars(end.fallbackChars) && end.fallbackChars > 0
-			? { typedChars: end.fallbackChars, source: 'ime-commit' as const }
-			: null;
+		const eventFallback =
+			validTypedChars(end.fallbackChars) && end.fallbackChars > 0
+				? { typedChars: end.fallbackChars, source: 'ime-commit' as const }
+				: null;
 		this.pending = {
 			generation,
 			// A trusted empty end means cancellation. An untrusted end's datum cannot
@@ -89,18 +90,23 @@ export class ImeCommitTracker {
 		if (input.isComposition) {
 			if (this.pending) {
 				this.pending = null;
-				return input.typedChars > 0 ? { typedChars: input.typedChars, source: 'ime-commit' } : null;
-			}
-			if (this.composing) {
-				this.provisional = input.typedChars > 0
+				return input.typedChars > 0
 					? { typedChars: input.typedChars, source: 'ime-commit' }
 					: null;
+			}
+			if (this.composing) {
+				this.provisional =
+					input.typedChars > 0
+						? { typedChars: input.typedChars, source: 'ime-commit' }
+						: null;
 			}
 			return null;
 		}
 		if (this.pending) {
 			this.pending = null;
-			return input.typedChars > 0 ? { typedChars: input.typedChars, source: 'ime-commit' } : null;
+			return input.typedChars > 0
+				? { typedChars: input.typedChars, source: 'ime-commit' }
+				: null;
 		}
 		if (input.typedChars === 0) return null;
 		return { typedChars: input.typedChars, source: 'insert-text' };
@@ -130,8 +136,16 @@ function validTypedChars(value: number): boolean {
 /** Count user-perceived Unicode characters without persisting their content. */
 export function countGraphemes(value: string): number {
 	type Segmenter = { segment(input: string): Iterable<unknown> };
-	const SegmenterCtor = (Intl as typeof Intl & { Segmenter?: new (locales?: string | string[], options?: { granularity: 'grapheme' }) => Segmenter }).Segmenter;
-	if (SegmenterCtor) return [...new SegmenterCtor(undefined, { granularity: 'grapheme' }).segment(value)].length;
+	const SegmenterCtor = (
+		Intl as typeof Intl & {
+			Segmenter?: new (
+				locales?: string | string[],
+				options?: { granularity: 'grapheme' },
+			) => Segmenter;
+		}
+	).Segmenter;
+	if (SegmenterCtor)
+		return [...new SegmenterCtor(undefined, { granularity: 'grapheme' }).segment(value)].length;
 	// Fallback keeps combining marks with their base when Intl.Segmenter is absent.
 	return [...value.normalize('NFC')].length;
 }
@@ -144,15 +158,25 @@ export function countGraphemes(value: string): number {
 export function countInputGraphemes(value: string): number {
 	type Segment = { segment: string };
 	type Segmenter = { segment(input: string): Iterable<Segment> };
-	const SegmenterCtor = (Intl as typeof Intl & { Segmenter?: new (locales?: string | string[], options?: { granularity: 'grapheme' }) => Segmenter }).Segmenter;
+	const SegmenterCtor = (
+		Intl as typeof Intl & {
+			Segmenter?: new (
+				locales?: string | string[],
+				options?: { granularity: 'grapheme' },
+			) => Segmenter;
+		}
+	).Segmenter;
 	if (SegmenterCtor) {
 		let count = 0;
-		for (const part of new SegmenterCtor(undefined, { granularity: 'grapheme' }).segment(value)) {
+		for (const part of new SegmenterCtor(undefined, { granularity: 'grapheme' }).segment(
+			value,
+		)) {
 			if (!isWhitespaceGrapheme(part.segment)) count += 1;
 		}
 		return count;
 	}
-	return [...value.normalize('NFC')].filter((character) => !isWhitespaceGrapheme(character)).length;
+	return [...value.normalize('NFC')].filter((character) => !isWhitespaceGrapheme(character))
+		.length;
 }
 
 function isWhitespaceGrapheme(value: string): boolean {

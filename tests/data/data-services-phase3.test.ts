@@ -15,7 +15,12 @@ import type { ClosedSessionSegment, RecoveryDecision } from '../../src/domain/ac
 import { LocalQueryService } from '../../src/query/query-service';
 import { normalizeSettings } from '../../src/domain/settings';
 
-function segment(fileId: string, path: string, localDate: string, activeMs: number): ClosedSessionSegment {
+function segment(
+	fileId: string,
+	path: string,
+	localDate: string,
+	activeMs: number,
+): ClosedSessionSegment {
 	return {
 		sessionId: `s-${fileId}-${localDate}`,
 		target: { fileId, path, windowId: 'main', leafId: 'l1' },
@@ -30,7 +35,17 @@ function segment(fileId: string, path: string, localDate: string, activeMs: numb
 }
 
 function decision(candidateId: string, decidedAt: string): RecoveryDecision {
-	return { candidateId, fileId: 'f1', pathAtEvent: 'a.md', intervalStartedAt: decidedAt, kind: 'include', deltaMs: 5_000, reason: 'user-include', decidedAt, automatic: false };
+	return {
+		candidateId,
+		fileId: 'f1',
+		pathAtEvent: 'a.md',
+		intervalStartedAt: decidedAt,
+		kind: 'include',
+		deltaMs: 5_000,
+		reason: 'user-include',
+		decidedAt,
+		automatic: false,
+	};
 }
 
 /** Fake inventory that returns whatever (deviceId, localDate) pairs it's given. */
@@ -59,7 +74,11 @@ interface Setup {
 function setup(options: ConstructorParameters<typeof FakeDataAdapter>[0] = {}): Setup {
 	const adapter = new FakeDataAdapter(options);
 	const shardStore = new NdjsonShardStore(adapter);
-	const summaries = new DailySummaryRepository({ shardStore, pathAdapter: adapter, fileAdapter: adapter });
+	const summaries = new DailySummaryRepository({
+		shardStore,
+		pathAdapter: adapter,
+		fileAdapter: adapter,
+	});
 	const registryStore = new SafeJsonStore(adapter, '/p/files.json');
 	const registry = new FileRegistry(registryStore, null, false);
 	return { adapter, shardStore, summaries, pathAdapter: adapter, registry };
@@ -130,7 +149,13 @@ describe('rebuild service', () => {
 
 	it('deduplicates legacy adjustment retries by candidate identity during rebuild', async () => {
 		const s = setup();
-		const first = buildAdjustmentEnvelope(decision('candidate-1', '2026-07-20T00:01:00.000Z'), 'dev1', 'f1', 'a.md', '2026-07-20');
+		const first = buildAdjustmentEnvelope(
+			decision('candidate-1', '2026-07-20T00:01:00.000Z'),
+			'dev1',
+			'f1',
+			'a.md',
+			'2026-07-20',
+		);
 		const duplicate = { ...first, recordId: 'legacy-random-retry-id' };
 		await s.shardStore.append(dev1Path(s), [first, duplicate]);
 		const rebuilt = await s.summaries.rebuild({
@@ -139,7 +164,9 @@ describe('rebuild service', () => {
 			nowIso: '2026-07-21T00:00:00.000Z',
 		});
 		expect(rebuilt.summary.metricsByFileId.f1?.activeMs).toBe(5_000);
-		expect(rebuilt.summary.warnings.some((warning) => warning.code === 'duplicate-adjustment')).toBeTrue();
+		expect(
+			rebuilt.summary.warnings.some((warning) => warning.code === 'duplicate-adjustment'),
+		).toBeTrue();
 	});
 
 	it('rejects invalid nested metrics, identity, and warning structures', async () => {
@@ -172,11 +199,8 @@ describe('rebuild service', () => {
 		const s = setup();
 		const ref = { deviceId: 'dev1', localDate: '2026-07-20' };
 		s.adapter.seed(dailySummaryPath(s.pathAdapter, ref.deviceId, ref.localDate), '{broken');
-		const query = new LocalQueryService(
-			fakeInventory([], [ref]),
-			s.summaries,
-			s.registry,
-			() => normalizeSettings({ deviceId: 'dev1' }),
+		const query = new LocalQueryService(fakeInventory([], [ref]), s.summaries, s.registry, () =>
+			normalizeSettings({ deviceId: 'dev1' }),
 		);
 		const result = await query.run({
 			metric: 'activeMs',
@@ -185,7 +209,9 @@ describe('rebuild service', () => {
 			view: 'children',
 			groupBy: 'path',
 		});
-		expect(result.warnings.some((warning) => warning.code === 'corrupt-daily-summary')).toBeTrue();
+		expect(
+			result.warnings.some((warning) => warning.code === 'corrupt-daily-summary'),
+		).toBeTrue();
 		expect(result.scopeTotal).toBe(0);
 	});
 });
@@ -197,12 +223,24 @@ describe('retention service', () => {
 		const inventory = fakeInventory([{ deviceId: 'dev1', localDate: '2026-07-01' }]);
 		const rebuild = new RebuildService(inventory, s.shardStore, s.summaries);
 		// First: summary does not exist yet, so retention keeps the shard.
-		const retention = new RetentionService(inventory, s.shardStore, s.summaries, s.pathAdapter, s.adapter);
-		const before = await retention.run({ cutoffDate: '2026-07-15', nowIso: '2026-07-21T00:00:00.000Z' });
+		const retention = new RetentionService(
+			inventory,
+			s.shardStore,
+			s.summaries,
+			s.pathAdapter,
+			s.adapter,
+		);
+		const before = await retention.run({
+			cutoffDate: '2026-07-15',
+			nowIso: '2026-07-21T00:00:00.000Z',
+		});
 		expect(before.processed[0]?.outcome).toBe('kept-summary-missing');
 		// Build the summary, then retention removes the raw shard.
 		await rebuild.rebuild({ nowIso: '2026-07-21T00:00:00.000Z' });
-		const after = await retention.run({ cutoffDate: '2026-07-15', nowIso: '2026-07-21T00:00:00.000Z' });
+		const after = await retention.run({
+			cutoffDate: '2026-07-15',
+			nowIso: '2026-07-21T00:00:00.000Z',
+		});
 		expect(after.processed[0]?.outcome).toBe('removed');
 		expect(after.watermark).toBe('2026-07-21T00:00:00.000Z');
 	});
@@ -211,8 +249,17 @@ describe('retention service', () => {
 		const s = setup();
 		await seedShard(s, 'dev1', '2026-07-20', [segment('f1', 'a.md', '2026-07-20', 10_000)]);
 		const inventory = fakeInventory([{ deviceId: 'dev1', localDate: '2026-07-20' }]);
-		const retention = new RetentionService(inventory, s.shardStore, s.summaries, s.pathAdapter, s.adapter);
-		const result = await retention.run({ cutoffDate: '2026-07-15', nowIso: '2026-07-21T00:00:00.000Z' });
+		const retention = new RetentionService(
+			inventory,
+			s.shardStore,
+			s.summaries,
+			s.pathAdapter,
+			s.adapter,
+		);
+		const result = await retention.run({
+			cutoffDate: '2026-07-15',
+			nowIso: '2026-07-21T00:00:00.000Z',
+		});
 		// 2026-07-20 >= 2026-07-15, so it is within the window.
 		expect(result.processed[0]?.outcome).toBe('kept-within-window');
 	});
@@ -221,9 +268,17 @@ describe('retention service', () => {
 		const s = setup();
 		await seedShard(s, 'dev1', '2026-07-01', [segment('f1', 'a.md', '2026-07-01', 10_000)]);
 		const inventory = fakeInventory([{ deviceId: 'dev1', localDate: '2026-07-01' }]);
-		await new RebuildService(inventory, s.shardStore, s.summaries).rebuild({ nowIso: '2026-07-21T00:00:00.000Z' });
+		await new RebuildService(inventory, s.shardStore, s.summaries).rebuild({
+			nowIso: '2026-07-21T00:00:00.000Z',
+		});
 		await seedShard(s, 'dev1', '2026-07-01', [segment('f2', 'b.md', '2026-07-01', 5_000)]);
-		const result = await new RetentionService(inventory, s.shardStore, s.summaries, s.pathAdapter, s.adapter).run({
+		const result = await new RetentionService(
+			inventory,
+			s.shardStore,
+			s.summaries,
+			s.pathAdapter,
+			s.adapter,
+		).run({
 			cutoffDate: '2026-07-15',
 			nowIso: '2026-07-21T00:00:00.000Z',
 		});
@@ -236,8 +291,16 @@ describe('retention service', () => {
 		const envelope = buildSessionEnvelope(segment('f1', 'a.md', '2026-07-01', 10_000), 'dev1');
 		s.adapter.seed(dev1Path(s, '2026-07-01'), `${JSON.stringify(envelope)}\n`);
 		const inventory = fakeInventory([{ deviceId: 'dev1', localDate: '2026-07-01' }]);
-		await new RebuildService(inventory, s.shardStore, s.summaries).rebuild({ nowIso: '2026-07-21T00:00:00.000Z' });
-		const result = await new RetentionService(inventory, s.shardStore, s.summaries, s.pathAdapter, s.adapter).run({
+		await new RebuildService(inventory, s.shardStore, s.summaries).rebuild({
+			nowIso: '2026-07-21T00:00:00.000Z',
+		});
+		const result = await new RetentionService(
+			inventory,
+			s.shardStore,
+			s.summaries,
+			s.pathAdapter,
+			s.adapter,
+		).run({
 			cutoffDate: '2026-07-15',
 			nowIso: '2026-07-21T00:00:00.000Z',
 		});
@@ -259,7 +322,10 @@ describe('raw export service', () => {
 		]);
 		const inventory = fakeInventory([{ deviceId: 'dev1', localDate: '2026-07-20' }]);
 		const exporter = new RawExportService(inventory, s.shardStore, s.pathAdapter);
-		const result = await exporter.export({ scope: { kind: 'all' }, nowIso: '2026-07-21T00:00:00.000Z' });
+		const result = await exporter.export({
+			scope: { kind: 'all' },
+			nowIso: '2026-07-21T00:00:00.000Z',
+		});
 		expect(result.recordCount).toBe(2);
 		expect(result.deviceId).toBe('dev1');
 		expect(result.schemaVersion).toBe(1);
@@ -286,11 +352,20 @@ describe('raw export service', () => {
 
 	it('exports adjustments alongside sessions', async () => {
 		const s = setup();
-		const adj = buildAdjustmentEnvelope(decision('c1', '2026-07-20T00:01:00.000Z'), 'dev1', 'f1', 'a.md', '2026-07-20');
+		const adj = buildAdjustmentEnvelope(
+			decision('c1', '2026-07-20T00:01:00.000Z'),
+			'dev1',
+			'f1',
+			'a.md',
+			'2026-07-20',
+		);
 		await s.shardStore.append(dev1Path(s), [adj]);
 		const inventory = fakeInventory([{ deviceId: 'dev1', localDate: '2026-07-20' }]);
 		const exporter = new RawExportService(inventory, s.shardStore, s.pathAdapter);
-		const result = await exporter.export({ scope: { kind: 'all' }, nowIso: '2026-07-21T00:00:00.000Z' });
+		const result = await exporter.export({
+			scope: { kind: 'all' },
+			nowIso: '2026-07-21T00:00:00.000Z',
+		});
 		expect(result.records[0]?.type).toBe('adjustment');
 	});
 
@@ -316,7 +391,14 @@ describe('deletion service', () => {
 		const s = setup();
 		await seedShard(s, 'dev1', '2026-07-20', [segment('f1', 'a.md', '2026-07-20', 10_000)]);
 		const inventory = fakeInventory([{ deviceId: 'dev1', localDate: '2026-07-20' }]);
-		const service = new DeletionService(inventory, s.shardStore, s.summaries, s.pathAdapter, s.adapter, s.registry);
+		const service = new DeletionService(
+			inventory,
+			s.shardStore,
+			s.summaries,
+			s.pathAdapter,
+			s.adapter,
+			s.registry,
+		);
 		const plan = await service.planDeletion({
 			scope: { kind: 'date', localDate: '2026-07-20' },
 			nowIso: '2026-07-21T00:00:00.000Z',
@@ -324,7 +406,10 @@ describe('deletion service', () => {
 		expect(plan.affectedRecordCount).toBe(1);
 		expect(plan.affectedShards).toHaveLength(1);
 		expect(Object.keys(plan.pathFingerprints)).toEqual(plan.affectedPaths);
-		const executed = await service.executeDeletion({ plan, nowIso: '2026-07-21T00:00:00.000Z' });
+		const executed = await service.executeDeletion({
+			plan,
+			nowIso: '2026-07-21T00:00:00.000Z',
+		});
 		expect(executed.outcome).toBe('completed');
 		expect(executed.removedPaths.length).toBeGreaterThan(0);
 		// The shard is gone.
@@ -337,11 +422,24 @@ describe('deletion service', () => {
 		const shards = [{ deviceId: 'dev1', localDate: '2026-07-20' }];
 		await seedShard(s, 'dev1', '2026-07-20', [segment('f1', 'a.md', '2026-07-20', 10_000)]);
 		const inventory = fakeInventory(shards);
-		const service = new DeletionService(inventory, s.shardStore, s.summaries, s.pathAdapter, s.adapter, s.registry);
-		const plan = await service.planDeletion({ scope: { kind: 'all' }, nowIso: '2026-07-21T00:00:00.000Z' });
+		const service = new DeletionService(
+			inventory,
+			s.shardStore,
+			s.summaries,
+			s.pathAdapter,
+			s.adapter,
+			s.registry,
+		);
+		const plan = await service.planDeletion({
+			scope: { kind: 'all' },
+			nowIso: '2026-07-21T00:00:00.000Z',
+		});
 		shards.push({ deviceId: 'dev1', localDate: '2026-07-21' });
 		await seedShard(s, 'dev1', '2026-07-21', [segment('f2', 'new.md', '2026-07-21', 5_000)]);
-		const executed = await service.executeDeletion({ plan, nowIso: '2026-07-21T00:01:00.000Z' });
+		const executed = await service.executeDeletion({
+			plan,
+			nowIso: '2026-07-21T00:01:00.000Z',
+		});
 		expect(executed.outcome).toBe('aborted-drift');
 		expect((await s.shardStore.read(dev1Path(s, '2026-07-20'))).records).toHaveLength(1);
 		expect((await s.shardStore.read(dev1Path(s, '2026-07-21'))).records).toHaveLength(1);
@@ -351,14 +449,24 @@ describe('deletion service', () => {
 		const s = setup();
 		await seedShard(s, 'dev1', '2026-07-20', [segment('f1', 'a.md', '2026-07-20', 10_000)]);
 		const inventory = fakeInventory([{ deviceId: 'dev1', localDate: '2026-07-20' }]);
-		const service = new DeletionService(inventory, s.shardStore, s.summaries, s.pathAdapter, s.adapter, s.registry);
+		const service = new DeletionService(
+			inventory,
+			s.shardStore,
+			s.summaries,
+			s.pathAdapter,
+			s.adapter,
+			s.registry,
+		);
 		const plan = await service.planDeletion({
 			scope: { kind: 'date', localDate: '2026-07-20' },
 			nowIso: '2026-07-21T00:00:00.000Z',
 		});
 		// Drift: add another record between plan and execute.
 		await seedShard(s, 'dev1', '2026-07-20', [segment('f2', 'b.md', '2026-07-20', 5_000)]);
-		const executed = await service.executeDeletion({ plan, nowIso: '2026-07-21T00:00:00.000Z' });
+		const executed = await service.executeDeletion({
+			plan,
+			nowIso: '2026-07-21T00:00:00.000Z',
+		});
 		expect(executed.outcome).toBe('aborted-drift');
 		// Original records are preserved.
 		const read = await s.shardStore.read(dev1Path(s));
@@ -369,11 +477,24 @@ describe('deletion service', () => {
 		const s = setup();
 		await seedShard(s, 'dev1', '2026-07-20', [segment('f1', 'a.md', '2026-07-20', 10_000)]);
 		const inventory = fakeInventory([{ deviceId: 'dev1', localDate: '2026-07-20' }]);
-		const service = new DeletionService(inventory, s.shardStore, s.summaries, s.pathAdapter, s.adapter, s.registry);
-		const plan = await service.planDeletion({ scope: { kind: 'date', localDate: '2026-07-20' }, nowIso: '2026-07-21T00:00:00.000Z' });
+		const service = new DeletionService(
+			inventory,
+			s.shardStore,
+			s.summaries,
+			s.pathAdapter,
+			s.adapter,
+			s.registry,
+		);
+		const plan = await service.planDeletion({
+			scope: { kind: 'date', localDate: '2026-07-20' },
+			nowIso: '2026-07-21T00:00:00.000Z',
+		});
 		await s.shardStore.remove(dev1Path(s));
 		await seedShard(s, 'dev1', '2026-07-20', [segment('f2', 'b.md', '2026-07-20', 5_000)]);
-		const executed = await service.executeDeletion({ plan, nowIso: '2026-07-21T00:01:00.000Z' });
+		const executed = await service.executeDeletion({
+			plan,
+			nowIso: '2026-07-21T00:01:00.000Z',
+		});
 		expect(executed.outcome).toBe('aborted-drift');
 	});
 
@@ -388,12 +509,21 @@ describe('deletion service', () => {
 				generatedAt: '2026-07-20T00:00:00.000Z',
 				sourceRecordCount: 1,
 				sourceFingerprint: 'retained-source',
-				metricsByFileId: { f1: { activeMs: 10_000, editingMs: 0, openCount: 1, typedChars: 0 } },
+				metricsByFileId: {
+					f1: { activeMs: 10_000, editingMs: 0, openCount: 1, typedChars: 0 },
+				},
 				warnings: [],
 			},
 		});
 		const inventory = fakeInventory([], [summaryRef]);
-		const service = new DeletionService(inventory, s.shardStore, s.summaries, s.pathAdapter, s.adapter, s.registry);
+		const service = new DeletionService(
+			inventory,
+			s.shardStore,
+			s.summaries,
+			s.pathAdapter,
+			s.adapter,
+			s.registry,
+		);
 		const plan = await service.planDeletion({
 			scope: { kind: 'date', localDate: summaryRef.localDate },
 			nowIso: '2026-07-21T00:00:00.000Z',
@@ -406,10 +536,15 @@ describe('deletion service', () => {
 			summary: {
 				...current,
 				generatedAt: '2026-07-21T00:00:30.000Z',
-				metricsByFileId: { f1: { activeMs: 20_000, editingMs: 0, openCount: 1, typedChars: 0 } },
+				metricsByFileId: {
+					f1: { activeMs: 20_000, editingMs: 0, openCount: 1, typedChars: 0 },
+				},
 			},
 		});
-		const executed = await service.executeDeletion({ plan, nowIso: '2026-07-21T00:01:00.000Z' });
+		const executed = await service.executeDeletion({
+			plan,
+			nowIso: '2026-07-21T00:01:00.000Z',
+		});
 		expect(executed.outcome).toBe('aborted-drift');
 		expect((await s.summaries.load(summaryRef))?.metricsByFileId.f1?.activeMs).toBe(20_000);
 	});
@@ -421,12 +556,22 @@ describe('deletion service', () => {
 			segment('f2', 'b.md', '2026-07-20', 5_000),
 		]);
 		const inventory = fakeInventory([{ deviceId: 'dev1', localDate: '2026-07-20' }]);
-		const service = new DeletionService(inventory, s.shardStore, s.summaries, s.pathAdapter, s.adapter, s.registry);
+		const service = new DeletionService(
+			inventory,
+			s.shardStore,
+			s.summaries,
+			s.pathAdapter,
+			s.adapter,
+			s.registry,
+		);
 		const plan = await service.planDeletion({
 			scope: { kind: 'file', fileId: 'f1' },
 			nowIso: '2026-07-21T00:00:00.000Z',
 		});
-		const executed = await service.executeDeletion({ plan, nowIso: '2026-07-21T00:00:00.000Z' });
+		const executed = await service.executeDeletion({
+			plan,
+			nowIso: '2026-07-21T00:00:00.000Z',
+		});
 		expect(executed.outcome).toBe('completed');
 		const read = await s.shardStore.read(dev1Path(s));
 		// f1 removed, f2 retained.
@@ -439,9 +584,22 @@ describe('deletion service', () => {
 		const envelope = buildSessionEnvelope(segment('f1', 'a.md', '2026-07-20', 10_000), 'dev1');
 		s.adapter.seed(dev1Path(s), `${JSON.stringify(envelope)}\n`);
 		const inventory = fakeInventory([{ deviceId: 'dev1', localDate: '2026-07-20' }]);
-		const service = new DeletionService(inventory, s.shardStore, s.summaries, s.pathAdapter, s.adapter, s.registry);
-		const plan = await service.planDeletion({ scope: { kind: 'file', fileId: 'f1' }, nowIso: '2026-07-21T00:00:00.000Z' });
-		const executed = await service.executeDeletion({ plan, nowIso: '2026-07-21T00:01:00.000Z' });
+		const service = new DeletionService(
+			inventory,
+			s.shardStore,
+			s.summaries,
+			s.pathAdapter,
+			s.adapter,
+			s.registry,
+		);
+		const plan = await service.planDeletion({
+			scope: { kind: 'file', fileId: 'f1' },
+			nowIso: '2026-07-21T00:00:00.000Z',
+		});
+		const executed = await service.executeDeletion({
+			plan,
+			nowIso: '2026-07-21T00:01:00.000Z',
+		});
 		expect(executed.outcome).toBe('partial-failure');
 		expect(executed.errors.length).toBeGreaterThan(0);
 	});
@@ -451,9 +609,22 @@ describe('deletion service', () => {
 		const envelope = buildSessionEnvelope(segment('f1', 'a.md', '2026-07-20', 10_000), 'dev1');
 		s.adapter.seed(dev1Path(s), `${JSON.stringify(envelope)}\n{broken\n`);
 		const inventory = fakeInventory([{ deviceId: 'dev1', localDate: '2026-07-20' }]);
-		const service = new DeletionService(inventory, s.shardStore, s.summaries, s.pathAdapter, s.adapter, s.registry);
-		const plan = await service.planDeletion({ scope: { kind: 'file', fileId: 'f1' }, nowIso: '2026-07-21T00:00:00.000Z' });
-		const executed = await service.executeDeletion({ plan, nowIso: '2026-07-21T00:01:00.000Z' });
+		const service = new DeletionService(
+			inventory,
+			s.shardStore,
+			s.summaries,
+			s.pathAdapter,
+			s.adapter,
+			s.registry,
+		);
+		const plan = await service.planDeletion({
+			scope: { kind: 'file', fileId: 'f1' },
+			nowIso: '2026-07-21T00:00:00.000Z',
+		});
+		const executed = await service.executeDeletion({
+			plan,
+			nowIso: '2026-07-21T00:01:00.000Z',
+		});
 		expect(executed.outcome).toBe('partial-failure');
 		expect((await s.shardStore.read(dev1Path(s))).diagnostics).toHaveLength(1);
 	});
@@ -464,9 +635,22 @@ describe('deletion service', () => {
 		await s.registry.save();
 		await seedShard(s, 'dev1', '2026-07-20', [segment('f1', 'a.md', '2026-07-20', 10_000)]);
 		const inventory = fakeInventory([{ deviceId: 'dev1', localDate: '2026-07-20' }]);
-		const service = new DeletionService(inventory, s.shardStore, s.summaries, s.pathAdapter, s.adapter, s.registry);
-		const plan = await service.planDeletion({ scope: { kind: 'all' }, nowIso: '2026-07-21T00:00:00.000Z' });
-		const executed = await service.executeDeletion({ plan, nowIso: '2026-07-21T00:01:00.000Z' });
+		const service = new DeletionService(
+			inventory,
+			s.shardStore,
+			s.summaries,
+			s.pathAdapter,
+			s.adapter,
+			s.registry,
+		);
+		const plan = await service.planDeletion({
+			scope: { kind: 'all' },
+			nowIso: '2026-07-21T00:00:00.000Z',
+		});
+		const executed = await service.executeDeletion({
+			plan,
+			nowIso: '2026-07-21T00:01:00.000Z',
+		});
 		expect(executed.outcome).toBe('completed');
 		expect(Object.keys(s.registry.snapshot().entries)).toHaveLength(0);
 	});

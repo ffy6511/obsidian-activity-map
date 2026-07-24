@@ -14,7 +14,7 @@ describe('automated accessibility and platform presentation checks', () => {
 		expect(chart.includes("setAttribute('aria-label'")).toBeTrue();
 		expect(chart.includes("createSvg('title')")).toBeTrue();
 		expect(legend.includes("'Activity chart legend'")).toBeTrue();
-		expect(legend.includes('formatMetric(item.value')).toBeTrue();
+		expect(/formatMetric\s*\(\s*item\.value/.test(legend)).toBeTrue();
 		expect(legend.includes('formatPercent(item.percentOfScope)')).toBeTrue();
 	});
 
@@ -35,7 +35,7 @@ describe('automated accessibility and platform presentation checks', () => {
 		expect(popover.includes('List area')).toBeFalse();
 		expect(posterModal.includes('renderPosterCaptionEditor')).toBeTrue();
 		expect(posterModal.includes("cls: 'activity-map-poster-preview-frame'")).toBeTrue();
-		expect(posterModal.includes("cls: 'activity-map-poster-preview'" )).toBeFalse();
+		expect(posterModal.includes("cls: 'activity-map-poster-preview'")).toBeFalse();
 		expect(posterModal.includes('WIDE_POSTER_CAPTION_PREVIEW')).toBeTrue();
 		expect(captionEditor.includes("'aria-label': 'Optional poster caption'")).toBeTrue();
 		expect(captionEditor.includes("createEl('textarea'")).toBeTrue();
@@ -49,7 +49,9 @@ describe('automated accessibility and platform presentation checks', () => {
 		expect(posterModal.includes('getExportLabel()')).toBeTrue();
 		expect(posterModal.includes("text: 'Download'")).toBeTrue();
 		expect(posterModal.includes("text: 'Cancel'")).toBeTrue();
-		expect(posterModal.indexOf("const frame = this.contentEl.createDiv")).toBeLessThan(posterModal.indexOf("const footer = this.contentEl.createDiv"));
+		expect(posterModal.indexOf('const frame = this.contentEl.createDiv')).toBeLessThan(
+			posterModal.indexOf('const footer = this.contentEl.createDiv'),
+		);
 		expect(posterModal.includes("data-activity-map-id': 'poster-layout'")).toBeFalse();
 		expect(posterModal.includes("data-activity-map-id': 'poster-format'")).toBeFalse();
 		expect(posterModal.includes('renderPosterExportDetails')).toBeFalse();
@@ -61,7 +63,14 @@ describe('automated accessibility and platform presentation checks', () => {
 		const status = await source('src/ui/status-presentation.ts');
 		const header = await source('src/ui/header-action-manager.ts');
 		const css = await source('styles.css');
-		for (const state of ['tracking this file', 'idle', 'paused', 'need review', 'storage problem']) expect(status.includes(state)).toBeTrue();
+		for (const state of [
+			'tracking this file',
+			'idle',
+			'paused',
+			'need review',
+			'storage problem',
+		])
+			expect(status.includes(state)).toBeTrue();
 		expect(header.includes('(hover: hover) and (pointer: fine)')).toBeTrue();
 		expect(css.includes('var(--background-primary)')).toBeTrue();
 		expect(css.includes('@media (prefers-reduced-motion: reduce)')).toBeTrue();

@@ -120,7 +120,8 @@ export interface ValidatedTypedInputPayload {
 	source: 'insert-text' | 'ime-commit';
 }
 
-export type ValidatedPayload = ValidatedSessionPayload | ValidatedAdjustmentPayload | ValidatedTypedInputPayload;
+export type ValidatedPayload =
+	ValidatedSessionPayload | ValidatedAdjustmentPayload | ValidatedTypedInputPayload;
 
 /** A validated event envelope (schema version 1). */
 export interface ValidatedEventEnvelope {
@@ -187,7 +188,10 @@ function validatePayload(value: unknown, type: EventPayloadKind): ValidatedPaylo
 	}
 	if (type === 'typed-input') {
 		if (!Number.isSafeInteger(value.typedChars) || (value.typedChars as number) < 0) {
-			throw new SchemaError('invalid-payload', 'typedChars must be a non-negative safe integer');
+			throw new SchemaError(
+				'invalid-payload',
+				'typedChars must be a non-negative safe integer',
+			);
 		}
 		if (value.source !== 'insert-text' && value.source !== 'ime-commit') {
 			throw new SchemaError('invalid-payload', 'typed-input source is invalid');
@@ -199,10 +203,7 @@ function validatePayload(value: unknown, type: EventPayloadKind): ValidatedPaylo
 		};
 	}
 	// adjustment
-	if (
-		typeof value.deltaMs !== 'number' ||
-		!Number.isFinite(value.deltaMs)
-	) {
+	if (typeof value.deltaMs !== 'number' || !Number.isFinite(value.deltaMs)) {
 		throw new SchemaError('invalid-payload', 'adjustment deltaMs must be a finite number');
 	}
 	const deltaMs: number = value.deltaMs;

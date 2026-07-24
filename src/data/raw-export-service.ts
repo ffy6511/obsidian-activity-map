@@ -16,9 +16,7 @@ import type { ValidatedEventEnvelope } from './schema';
 
 /** Export scope. */
 export type ExportScope =
-	| { kind: 'all' }
-	| { kind: 'date'; localDate: string }
-	| { kind: 'file'; fileId: string };
+	{ kind: 'all' } | { kind: 'date'; localDate: string } | { kind: 'file'; fileId: string };
 
 /** Export result: metadata + records, ready to serialize. */
 export interface RawExportResult {
@@ -62,7 +60,13 @@ export class RawExportService {
 			}
 			const path = sessionShardPath(this.pathAdapter, shard.deviceId, shard.localDate);
 			const read = await this.shardStore.read(path);
-			warnings.push(...read.diagnostics.map((warning) => ({ path, code: warning.code, message: warning.message })));
+			warnings.push(
+				...read.diagnostics.map((warning) => ({
+					path,
+					code: warning.code,
+					message: warning.message,
+				})),
+			);
 			const kept =
 				scopeFileId !== null
 					? read.records.filter((r) => r.fileId === scopeFileId)
@@ -71,7 +75,12 @@ export class RawExportService {
 			if (exportDeviceId === null && shard.deviceId) {
 				exportDeviceId = shard.deviceId;
 			}
-			args.onProgress?.({ operation: 'export', completed: index + 1, total: filtered.length, ...shard });
+			args.onProgress?.({
+				operation: 'export',
+				completed: index + 1,
+				total: filtered.length,
+				...shard,
+			});
 		}
 		return {
 			schemaVersion: 1,

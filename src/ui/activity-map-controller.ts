@@ -1,15 +1,26 @@
 import type { TrackingSnapshot } from '../domain/activity';
 import type { ActivityMapSettings, HeaderPopoverRange } from '../domain/settings';
 import type { TrackingObserver } from '../tracking/ports';
-import type { DistributionGrouping, DistributionQuery, DistributionResult } from '../query/distribution-query';
+import type {
+	DistributionGrouping,
+	DistributionQuery,
+	DistributionResult,
+} from '../query/distribution-query';
 import type { MetricKey } from '../query/path-projection';
 import type { RangeMode } from '../query/date-range';
-import { headerPopoverDefaultQuery, initialViewModel, type ActivityMapViewModel } from './view-model';
+import {
+	headerPopoverDefaultQuery,
+	initialViewModel,
+	type ActivityMapViewModel,
+} from './view-model';
 import { localDateFor } from '../platform/clock';
 
 export interface QueryService {
 	run(query: DistributionQuery): Promise<DistributionResult>;
-	getStatusSummary?(filePath: string, today: string): Promise<{ fileActiveMs: number; vaultActiveMs: number }>;
+	getStatusSummary?(
+		filePath: string,
+		today: string,
+	): Promise<{ fileActiveMs: number; vaultActiveMs: number }>;
 }
 
 export interface SettingsService {
@@ -111,7 +122,9 @@ export class ActivityMapController implements TrackingObserver {
 		this.publish({ ...this.model, tracking: snapshot });
 	}
 
-	async getStatusSummary(filePath: string): Promise<{ fileActiveMs: number; vaultActiveMs: number }> {
+	async getStatusSummary(
+		filePath: string,
+	): Promise<{ fileActiveMs: number; vaultActiveMs: number }> {
 		if (!this.queryService.getStatusSummary) return { fileActiveMs: 0, vaultActiveMs: 0 };
 		return this.queryService.getStatusSummary(filePath, this.today);
 	}
@@ -131,7 +144,10 @@ export class ActivityMapController implements TrackingObserver {
 				this.tracking.resume();
 				return;
 			case 'resolve-recovery':
-				await this.tracking.resolveRecovery({ candidateId: intent.candidateId, kind: intent.decision });
+				await this.tracking.resolveRecovery({
+					candidateId: intent.candidateId,
+					kind: intent.decision,
+				});
 				return;
 			case 'undo-automatic-exclusion':
 				this.tracking.undoAutomaticExclusion(intent.candidateId);
@@ -154,7 +170,11 @@ export class ActivityMapController implements TrackingObserver {
 			case 'set-path':
 				this.model = {
 					...this.model,
-					query: { ...this.model.query, path: intent.path, view: intent.view ?? 'children' },
+					query: {
+						...this.model.query,
+						path: intent.path,
+						view: intent.view ?? 'children',
+					},
 				};
 				break;
 			case 'set-grouping':
@@ -167,7 +187,10 @@ export class ActivityMapController implements TrackingObserver {
 				);
 				return;
 			case 'set-query':
-				this.model = { ...this.model, query: { ...intent.query, range: { ...intent.query.range } } };
+				this.model = {
+					...this.model,
+					query: { ...intent.query, range: { ...intent.query.range } },
+				};
 				break;
 			case 'refresh':
 				break;
@@ -184,7 +207,12 @@ export class ActivityMapController implements TrackingObserver {
 	private async refresh(): Promise<void> {
 		const generation = ++this.generation;
 		const query = this.model.query;
-		this.publish({ ...this.model, loadState: 'loading', error: null, queryGeneration: generation });
+		this.publish({
+			...this.model,
+			loadState: 'loading',
+			error: null,
+			queryGeneration: generation,
+		});
 		try {
 			const distribution = await this.queryService.run(query);
 			if (this.stopped || generation !== this.generation) return;
@@ -238,19 +266,25 @@ export class ActivityMapController implements TrackingObserver {
 	}
 
 	private queuePopoverPreference(
-		patch: Pick<ActivityMapSettings, 'headerPopoverMetric'> | Pick<ActivityMapSettings, 'headerPopoverRange'>,
+		patch:
+			| Pick<ActivityMapSettings, 'headerPopoverMetric'>
+			| Pick<ActivityMapSettings, 'headerPopoverRange'>,
 		updateQuery: (query: DistributionQuery) => DistributionQuery,
 	): Promise<void> {
 		// Popover controls dispatch without awaiting the previous change. Serialize
 		// their settings commits so a quick metric/range pair cannot write two
 		// patches derived from the same stale settings snapshot.
-		const operation = this.popoverPreferenceQueue.then(() => this.setPopoverPreference(patch, updateQuery));
+		const operation = this.popoverPreferenceQueue.then(() =>
+			this.setPopoverPreference(patch, updateQuery),
+		);
 		this.popoverPreferenceQueue = operation.catch(() => undefined);
 		return operation;
 	}
 
 	private async setPopoverPreference(
-		patch: Pick<ActivityMapSettings, 'headerPopoverMetric'> | Pick<ActivityMapSettings, 'headerPopoverRange'>,
+		patch:
+			| Pick<ActivityMapSettings, 'headerPopoverMetric'>
+			| Pick<ActivityMapSettings, 'headerPopoverRange'>,
 		updateQuery: (query: DistributionQuery) => DistributionQuery,
 	): Promise<void> {
 		const previousQuery = this.model.query;

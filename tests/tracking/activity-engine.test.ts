@@ -55,7 +55,13 @@ function createEngine(settings = baseSettings()): Harness {
 		onSnapshot: (s) => snapshots.push(s),
 		onCheckpoint: (c) => checkpoints.push(c),
 	};
-	return { engine: new ActivityEngine(settings, callbacks), sessions, decisions, snapshots, checkpoints };
+	return {
+		engine: new ActivityEngine(settings, callbacks),
+		sessions,
+		decisions,
+		snapshots,
+		checkpoints,
+	};
 }
 
 describe('activity engine startup', () => {
@@ -249,8 +255,16 @@ describe('activity engine recovery decisions', () => {
 		h.engine.submit({ kind: 'idle-confirm', sample: sample(65_000) });
 		h.engine.submit({ kind: 'focus-target', sample: sample(65_000), target: target('a') });
 		const id = h.engine.pendingRecovery()[0]?.candidateId ?? '';
-		const first = h.engine.resolveRecovery({ candidateId: id, kind: 'include', decidedAt: 'x' });
-		const second = h.engine.resolveRecovery({ candidateId: id, kind: 'include', decidedAt: 'y' });
+		const first = h.engine.resolveRecovery({
+			candidateId: id,
+			kind: 'include',
+			decidedAt: 'x',
+		});
+		const second = h.engine.resolveRecovery({
+			candidateId: id,
+			kind: 'include',
+			decidedAt: 'y',
+		});
 		expect(first).toBeDefined();
 		expect(second).toEqual(first);
 		// Only one include decision recorded.

@@ -7,6 +7,8 @@ export default defineConfig(
 		'node_modules',
 		'dist',
 		'esbuild.config.mjs',
+		'.lintstagedrc.mjs',
+		'prettier.config.mjs',
 		'version-bump.mjs',
 		'versions.json',
 		'main.js',

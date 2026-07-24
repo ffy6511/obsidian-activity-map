@@ -40,7 +40,10 @@ export interface PathGroup {
  * "deleted" group handled by the caller.
  */
 export function projectAndGroup(args: {
-	metricsByFileId: Record<string, { activeMs: number; editingMs: number; openCount: number; typedChars: number }>;
+	metricsByFileId: Record<
+		string,
+		{ activeMs: number; editingMs: number; openCount: number; typedChars: number }
+	>;
 	registryEntries: Record<string, FileRegistryEntry>;
 	path: string;
 	metric: MetricKey;

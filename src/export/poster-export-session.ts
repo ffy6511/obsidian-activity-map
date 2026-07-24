@@ -1,5 +1,9 @@
 import type { DistributionQuery, DistributionResult } from '../query/distribution-query';
-import { BrowserExportDestination, type ExportDestinationResult, type SvgRasterizer } from './export-destination';
+import {
+	BrowserExportDestination,
+	type ExportDestinationResult,
+	type SvgRasterizer,
+} from './export-destination';
 import {
 	posterMimeType,
 	renderPoster,
@@ -42,7 +46,10 @@ export class PosterExportSession {
 	private caption = '';
 	private filenameInput = '';
 
-	constructor(snapshot: PosterSnapshot, private readonly dependencies: PosterExportSessionDependencies) {
+	constructor(
+		snapshot: PosterSnapshot,
+		private readonly dependencies: PosterExportSessionDependencies,
+	) {
 		this.snapshot = copySnapshot(snapshot);
 	}
 
@@ -106,37 +113,36 @@ export class PosterExportSession {
 	async download(): Promise<PosterExportAttempt> {
 		const poster = this.preview();
 		const rasterScale = this.format === 'png' ? POSTER_PNG_RASTER_SCALE : 1;
-		const blob = this.format === 'svg'
-			? new Blob([poster.svg], { type: posterMimeType('svg') })
-			: await this.dependencies.rasterizer.rasterize({
-				svg: poster.svg,
-				width: poster.width * rasterScale,
-				height: poster.height * rasterScale,
-				format: this.format,
-			});
+		const blob =
+			this.format === 'svg'
+				? new Blob([poster.svg], { type: posterMimeType('svg') })
+				: await this.dependencies.rasterizer.rasterize({
+						svg: poster.svg,
+						width: poster.width * rasterScale,
+						height: poster.height * rasterScale,
+						format: this.format,
+					});
 		return {
 			poster,
-			result: this.dependencies.destination.download(
-				blob,
-				this.getFilename(),
-			),
+			result: this.dependencies.destination.download(blob, this.getFilename()),
 		};
 	}
 }
 
 function editablePosterFilename(value: string, format: PosterFormat): string {
-	const stem = Array.from(value, (character) => {
-		const codePoint = character.codePointAt(0) ?? 0;
-		return codePoint >= 0x20 && codePoint !== 0x7f ? character : '';
-	})
-		.join('')
-		.normalize('NFC')
-		.replace(/[\\/]/g, '-')
-		.replace(/[<>:"|?*]/g, '')
-		.replace(/\.(?:svg|png|jpe?g)$/i, '')
-		.replace(/^\.+|[. ]+$/g, '')
-		.trim()
-		.slice(0, 96) || 'activity-map-export';
+	const stem =
+		Array.from(value, (character) => {
+			const codePoint = character.codePointAt(0) ?? 0;
+			return codePoint >= 0x20 && codePoint !== 0x7f ? character : '';
+		})
+			.join('')
+			.normalize('NFC')
+			.replace(/[\\/]/g, '-')
+			.replace(/[<>:"|?*]/g, '')
+			.replace(/\.(?:svg|png|jpe?g)$/i, '')
+			.replace(/^\.+|[. ]+$/g, '')
+			.trim()
+			.slice(0, 96) || 'activity-map-export';
 	return `${stem}.${format}`;
 }
 
@@ -158,6 +164,8 @@ function copyQuery(query: DistributionQuery): DistributionQuery {
 	return { ...query, range: { ...query.range } };
 }
 
-function copyItem(item: DistributionResult['chartItems'][number]): DistributionResult['chartItems'][number] {
+function copyItem(
+	item: DistributionResult['chartItems'][number],
+): DistributionResult['chartItems'][number] {
 	return { ...item, memberIds: [...item.memberIds] };
 }

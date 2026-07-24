@@ -39,17 +39,14 @@ function makeEngine(): Harness {
 	const decisions: RecoveryDecision[] = [];
 	const snapshots: TrackingSnapshot[] = [];
 	const checkpoints: RuntimeCheckpoint[] = [];
-	const engine = new ActivityEngine(
-		normalizeSettings({ ...DEFAULT_SETTINGS, deviceId: 'd1' }),
-		{
-			onEmit: (e) => {
-				sessions.push(...e.segments);
-				decisions.push(...e.decisions);
-			},
-			onSnapshot: (s) => snapshots.push(s),
-			onCheckpoint: (c) => checkpoints.push(c),
+	const engine = new ActivityEngine(normalizeSettings({ ...DEFAULT_SETTINGS, deviceId: 'd1' }), {
+		onEmit: (e) => {
+			sessions.push(...e.segments);
+			decisions.push(...e.decisions);
 		},
-	);
+		onSnapshot: (s) => snapshots.push(s),
+		onCheckpoint: (c) => checkpoints.push(c),
+	});
 	return { engine, sessions };
 }
 

@@ -63,9 +63,20 @@ export function renderRangeControls(args: {
 	const renderIcon = args.renderIcon ?? setIcon;
 
 	if (args.leadingActions?.length) {
-		const actionGroup = controls.createDiv({ cls: 'activity-map-control-actions activity-map-control-leading' });
+		const actionGroup = controls.createDiv({
+			cls: 'activity-map-control-actions activity-map-control-leading',
+		});
 		for (const action of args.leadingActions) {
-			const button = iconButton(actionGroup, action.icon, action.label, action.id, () => action.onActivate(), '', action.pressed, renderIcon);
+			const button = iconButton(
+				actionGroup,
+				action.icon,
+				action.label,
+				action.id,
+				() => action.onActivate(),
+				'',
+				action.pressed,
+				renderIcon,
+			);
 			button.disabled = action.disabled === true;
 			actionButtons.set(action.id, button);
 		}
@@ -78,7 +89,15 @@ export function renderRangeControls(args: {
 			'chevron-left',
 			'Previous day',
 			'previous-day',
-			() => { args.onRange({ mode: 'day', localDate: shiftLocalDate(args.range.mode === 'day' ? args.range.localDate : '', -1) }); },
+			() => {
+				args.onRange({
+					mode: 'day',
+					localDate: shiftLocalDate(
+						args.range.mode === 'day' ? args.range.localDate : '',
+						-1,
+					),
+				});
+			},
 			'',
 			undefined,
 			renderIcon,
@@ -96,7 +115,10 @@ export function renderRangeControls(args: {
 		const dateButton = dayNavigation.createEl('button', {
 			text: args.range.localDate,
 			cls: 'clickable-icon activity-map-control-button activity-map-date-button',
-			attr: { 'aria-label': `Choose date, ${args.range.localDate}`, 'data-activity-map-id': 'calendar-day' },
+			attr: {
+				'aria-label': `Choose date, ${args.range.localDate}`,
+				'data-activity-map-id': 'calendar-day',
+			},
 		});
 		dateButton.addEventListener('click', () => {
 			try {
@@ -111,7 +133,15 @@ export function renderRangeControls(args: {
 			'chevron-right',
 			'Next day',
 			'next-day',
-			() => { args.onRange({ mode: 'day', localDate: shiftLocalDate(args.range.mode === 'day' ? args.range.localDate : '', 1) }); },
+			() => {
+				args.onRange({
+					mode: 'day',
+					localDate: shiftLocalDate(
+						args.range.mode === 'day' ? args.range.localDate : '',
+						1,
+					),
+				});
+			},
 			'',
 			undefined,
 			renderIcon,
@@ -120,27 +150,31 @@ export function renderRangeControls(args: {
 
 	const queryControls = controls.createDiv({ cls: 'activity-map-query-controls' });
 	const metricControl = queryControls.createDiv({ cls: 'activity-map-metric-control' });
-	dropdowns.push(renderDropdownControl({
-		container: metricControl,
-		id: 'metric',
-		label: 'Metric',
-		selected: args.metric,
-		options: METRIC_OPTIONS,
-		icon: iconForMetric(args.metric),
-		iconOnly: true,
-		onSelect: args.onMetric,
-		renderIcon,
-	}));
+	dropdowns.push(
+		renderDropdownControl({
+			container: metricControl,
+			id: 'metric',
+			label: 'Metric',
+			selected: args.metric,
+			options: METRIC_OPTIONS,
+			icon: iconForMetric(args.metric),
+			iconOnly: true,
+			onSelect: args.onMetric,
+			renderIcon,
+		}),
+	);
 
-	dropdowns.push(renderDropdownControl({
-		container: queryControls,
-		id: 'date-range',
-		label: 'Date range',
-		selected: rangeValue(args.range),
-		options: RANGE_OPTIONS,
-		onSelect: (value) => args.onRange(rangeForValue(value, args.range)),
-		renderIcon,
-	}));
+	dropdowns.push(
+		renderDropdownControl({
+			container: queryControls,
+			id: 'date-range',
+			label: 'Date range',
+			selected: rangeValue(args.range),
+			options: RANGE_OPTIONS,
+			onSelect: (value) => args.onRange(rangeForValue(value, args.range)),
+			renderIcon,
+		}),
+	);
 
 	return {
 		updateAction(action) {
@@ -170,7 +204,10 @@ function renderDropdownControl<T extends string>(args: {
 	onSelect(value: T): void;
 	renderIcon: (container: HTMLElement, icon: string) => void;
 }): DropdownHandle {
-	const selectedIndex = Math.max(0, args.options.findIndex((option) => option.value === args.selected));
+	const selectedIndex = Math.max(
+		0,
+		args.options.findIndex((option) => option.value === args.selected),
+	);
 	const selected = args.options[selectedIndex];
 	if (!selected) throw new Error('Dropdown controls require at least one option.');
 	const dropdown = args.container.createDiv({ cls: 'activity-map-dropdown' });
@@ -183,15 +220,19 @@ function renderDropdownControl<T extends string>(args: {
 			'aria-expanded': 'false',
 			'aria-haspopup': 'listbox',
 			'data-activity-map-id': args.id,
-			'title': `${args.label}: ${selected.label}`,
+			title: `${args.label}: ${selected.label}`,
 			type: 'button',
 		},
 	});
 	if (args.icon) {
-		const icon = trigger.createSpan({ cls: 'activity-map-control-icon', attr: { 'aria-hidden': 'true' } });
+		const icon = trigger.createSpan({
+			cls: 'activity-map-control-icon',
+			attr: { 'aria-hidden': 'true' },
+		});
 		args.renderIcon(icon, args.icon);
 	}
-	if (!args.iconOnly) trigger.createSpan({ cls: 'activity-map-query-button-label', text: selected.label });
+	if (!args.iconOnly)
+		trigger.createSpan({ cls: 'activity-map-query-button-label', text: selected.label });
 
 	const listbox = dropdown.createDiv({
 		cls: 'activity-map-dropdown-menu',
@@ -284,7 +325,9 @@ function renderDropdownControl<T extends string>(args: {
 		if (!target || !dropdown.contains(target)) setOpen(false);
 	};
 	document.addEventListener('pointerdown', closeOnOutsidePointerDown, true);
-	return { destroy: () => document.removeEventListener('pointerdown', closeOnOutsidePointerDown, true) };
+	return {
+		destroy: () => document.removeEventListener('pointerdown', closeOnOutsidePointerDown, true),
+	};
 }
 
 function iconButton(
@@ -324,14 +367,24 @@ function rangeValue(range: RangeMode): RangeChoice {
 
 function rangeForValue(value: RangeChoice, currentRange: RangeMode): RangeMode {
 	const today = new Date().toISOString().slice(0, 10);
-	if (value === 'day') return { mode: 'day', localDate: currentRange.mode === 'day' ? currentRange.localDate : today };
+	if (value === 'day')
+		return {
+			mode: 'day',
+			localDate: currentRange.mode === 'day' ? currentRange.localDate : today,
+		};
 	if (value === 'all') return { mode: 'all' };
-	return { mode: 'average', days: value === 'average-all' ? 'all' : Number(value.slice(8)) as 7 | 30 | 90, today };
+	return {
+		mode: 'average',
+		days: value === 'average-all' ? 'all' : (Number(value.slice(8)) as 7 | 30 | 90),
+		today,
+	};
 }
 
 export function shiftLocalDate(localDate: string, days: number): string {
 	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(localDate);
 	if (!match) return localDate;
-	const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + days));
+	const date = new Date(
+		Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + days),
+	);
 	return date.toISOString().slice(0, 10);
 }

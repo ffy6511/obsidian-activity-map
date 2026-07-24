@@ -14,9 +14,13 @@ describe('poster caption editor', () => {
 			value: 'Initial caption',
 			onCaption: (value) => captions.push(value),
 		});
-		const input = container.querySelector<HTMLTextAreaElement>('textarea[data-activity-map-id="poster-caption"]');
+		const input = container.querySelector<HTMLTextAreaElement>(
+			'textarea[data-activity-map-id="poster-caption"]',
+		);
 		if (!input) throw new Error('caption editor missing');
-		const lineCount = container.querySelector<HTMLElement>('.activity-map-poster-caption-line-count');
+		const lineCount = container.querySelector<HTMLElement>(
+			'.activity-map-poster-caption-line-count',
+		);
 		if (!lineCount) throw new Error('caption line count missing');
 		expect(input.classList.contains('activity-map-poster-caption-editor')).toBeTrue();
 		expect(input.getAttribute('aria-label')).toBe('Optional poster caption');

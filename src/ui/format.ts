@@ -1,14 +1,24 @@
 import type { MetricKey } from '../query/path-projection';
 
-export function formatMetric(value: number, metric: MetricKey, denominatorDays: number | null = null): string {
+export function formatMetric(
+	value: number,
+	metric: MetricKey,
+	denominatorDays: number | null = null,
+): string {
 	const normalized = denominatorDays && denominatorDays > 0 ? value / denominatorDays : value;
-	if (metric === 'openCount') return `${formatCompactCount(normalized, denominatorDays !== null)} opens`;
-	if (metric === 'typedChars') return `${formatCompactCount(normalized, denominatorDays !== null)} chars`;
+	if (metric === 'openCount')
+		return `${formatCompactCount(normalized, denominatorDays !== null)} opens`;
+	if (metric === 'typedChars')
+		return `${formatCompactCount(normalized, denominatorDays !== null)} chars`;
 	return formatDuration(normalized);
 }
 
 /** Full numeric text for accessible names and other space-unconstrained surfaces. */
-export function formatMetricFull(value: number, metric: MetricKey, denominatorDays: number | null = null): string {
+export function formatMetricFull(
+	value: number,
+	metric: MetricKey,
+	denominatorDays: number | null = null,
+): string {
 	const normalized = denominatorDays && denominatorDays > 0 ? value / denominatorDays : value;
 	if (metric === 'openCount') return `${normalized.toFixed(denominatorDays ? 1 : 0)} opens`;
 	if (metric === 'typedChars') return `${normalized.toFixed(denominatorDays ? 1 : 0)} chars`;

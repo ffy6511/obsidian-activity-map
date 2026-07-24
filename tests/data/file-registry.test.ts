@@ -4,11 +4,17 @@ import { FileRegistry, type FileRegistryFile } from '../../src/data/file-registr
 import { SafeJsonStore } from '../../src/data/safe-json-store';
 import { FakeDataAdapter } from '../helpers/fake-data-adapter';
 
-function registryFile(entries: Record<string, unknown> = {}, pathIndex: Record<string, string> = {}): FileRegistryFile {
+function registryFile(
+	entries: Record<string, unknown> = {},
+	pathIndex: Record<string, string> = {},
+): FileRegistryFile {
 	return { schemaVersion: 1, entries: entries as FileRegistryFile['entries'], pathIndex };
 }
 
-async function newRegistry(adapter = new FakeDataAdapter(), path = '/p/files.json'): Promise<FileRegistry> {
+async function newRegistry(
+	adapter = new FakeDataAdapter(),
+	path = '/p/files.json',
+): Promise<FileRegistry> {
 	const store = new SafeJsonStore(adapter, path);
 	return FileRegistry.load(store);
 }
@@ -99,7 +105,12 @@ describe('file registry persistence', () => {
 
 	it('quarantines an unsupported schema version without losing the file', async () => {
 		const adapter = new FakeDataAdapter();
-		adapter.seed('/p/files.json', JSON.stringify(registryFile({}, {}) && { schemaVersion: 99, entries: {}, pathIndex: {} }));
+		adapter.seed(
+			'/p/files.json',
+			JSON.stringify(
+				registryFile({}, {}) && { schemaVersion: 99, entries: {}, pathIndex: {} },
+			),
+		);
 		const reg = await newRegistry(adapter);
 		expect(reg.corrupted).toBeTrue();
 	});

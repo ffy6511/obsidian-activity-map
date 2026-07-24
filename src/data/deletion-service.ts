@@ -22,9 +22,7 @@ import type { FileRegistry } from './file-registry';
 
 /** Deletion scope. */
 export type DeletionScope =
-	| { kind: 'all' }
-	| { kind: 'date'; localDate: string }
-	| { kind: 'file'; fileId: string };
+	{ kind: 'all' } | { kind: 'date'; localDate: string } | { kind: 'file'; fileId: string };
 
 /** Frozen shard pair selected during deletion preview. */
 export interface DeletionShardTarget {
@@ -122,20 +120,29 @@ export class DeletionService {
 				if (scopeDate !== null && shard.localDate !== scopeDate) {
 					continue;
 				}
-				affectedPaths.push(dailySummaryPath(this.pathAdapter, shard.deviceId, shard.localDate));
+				affectedPaths.push(
+					dailySummaryPath(this.pathAdapter, shard.deviceId, shard.localDate),
+				);
 				if (!sessionShards.some((session) => shardKey(session) === shardKey(shard))) {
 					affectedSummaryCount += 1;
 					affectedShards.set(shardKey(shard), {
 						deviceId: shard.deviceId,
 						localDate: shard.localDate,
 						sessionPath: null,
-						summaryPath: dailySummaryPath(this.pathAdapter, shard.deviceId, shard.localDate),
+						summaryPath: dailySummaryPath(
+							this.pathAdapter,
+							shard.deviceId,
+							shard.localDate,
+						),
 					});
 				}
 			}
 		}
 		if (scope.kind === 'all') {
-			affectedPaths.push(checkpointPath(this.pathAdapter), filesRegistryPath(this.pathAdapter));
+			affectedPaths.push(
+				checkpointPath(this.pathAdapter),
+				filesRegistryPath(this.pathAdapter),
+			);
 		}
 		const uniqueAffectedPaths = [...new Set(affectedPaths)].sort();
 		const pathFingerprints = await this.fingerprintPaths(uniqueAffectedPaths);
@@ -143,7 +150,9 @@ export class DeletionService {
 			planId: newPlanId(),
 			scope: args.scope,
 			affectedPaths: uniqueAffectedPaths,
-			affectedShards: [...affectedShards.values()].sort((a, b) => shardKey(a).localeCompare(shardKey(b))),
+			affectedShards: [...affectedShards.values()].sort((a, b) =>
+				shardKey(a).localeCompare(shardKey(b)),
+			),
 			affectedRecordCount,
 			affectedSummaryCount,
 			createdAt: args.nowIso,
@@ -171,9 +180,12 @@ export class DeletionService {
 		}
 	}
 
-	private async pathsMatchPlan(plan: DeletionPlan, paths: readonly string[] = plan.affectedPaths): Promise<boolean> {
+	private async pathsMatchPlan(
+		plan: DeletionPlan,
+		paths: readonly string[] = plan.affectedPaths,
+	): Promise<boolean> {
 		for (const path of paths) {
-			if (await this.fingerprintPath(path) !== plan.pathFingerprints[path]) return false;
+			if ((await this.fingerprintPath(path)) !== plan.pathFingerprints[path]) return false;
 		}
 		return true;
 	}
@@ -228,7 +240,10 @@ export class DeletionService {
 							errors: [],
 						};
 					}
-					errors.push({ path: sessionPath ?? dailyPath, message: 'deletion-plan-path-drift' });
+					errors.push({
+						path: sessionPath ?? dailyPath,
+						message: 'deletion-plan-path-drift',
+					});
 					break;
 				}
 				if (scopeFileId !== null && sessionPath !== null) {
@@ -258,7 +273,10 @@ export class DeletionService {
 				} else {
 					// Date/all scope removes exactly the previewed shard pair.
 					if (sessionPath !== null) await this.shardStore.remove(sessionPath);
-					await this.summaries.remove({ deviceId: shard.deviceId, localDate: shard.localDate });
+					await this.summaries.remove({
+						deviceId: shard.deviceId,
+						localDate: shard.localDate,
+					});
 					if (sessionPath !== null) removedPaths.push(sessionPath);
 					removedPaths.push(dailyPath);
 				}
@@ -305,7 +323,10 @@ export class DeletionService {
 				await this.registry.clear();
 				removedPaths.push(registryPath);
 			} catch (error) {
-				errors.push({ path: cp, message: error instanceof Error ? error.message : String(error) });
+				errors.push({
+					path: cp,
+					message: error instanceof Error ? error.message : String(error),
+				});
 			}
 		}
 		return {

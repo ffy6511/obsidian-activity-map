@@ -48,8 +48,12 @@ describe('ndjson shard store append and read', () => {
 	it('appends multiple records to the same shard across calls', async () => {
 		const adapter = new FakeDataAdapter();
 		const store = new NdjsonShardStore(adapter);
-		await store.append('/shard.ndjson', [buildSessionEnvelope(segment('f1', '2026-01-01', 1_000), 'dev1')]);
-		await store.append('/shard.ndjson', [buildSessionEnvelope(segment('f2', '2026-01-01', 2_000), 'dev1')]);
+		await store.append('/shard.ndjson', [
+			buildSessionEnvelope(segment('f1', '2026-01-01', 1_000), 'dev1'),
+		]);
+		await store.append('/shard.ndjson', [
+			buildSessionEnvelope(segment('f2', '2026-01-01', 2_000), 'dev1'),
+		]);
 		const read = await store.read('/shard.ndjson');
 		expect(read.records).toHaveLength(2);
 	});
@@ -72,7 +76,12 @@ describe('ndjson shard store append and read', () => {
 describe('ndjson shard store corruption isolation', () => {
 	it('isolates a malformed line and continues with valid records', async () => {
 		const adapter = new FakeDataAdapter();
-		adapter.seed('/shard.ndjson', '{ valid-ish\n' + JSON.stringify(buildSessionEnvelope(segment('f1', '2026-01-01', 1_000), 'dev1')) + '\n');
+		adapter.seed(
+			'/shard.ndjson',
+			'{ valid-ish\n' +
+				JSON.stringify(buildSessionEnvelope(segment('f1', '2026-01-01', 1_000), 'dev1')) +
+				'\n',
+		);
 		const store = new NdjsonShardStore(adapter);
 		const read = await store.read('/shard.ndjson');
 		expect(read.records).toHaveLength(1);
@@ -107,7 +116,9 @@ describe('ndjson shard store concurrency and rewrite', () => {
 	it('normal append uses the append primitive and never rewrites the shard', async () => {
 		const adapter = new FakeDataAdapter();
 		const store = new NdjsonShardStore(adapter);
-		await store.append('/shard.ndjson', [buildSessionEnvelope(segment('f1', '2026-01-01', 1_000), 'dev1')]);
+		await store.append('/shard.ndjson', [
+			buildSessionEnvelope(segment('f1', '2026-01-01', 1_000), 'dev1'),
+		]);
 		expect(adapter.stats().append).toBe(1);
 		expect(adapter.stats().write).toBe(0);
 	});
@@ -122,7 +133,9 @@ describe('ndjson shard store concurrency and rewrite', () => {
 		const store = new NdjsonShardStore(adapter);
 		let rejected = false;
 		try {
-			await store.append('/shard.ndjson', [buildSessionEnvelope(segment('f2', '2026-01-01', 2_000), 'dev1')]);
+			await store.append('/shard.ndjson', [
+				buildSessionEnvelope(segment('f2', '2026-01-01', 2_000), 'dev1'),
+			]);
 		} catch {
 			rejected = true;
 		}
@@ -133,14 +146,18 @@ describe('ndjson shard store concurrency and rewrite', () => {
 
 	it('preserves existing bytes when append is interrupted', async () => {
 		const seedAdapter = new FakeDataAdapter();
-		await new NdjsonShardStore(seedAdapter).append('/shard.ndjson', [buildSessionEnvelope(segment('f1', '2026-01-01', 1_000), 'dev1')]);
+		await new NdjsonShardStore(seedAdapter).append('/shard.ndjson', [
+			buildSessionEnvelope(segment('f1', '2026-01-01', 1_000), 'dev1'),
+		]);
 		const original = seedAdapter.peek('/shard.ndjson') ?? '';
 		const adapter = new FakeDataAdapter({ fail: { append: 1 } });
 		adapter.seed('/shard.ndjson', original);
 		const store = new NdjsonShardStore(adapter);
 		let rejected = false;
 		try {
-			await store.append('/shard.ndjson', [buildSessionEnvelope(segment('f2', '2026-01-01', 2_000), 'dev1')]);
+			await store.append('/shard.ndjson', [
+				buildSessionEnvelope(segment('f2', '2026-01-01', 2_000), 'dev1'),
+			]);
 		} catch {
 			rejected = true;
 		}
@@ -177,7 +194,9 @@ describe('ndjson shard store concurrency and rewrite', () => {
 	it('remove deletes the shard file', async () => {
 		const adapter = new FakeDataAdapter();
 		const store = new NdjsonShardStore(adapter);
-		await store.append('/shard.ndjson', [buildSessionEnvelope(segment('f1', '2026-01-01', 1_000), 'dev1')]);
+		await store.append('/shard.ndjson', [
+			buildSessionEnvelope(segment('f1', '2026-01-01', 1_000), 'dev1'),
+		]);
 		await store.remove('/shard.ndjson');
 		const read = await store.read('/shard.ndjson');
 		expect(read.records).toHaveLength(0);
@@ -210,7 +229,10 @@ describe('ndjson shard store concurrency and rewrite', () => {
 		const store = new NdjsonShardStore(adapter);
 		const closed = segment('f1', '2026-01-01', 1_000);
 		const first = buildSessionEnvelope(closed, 'dev1');
-		const retry = buildSessionEnvelope({ ...closed, endedAt: '2026-01-01T00:00:02.000Z' }, 'dev1');
+		const retry = buildSessionEnvelope(
+			{ ...closed, endedAt: '2026-01-01T00:00:02.000Z' },
+			'dev1',
+		);
 		expect(retry.recordId).toBe(first.recordId);
 		await store.append('/shard.ndjson', [first]);
 		const result = await store.append('/shard.ndjson', [retry]);

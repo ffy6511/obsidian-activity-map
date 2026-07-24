@@ -6,7 +6,12 @@ export interface ExportDestinationResult {
 }
 
 export interface SvgRasterizer {
-	rasterize(args: { svg: string; width: number; height: number; format: Exclude<PosterFormat, 'svg'> }): Promise<Blob>;
+	rasterize(args: {
+		svg: string;
+		width: number;
+		height: number;
+		format: Exclude<PosterFormat, 'svg'>;
+	}): Promise<Blob>;
 }
 
 /** Standard-Web-API download boundary, capability-gated per owner document. */
@@ -16,7 +21,10 @@ export class BrowserExportDestination {
 	download(blob: Blob, filename: string): ExportDestinationResult {
 		const win = this.document.defaultView;
 		if (!win || typeof win.URL?.createObjectURL !== 'function') {
-			return { outcome: 'unavailable', message: 'Local download is unavailable on this platform.' };
+			return {
+				outcome: 'unavailable',
+				message: 'Local download is unavailable on this platform.',
+			};
 		}
 		const url = win.URL.createObjectURL(blob);
 		try {
@@ -40,7 +48,12 @@ export class BrowserExportDestination {
 export class BrowserSvgRasterizer implements SvgRasterizer {
 	constructor(private readonly document: Document) {}
 
-	async rasterize(args: { svg: string; width: number; height: number; format: Exclude<PosterFormat, 'svg'> }): Promise<Blob> {
+	async rasterize(args: {
+		svg: string;
+		width: number;
+		height: number;
+		format: Exclude<PosterFormat, 'svg'>;
+	}): Promise<Blob> {
 		const win = this.document.defaultView;
 		if (!win || typeof win.URL?.createObjectURL !== 'function') {
 			throw new Error('Poster rasterization is unavailable on this platform.');
@@ -53,15 +66,20 @@ export class BrowserSvgRasterizer implements SvgRasterizer {
 		}
 		canvas.width = args.width;
 		canvas.height = args.height;
-		const svgUrl = win.URL.createObjectURL(new Blob([args.svg], { type: 'image/svg+xml;charset=utf-8' }));
+		const svgUrl = win.URL.createObjectURL(
+			new Blob([args.svg], { type: 'image/svg+xml;charset=utf-8' }),
+		);
 		try {
 			const image = await loadImage(this.document, svgUrl);
 			context.drawImage(image, 0, 0, args.width, args.height);
 			return await new Promise<Blob>((resolve, reject) => {
-				canvas.toBlob((blob) => {
-					if (blob) resolve(blob);
-					else reject(new Error('Poster rasterization did not produce an image.'));
-				}, args.format === 'png' ? 'image/png' : 'image/jpeg');
+				canvas.toBlob(
+					(blob) => {
+						if (blob) resolve(blob);
+						else reject(new Error('Poster rasterization did not produce an image.'));
+					},
+					args.format === 'png' ? 'image/png' : 'image/jpeg',
+				);
 			});
 		} finally {
 			win.URL.revokeObjectURL(svgUrl);

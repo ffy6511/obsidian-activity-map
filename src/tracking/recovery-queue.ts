@@ -135,18 +135,12 @@ export class RecoveryQueue {
 	 * or null if the candidate is unknown or already resolved. Idempotent on a
 	 * resolved candidate: returns the prior decision without recording again.
 	 */
-	include(args: {
-		candidateId: string;
-		decidedAt: string;
-	}): RecoveryDecision | null {
+	include(args: { candidateId: string; decidedAt: string }): RecoveryDecision | null {
 		return this.decide(args.candidateId, 'include', args.decidedAt);
 	}
 
 	/** User excludes a pending candidate. Same idempotency as include. */
-	exclude(args: {
-		candidateId: string;
-		decidedAt: string;
-	}): RecoveryDecision | null {
+	exclude(args: { candidateId: string; decidedAt: string }): RecoveryDecision | null {
 		return this.decide(args.candidateId, 'exclude', args.decidedAt);
 	}
 
@@ -155,10 +149,7 @@ export class RecoveryQueue {
 	 * to the pending queue without including it. Returns true if undone, false
 	 * if unknown, already resolved by the user, or past the deadline.
 	 */
-	undoAutomaticExclusion(args: {
-		candidateId: string;
-		nowMs: number;
-	}): boolean {
+	undoAutomaticExclusion(args: { candidateId: string; nowMs: number }): boolean {
 		const entry = this.pending.get(args.candidateId);
 		if (!entry || !entry.autoExclusion) {
 			return false;
@@ -215,9 +206,7 @@ export class RecoveryQueue {
 		for (const p of pending) {
 			this.pending.set(p.candidate.candidateId, {
 				candidate: p.candidate,
-				autoExclusion: p.autoExclusion
-					? { ...p.autoExclusion }
-					: null,
+				autoExclusion: p.autoExclusion ? { ...p.autoExclusion } : null,
 				resolved: p.resolved,
 			});
 		}
@@ -266,10 +255,7 @@ export class RecoveryQueue {
 	private pushDecision(decision: RecoveryDecision): void {
 		this.recentDecisions.push(decision);
 		if (this.recentDecisions.length > MAX_RECENT_DECISIONS) {
-			this.recentDecisions.splice(
-				0,
-				this.recentDecisions.length - MAX_RECENT_DECISIONS,
-			);
+			this.recentDecisions.splice(0, this.recentDecisions.length - MAX_RECENT_DECISIONS);
 		}
 	}
 }

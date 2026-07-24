@@ -23,9 +23,7 @@ describe('clock samples and formatting', () => {
 	});
 
 	it('formats wall-ms as ISO timestamps', () => {
-		expect(toIso(Date.UTC(2026, 5, 21, 10, 30, 0))).toBe(
-			'2026-06-21T10:30:00.000Z',
-		);
+		expect(toIso(Date.UTC(2026, 5, 21, 10, 30, 0))).toBe('2026-06-21T10:30:00.000Z');
 	});
 
 	it('resolves the local date for a wall-ms epoch', () => {
@@ -91,10 +89,7 @@ describe('splitAtLocalMidnight', () => {
 			timeZone: UTC,
 		});
 		expect(segments).toHaveLength(2);
-		expect(segments.map((s) => s.localDate)).toEqual([
-			'2026-06-21',
-			'2026-06-22',
-		]);
+		expect(segments.map((s) => s.localDate)).toEqual(['2026-06-21', '2026-06-22']);
 		expect(segments[0]).toMatchObject({
 			startedAtMs: start,
 			endedAtMs: Date.UTC(2026, 5, 22, 0, 0, 0),

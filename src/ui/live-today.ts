@@ -14,7 +14,10 @@ export interface LiveTodayOptions {
  * between runtime snapshots, but can never turn an unattended interval into
  * activity.
  */
-export function liveTodayMs(snapshot: TrackingSnapshot | null, options: LiveTodayOptions = {}): number {
+export function liveTodayMs(
+	snapshot: TrackingSnapshot | null,
+	options: LiveTodayOptions = {},
+): number {
 	if (
 		snapshot?.state !== 'active' ||
 		!snapshot.currentTarget ||
@@ -26,8 +29,9 @@ export function liveTodayMs(snapshot: TrackingSnapshot | null, options: LiveToda
 	const sampledAt = Date.parse(snapshot.sampledAt);
 	const startedAt = Date.parse(snapshot.sessionStartedAt);
 	const trustedAt = Date.parse(snapshot.lastTrustedActivityAt ?? snapshot.sampledAt);
-	if (!Number.isFinite(sampledAt) || !Number.isFinite(startedAt) || !Number.isFinite(trustedAt)) return 0;
-	const requestedNow = Number.isFinite(options.nowMs) ? options.nowMs as number : sampledAt;
+	if (!Number.isFinite(sampledAt) || !Number.isFinite(startedAt) || !Number.isFinite(trustedAt))
+		return 0;
+	const requestedNow = Number.isFinite(options.nowMs) ? (options.nowMs as number) : sampledAt;
 	const idleBoundary = Number.isFinite(options.idleThresholdMs)
 		? trustedAt + Math.max(0, options.idleThresholdMs as number)
 		: requestedNow;

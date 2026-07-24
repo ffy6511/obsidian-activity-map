@@ -8,10 +8,7 @@
  * {@link normalizeSettings}, never trusted from cast JSON.
  */
 
-import {
-	normalizeSettings,
-	type ActivityMapSettings,
-} from '../domain/settings';
+import { normalizeSettings, type ActivityMapSettings } from '../domain/settings';
 
 /** Minimal plugin surface the repository needs; Obsidian's Plugin satisfies this. */
 export interface SettingsStore {
@@ -32,7 +29,10 @@ function newDeviceId(): string {
 	// Node-based test harness, where window is absent) fall back to a
 	// timestamp+random form. Both are opaque device identifiers; only the
 	// runtime needs them to be unique, not cryptographically strong.
-	const win = typeof window !== 'undefined' ? (window as { crypto?: { randomUUID?: () => string } }) : undefined;
+	const win =
+		typeof window !== 'undefined'
+			? (window as { crypto?: { randomUUID?: () => string } })
+			: undefined;
 	if (win?.crypto && typeof win.crypto.randomUUID === 'function') {
 		return win.crypto.randomUUID();
 	}
@@ -47,9 +47,7 @@ export class SettingsRepository {
 	// Mutable so update() can chain onto the latest settled save.
 	private writeQueue: Promise<unknown> = Promise.resolve();
 
-	constructor(
-		private readonly store: SettingsStore,
-	) {}
+	constructor(private readonly store: SettingsStore) {}
 
 	/** Load, normalize, and (if needed) assign the device id. */
 	async load(): Promise<LoadSettingsResult> {

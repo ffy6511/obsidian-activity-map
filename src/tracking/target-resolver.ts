@@ -21,8 +21,7 @@ export interface ResolvedLeaf {
 
 /** Outcome of resolving the current foreground leaf. */
 export type TargetResolution =
-	| { kind: 'target'; target: TrackingTarget }
-	| { kind: 'untrackable'; reason: string };
+	{ kind: 'target'; target: TrackingTarget } | { kind: 'untrackable'; reason: string };
 
 /** Function that decides whether a path is excluded from tracking. */
 export type ExclusionChecker = (path: string) => boolean;

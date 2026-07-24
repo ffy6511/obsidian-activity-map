@@ -3,9 +3,17 @@ import { describe, expect, it } from '../helpers/test-harness';
 import type { TrackingSnapshot } from '../../src/domain/activity';
 import { normalizeSettings } from '../../src/domain/settings';
 import type { DistributionQuery } from '../../src/query/distribution-query';
-import { ActivityMapController, type QueryService, type TrackingControl } from '../../src/ui/activity-map-controller';
+import {
+	ActivityMapController,
+	type QueryService,
+	type TrackingControl,
+} from '../../src/ui/activity-map-controller';
 import { renderRangeControls } from '../../src/ui/components/range-controls';
-import { createDistributionGroupingAction, createPosterExportAction, createTrackingAction } from '../../src/ui/summary-popover';
+import {
+	createDistributionGroupingAction,
+	createPosterExportAction,
+	createTrackingAction,
+} from '../../src/ui/summary-popover';
 import { installDomEnvironment } from '../helpers/dom-environment';
 
 function tracking(): TrackingControl {
@@ -20,8 +28,15 @@ function tracking(): TrackingControl {
 
 function snapshot(state: 'active' | 'paused'): TrackingSnapshot {
 	return {
-		state, reason: state, currentTarget: null, sessionStartedAt: null, lastTrustedActivityAt: null,
-		pendingRecovery: [], recentDecisions: [], degradedReason: null, sampledAt: '2026-07-22T10:00:00.000Z',
+		state,
+		reason: state,
+		currentTarget: null,
+		sessionStartedAt: null,
+		lastTrustedActivityAt: null,
+		pendingRecovery: [],
+		recentDecisions: [],
+		degradedReason: null,
+		sampledAt: '2026-07-22T10:00:00.000Z',
 	};
 }
 
@@ -39,17 +54,29 @@ describe('grouping control behavior', () => {
 		let renderedIcon = '';
 		let selectedMetric = '';
 		renderRangeControls({
-			container, metric: 'typedChars', range: { mode: 'all' }, onMetric: (metric) => { selectedMetric = metric; }, onRange: () => {},
-			renderIcon: (_element, icon) => { renderedIcon = icon; },
+			container,
+			metric: 'typedChars',
+			range: { mode: 'all' },
+			onMetric: (metric) => {
+				selectedMetric = metric;
+			},
+			onRange: () => {},
+			renderIcon: (_element, icon) => {
+				renderedIcon = icon;
+			},
 		});
-		const metric = container.querySelector<HTMLButtonElement>('[data-activity-map-id="metric"]');
+		const metric = container.querySelector<HTMLButtonElement>(
+			'[data-activity-map-id="metric"]',
+		);
 		if (!metric) throw new Error('metric trigger missing');
 		expect(metric.textContent).toBe('');
 		expect(metric.getAttribute('aria-label')).toBe('Metric: Chars');
 		expect(renderedIcon).toBe('keyboard');
 		metric.click();
 		expect(metric.getAttribute('aria-expanded')).toBe('true');
-		const chars = container.querySelector<HTMLButtonElement>('[data-activity-map-option="typedChars"]');
+		const chars = container.querySelector<HTMLButtonElement>(
+			'[data-activity-map-option="typedChars"]',
+		);
 		if (!chars) throw new Error('Chars option missing');
 		expect(chars.textContent).toBe('Chars');
 		chars.click();
@@ -62,13 +89,24 @@ describe('grouping control behavior', () => {
 		document.body.appendChild(container);
 		let selectedRange = '';
 		renderRangeControls({
-			container, metric: 'activeMs', range: { mode: 'all' }, onMetric: () => {}, onRange: (range) => { selectedRange = range.mode; }, renderIcon: () => {},
+			container,
+			metric: 'activeMs',
+			range: { mode: 'all' },
+			onMetric: () => {},
+			onRange: (range) => {
+				selectedRange = range.mode;
+			},
+			renderIcon: () => {},
 		});
-		const range = container.querySelector<HTMLButtonElement>('[data-activity-map-id="date-range"]');
+		const range = container.querySelector<HTMLButtonElement>(
+			'[data-activity-map-id="date-range"]',
+		);
 		if (!range) throw new Error('range trigger missing');
 		range.dispatchEvent(keydown('ArrowDown'));
 		expect(range.getAttribute('aria-expanded')).toBe('true');
-		const allHistory = container.querySelector<HTMLButtonElement>('[data-activity-map-option="all"]');
+		const allHistory = container.querySelector<HTMLButtonElement>(
+			'[data-activity-map-option="all"]',
+		);
 		if (!allHistory) throw new Error('All history option missing');
 		allHistory.dispatchEvent(keydown('Enter'));
 		expect(selectedRange).toBe('all');
@@ -81,14 +119,33 @@ describe('grouping control behavior', () => {
 		document.body.appendChild(container);
 		let exports = 0;
 		renderRangeControls({
-			container, metric: 'activeMs', range: { mode: 'all' }, onMetric: () => {}, onRange: () => {}, renderIcon: () => {},
+			container,
+			metric: 'activeMs',
+			range: { mode: 'all' },
+			onMetric: () => {},
+			onRange: () => {},
+			renderIcon: () => {},
 			leadingActions: [
-				createTrackingAction({ paused: false, getCurrentPaused: () => false, onTracking: () => {} }),
-				createPosterExportAction({ available: true, onExport: () => { exports += 1; } }),
+				createTrackingAction({
+					paused: false,
+					getCurrentPaused: () => false,
+					onTracking: () => {},
+				}),
+				createPosterExportAction({
+					available: true,
+					onExport: () => {
+						exports += 1;
+					},
+				}),
 			],
 		});
-		const actions = container.querySelectorAll<HTMLButtonElement>('.activity-map-control-actions > button');
-		expect(Array.from(actions).map((button) => button.dataset.activityMapId)).toEqual(['tracking-toggle', 'poster-export']);
+		const actions = container.querySelectorAll<HTMLButtonElement>(
+			'.activity-map-control-actions > button',
+		);
+		expect(Array.from(actions).map((button) => button.dataset.activityMapId)).toEqual([
+			'tracking-toggle',
+			'poster-export',
+		]);
 		const exportButton = actions[1];
 		if (!exportButton) throw new Error('poster export button missing');
 		expect(exportButton.disabled).toBeFalse();
@@ -98,10 +155,25 @@ describe('grouping control behavior', () => {
 		const unavailable = document.createElement('div');
 		document.body.appendChild(unavailable);
 		renderRangeControls({
-			container: unavailable, metric: 'activeMs', range: { mode: 'all' }, onMetric: () => {}, onRange: () => {}, renderIcon: () => {},
-			leadingActions: [createPosterExportAction({ available: false, onExport: () => { exports += 1; } })],
+			container: unavailable,
+			metric: 'activeMs',
+			range: { mode: 'all' },
+			onMetric: () => {},
+			onRange: () => {},
+			renderIcon: () => {},
+			leadingActions: [
+				createPosterExportAction({
+					available: false,
+					onExport: () => {
+						exports += 1;
+					},
+				}),
+			],
 		});
-		expect(unavailable.querySelector<HTMLButtonElement>('[data-activity-map-id="poster-export"]')?.disabled).toBeTrue();
+		expect(
+			unavailable.querySelector<HTMLButtonElement>('[data-activity-map-id="poster-export"]')
+				?.disabled,
+		).toBeTrue();
 	});
 
 	it('keeps one focused native toggle current across two delayed grouping queries', () => {
@@ -124,12 +196,17 @@ describe('grouping control behavior', () => {
 		const container = document.createElement('div');
 		document.body.appendChild(container);
 		let cleared = 0;
-		const groupingAction = () => createDistributionGroupingAction({
-			groupBy: controller.getViewModel().query.groupBy,
-			getCurrentGrouping: () => controller.getViewModel().query.groupBy,
-			onBeforeActivate: () => { cleared += 1; },
-			onGrouping: (groupBy) => { void controller.dispatch({ kind: 'set-grouping', groupBy }); },
-		});
+		const groupingAction = () =>
+			createDistributionGroupingAction({
+				groupBy: controller.getViewModel().query.groupBy,
+				getCurrentGrouping: () => controller.getViewModel().query.groupBy,
+				onBeforeActivate: () => {
+					cleared += 1;
+				},
+				onGrouping: (groupBy) => {
+					void controller.dispatch({ kind: 'set-grouping', groupBy });
+				},
+			});
 		const handle = renderRangeControls({
 			container,
 			metric: 'activeMs',
@@ -139,10 +216,17 @@ describe('grouping control behavior', () => {
 			renderIcon: () => {},
 			leadingActions: [
 				groupingAction(),
-				{ icon: 'pause', label: 'Pause activity tracking', id: 'tracking-toggle', onActivate: () => {} },
+				{
+					icon: 'pause',
+					label: 'Pause activity tracking',
+					id: 'tracking-toggle',
+					onActivate: () => {},
+				},
 			],
 		});
-		const actions = container.querySelectorAll<HTMLButtonElement>('.activity-map-control-actions > button');
+		const actions = container.querySelectorAll<HTMLButtonElement>(
+			'.activity-map-control-actions > button',
+		);
 		expect(Array.from(actions).map((button) => button.dataset.activityMapId)).toEqual([
 			'distribution-grouping-toggle',
 			'tracking-toggle',
@@ -158,7 +242,9 @@ describe('grouping control behavior', () => {
 		expect(handle.updateAction(groupingAction())).toBeTrue();
 		expect(grouping.getAttribute('aria-label')).toBe('Group by path');
 		expect(grouping.getAttribute('aria-pressed')).toBe('true');
-		expect(container.querySelector('[data-activity-map-id="distribution-grouping-toggle"]')).toBe(grouping);
+		expect(
+			container.querySelector('[data-activity-map-id="distribution-grouping-toggle"]'),
+		).toBe(grouping);
 
 		// The retained button still owns its original listener. Its callback must
 		// read current controller state so a second pointer/native-key activation
@@ -168,7 +254,9 @@ describe('grouping control behavior', () => {
 		expect(handle.updateAction(groupingAction())).toBeTrue();
 		expect(grouping.getAttribute('aria-label')).toBe('Show all files');
 		expect(grouping.getAttribute('aria-pressed')).toBe('false');
-		expect(container.querySelector('[data-activity-map-id="distribution-grouping-toggle"]')).toBe(grouping);
+		expect(
+			container.querySelector('[data-activity-map-id="distribution-grouping-toggle"]'),
+		).toBe(grouping);
 		expect(cleared).toBe(2);
 		expect(pending.map((query) => query.groupBy)).toEqual(['file', 'path']);
 	});
@@ -181,26 +269,51 @@ describe('grouping control behavior', () => {
 		let pauses = 0;
 		let resumes = 0;
 		const runtime: TrackingControl = {
-			pause: () => { pauses += 1; controller.onSnapshot(snapshot('paused')); },
-			resume: () => { resumes += 1; controller.onSnapshot(snapshot('active')); },
-			updateSettings: () => {}, resolveRecovery: async () => null, undoAutomaticExclusion: () => true,
+			pause: () => {
+				pauses += 1;
+				controller.onSnapshot(snapshot('paused'));
+			},
+			resume: () => {
+				resumes += 1;
+				controller.onSnapshot(snapshot('active'));
+			},
+			updateSettings: () => {},
+			resolveRecovery: async () => null,
+			undoAutomaticExclusion: () => true,
 		};
-		controller = new ActivityMapController(settings, service, { update: async () => settings }, runtime, '2026-07-22');
+		controller = new ActivityMapController(
+			settings,
+			service,
+			{ update: async () => settings },
+			runtime,
+			'2026-07-22',
+		);
 		controller.onSnapshot(snapshot('active'));
 		void controller.dispatch({ kind: 'set-grouping', groupBy: 'file' });
 		const container = document.createElement('div');
 		document.body.appendChild(container);
-		const action = () => createTrackingAction({
-			paused: controller.getViewModel().tracking?.state === 'paused',
-			getCurrentPaused: () => controller.getViewModel().tracking?.state === 'paused',
-			onTracking: (kind) => { void controller.dispatch({ kind }); },
-		});
+		const action = () =>
+			createTrackingAction({
+				paused: controller.getViewModel().tracking?.state === 'paused',
+				getCurrentPaused: () => controller.getViewModel().tracking?.state === 'paused',
+				onTracking: (kind) => {
+					void controller.dispatch({ kind });
+				},
+			});
 		const handle = renderRangeControls({
-			container, metric: 'activeMs', range: { mode: 'all' }, onMetric: () => {}, onRange: () => {},
-			renderIcon: (element, icon) => { element.setAttribute('data-icon', icon); },
+			container,
+			metric: 'activeMs',
+			range: { mode: 'all' },
+			onMetric: () => {},
+			onRange: () => {},
+			renderIcon: (element, icon) => {
+				element.setAttribute('data-icon', icon);
+			},
 			leadingActions: [action()],
 		});
-		const button = container.querySelector<HTMLButtonElement>('[data-activity-map-id="tracking-toggle"]');
+		const button = container.querySelector<HTMLButtonElement>(
+			'[data-activity-map-id="tracking-toggle"]',
+		);
 		if (!button) throw new Error('tracking toggle missing');
 		button.focus();
 		button.click();
@@ -232,9 +345,24 @@ describe('grouping control behavior', () => {
 			onRange: () => {},
 			renderIcon: () => {},
 			leadingActions: [
-				{ icon: 'pause', label: 'Pause activity tracking', id: 'tracking-toggle', onActivate: () => {} },
-				{ icon: 'files', label: 'Group by path', id: 'distribution-grouping-toggle', onActivate: () => {} },
-				{ icon: 'image-down', label: 'Export activity poster', id: 'poster-export', onActivate: () => {} },
+				{
+					icon: 'pause',
+					label: 'Pause activity tracking',
+					id: 'tracking-toggle',
+					onActivate: () => {},
+				},
+				{
+					icon: 'files',
+					label: 'Group by path',
+					id: 'distribution-grouping-toggle',
+					onActivate: () => {},
+				},
+				{
+					icon: 'image-down',
+					label: 'Export activity poster',
+					id: 'poster-export',
+					onActivate: () => {},
+				},
 			],
 		});
 
@@ -245,10 +373,12 @@ describe('grouping control behavior', () => {
 			'activity-map-day-navigation',
 			'activity-map-query-controls',
 		]);
-		expect(Array.from(controls.querySelectorAll<HTMLButtonElement>('.activity-map-control-leading > button')).map((button) => button.dataset.activityMapId)).toEqual([
-			'tracking-toggle',
-			'distribution-grouping-toggle',
-			'poster-export',
-		]);
+		expect(
+			Array.from(
+				controls.querySelectorAll<HTMLButtonElement>(
+					'.activity-map-control-leading > button',
+				),
+			).map((button) => button.dataset.activityMapId),
+		).toEqual(['tracking-toggle', 'distribution-grouping-toggle', 'poster-export']);
 	});
 });

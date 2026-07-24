@@ -54,9 +54,7 @@ export function renderPosterCaptionEditor(args: {
 	const window = input.ownerDocument.defaultView;
 	const resizeObserver =
 		window && typeof window.ResizeObserver === 'function'
-			? new window.ResizeObserver(() =>
-					positionLineCount(input, lineCount),
-				)
+			? new window.ResizeObserver(() => positionLineCount(input, lineCount))
 			: null;
 	resizeObserver?.observe(input);
 	return {
@@ -81,15 +79,11 @@ function resizeCaptionEditor(input: HTMLTextAreaElement): void {
 	if (naturalHeight <= 0) return;
 	input.setCssProps({
 		'--activity-map-poster-caption-height': `${Math.min(naturalHeight, maximumHeight)}px`,
-		'--activity-map-poster-caption-overflow':
-			naturalHeight > maximumHeight ? 'auto' : 'hidden',
+		'--activity-map-poster-caption-overflow': naturalHeight > maximumHeight ? 'auto' : 'hidden',
 	});
 }
 
-function updateLineCount(
-	input: HTMLTextAreaElement,
-	lineCount: HTMLElement,
-): void {
+function updateLineCount(input: HTMLTextAreaElement, lineCount: HTMLElement): void {
 	const lines = renderedLineCount(input);
 	lineCount.textContent = `(${String(lines)}/3)`;
 	lineCount.toggleClass('is-overflow', lines > 3);
@@ -106,18 +100,10 @@ function renderedLineCount(input: HTMLTextAreaElement): number {
 	const padding =
 		Number.parseFloat(styles?.paddingTop ?? '') +
 		Number.parseFloat(styles?.paddingBottom ?? '');
-	if (
-		Number.isFinite(lineHeight) &&
-		lineHeight > 0 &&
-		input.scrollHeight > 0
-	) {
+	if (Number.isFinite(lineHeight) && lineHeight > 0 && input.scrollHeight > 0) {
 		return Math.max(
 			1,
-			Math.ceil(
-				(input.scrollHeight -
-					(Number.isFinite(padding) ? padding : 0)) /
-					lineHeight,
-			),
+			Math.ceil((input.scrollHeight - (Number.isFinite(padding) ? padding : 0)) / lineHeight),
 		);
 	}
 	// Test DOMs and hidden elements have no layout metrics. Explicit newlines are
@@ -125,10 +111,7 @@ function renderedLineCount(input: HTMLTextAreaElement): number {
 	return Math.max(1, input.value.split('\n').length);
 }
 
-function positionLineCount(
-	input: HTMLTextAreaElement,
-	lineCount: HTMLElement,
-): void {
+function positionLineCount(input: HTMLTextAreaElement, lineCount: HTMLElement): void {
 	const frame = input.parentElement;
 	if (!frame) return;
 	const inputRect = input.getBoundingClientRect();

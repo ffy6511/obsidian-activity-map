@@ -19,7 +19,11 @@ import { CheckpointRepository } from './data/checkpoint-repository';
 import { DataServices } from './data/data-services';
 import { DailySummaryRepository } from './data/daily-summary-repository';
 import { ExclusionMatcher } from './data/exclusions';
-import { TrackingCoordinator, type ActivityEventSource, type WorkspaceSource } from './tracking/tracking-coordinator';
+import {
+	TrackingCoordinator,
+	type ActivityEventSource,
+	type WorkspaceSource,
+} from './tracking/tracking-coordinator';
 import type { TrackingObserver } from './tracking/ports';
 import type { ResolvedLeaf } from './tracking/target-resolver';
 import { LocalQueryService } from './query/query-service';
@@ -27,7 +31,10 @@ import { ActivityMapController } from './ui/activity-map-controller';
 import { ActivityMapSettingsTab } from './ui/settings-tab';
 import { HeaderActionManager } from './ui/header-action-manager';
 import { ACTIVITY_MAP_HOVER_SOURCE } from './ui/file-hover-preview';
-import { belongsToMarkdownEditor, createCodeMirrorTypedInputExtension } from './platform/codemirror-typed-input';
+import {
+	belongsToMarkdownEditor,
+	createCodeMirrorTypedInputExtension,
+} from './platform/codemirror-typed-input';
 
 export default class ActivityMapPlugin extends Plugin {
 	private controller: ActivityMapController | null = null;
@@ -40,13 +47,21 @@ export default class ActivityMapPlugin extends Plugin {
 
 	async onload(): Promise<void> {
 		const clock = new SystemClock();
-		const adapter = new ObsidianDataAdapter(this.app.vault.adapter, this.manifest, this.app.vault.configDir);
+		const adapter = new ObsidianDataAdapter(
+			this.app.vault.adapter,
+			this.manifest,
+			this.app.vault.configDir,
+		);
 		const settingsRepository = new SettingsRepository(this);
 		let settings = (await settingsRepository.load()).settings;
 		let exclusions = new ExclusionMatcher(adapter, settings.excludedPathGlobs);
 
-		const registry = await FileRegistry.load(new SafeJsonStore(adapter, filesRegistryPath(adapter)));
-		const checkpoint = new CheckpointRepository(new SafeJsonStore(adapter, checkpointPath(adapter)));
+		const registry = await FileRegistry.load(
+			new SafeJsonStore(adapter, filesRegistryPath(adapter)),
+		);
+		const checkpoint = new CheckpointRepository(
+			new SafeJsonStore(adapter, checkpointPath(adapter)),
+		);
 		const inventory = new ObsidianShardInventory(adapter);
 		const observers: TrackingObserver[] = [];
 		const summariesHolder: { value: DailySummaryRepository | null } = { value: null };
@@ -59,14 +74,22 @@ export default class ActivityMapPlugin extends Plugin {
 			onShardChanged: async (deviceId, localDate) => {
 				const repository = summariesHolder.value;
 				if (!repository) return;
-				const rebuilt = await repository.rebuild({ deviceId, localDate, nowIso: new Date().toISOString() });
+				const rebuilt = await repository.rebuild({
+					deviceId,
+					localDate,
+					nowIso: new Date().toISOString(),
+				});
 				if (!rebuilt.rawUnavailable) {
 					await repository.save({ deviceId, localDate, summary: rebuilt.summary });
 					await controllerHolder.value?.dispatch({ kind: 'refresh' });
 				}
 			},
 		});
-		const summaries = new DailySummaryRepository({ shardStore: dataServices.getShardStore(), pathAdapter: adapter, fileAdapter: adapter });
+		const summaries = new DailySummaryRepository({
+			shardStore: dataServices.getShardStore(),
+			pathAdapter: adapter,
+			fileAdapter: adapter,
+		});
 		summariesHolder.value = summaries;
 		this.windowById.set('main', window);
 		const workspaceSource = this.createWorkspaceSource();
@@ -82,10 +105,12 @@ export default class ActivityMapPlugin extends Plugin {
 			observers,
 		});
 		this.coordinator = coordinator;
-		this.registerEditorExtension(createCodeMirrorTypedInputExtension({
-			resolveTarget: (info) => this.resolveTypedInputTarget(info),
-			onTypedInput: (commit) => coordinator.onTypedInputCommit(commit),
-		}));
+		this.registerEditorExtension(
+			createCodeMirrorTypedInputExtension({
+				resolveTarget: (info) => this.resolveTypedInputTarget(info),
+				onTypedInput: (commit) => coordinator.onTypedInputCommit(commit),
+			}),
+		);
 		const queryService = new LocalQueryService(inventory, summaries, registry, () => settings);
 		const controller = new ActivityMapController(
 			settings,
@@ -113,7 +138,8 @@ export default class ActivityMapPlugin extends Plugin {
 				coordinator.degrade(reconciliation.reason ?? 'checkpoint-quarantined');
 			}
 		}
-		if (loadedCheckpoint.quarantined) coordinator.degrade(loadedCheckpoint.reason ?? 'checkpoint-quarantined');
+		if (loadedCheckpoint.quarantined)
+			coordinator.degrade(loadedCheckpoint.reason ?? 'checkpoint-quarantined');
 		this.registerHoverLinkSource(ACTIVITY_MAP_HOVER_SOURCE, {
 			display: 'Activity Map',
 			defaultMod: true,
@@ -133,8 +159,15 @@ export default class ActivityMapPlugin extends Plugin {
 		this.app.workspace.onLayoutReady(() => headerActions.start());
 
 		const heartbeatMs = 30_000;
-		this.registerInterval(window.setInterval(() => coordinator.onHeartbeat(heartbeatMs), heartbeatMs));
-		this.registerInterval(window.setInterval(() => coordinator.onIdleTimer(), Math.min(30_000, settings.idleThresholdMs)));
+		this.registerInterval(
+			window.setInterval(() => coordinator.onHeartbeat(heartbeatMs), heartbeatMs),
+		);
+		this.registerInterval(
+			window.setInterval(
+				() => coordinator.onIdleTimer(),
+				Math.min(30_000, settings.idleThresholdMs),
+			),
+		);
 		coordinator.start();
 	}
 
@@ -147,24 +180,35 @@ export default class ActivityMapPlugin extends Plugin {
 
 	private createWorkspaceSource(): WorkspaceSource {
 		const workspace = this.app.workspace;
-		const subscribe = (ref: EventRef): (() => void) => () => workspace.offref(ref);
+		const subscribe =
+			(ref: EventRef): (() => void) =>
+			() =>
+				workspace.offref(ref);
 		return {
 			getActiveLeaf: () => this.resolveLeaf(workspace.getMostRecentLeaf()),
-			onActiveLeafChange: (callback) => subscribe(workspace.on('active-leaf-change', callback)),
-			onFileOpen: (callback) => subscribe(workspace.on('file-open', () => {
-				const leaf = this.resolveLeaf(workspace.getMostRecentLeaf());
-				if (leaf) callback(leaf);
-			})),
-			onEditorChange: (callback) => subscribe(workspace.on('editor-change', (_editor, info) => {
-				const file = info.file;
-				if (!file) return;
-				const resolved = info instanceof FileView ? this.resolveLeaf(info.leaf) : null;
-				callback({
-					path: file.path,
-					leafId: resolved?.leafId,
-					windowId: resolved?.windowId,
-				});
-			})),
+			onActiveLeafChange: (callback) =>
+				subscribe(workspace.on('active-leaf-change', callback)),
+			onFileOpen: (callback) =>
+				subscribe(
+					workspace.on('file-open', () => {
+						const leaf = this.resolveLeaf(workspace.getMostRecentLeaf());
+						if (leaf) callback(leaf);
+					}),
+				),
+			onEditorChange: (callback) =>
+				subscribe(
+					workspace.on('editor-change', (_editor, info) => {
+						const file = info.file;
+						if (!file) return;
+						const resolved =
+							info instanceof FileView ? this.resolveLeaf(info.leaf) : null;
+						callback({
+							path: file.path,
+							leafId: resolved?.leafId,
+							windowId: resolved?.windowId,
+						});
+					}),
+				),
 		};
 	}
 
@@ -200,11 +244,22 @@ export default class ActivityMapPlugin extends Plugin {
 		const win = this.windowById.get(windowId) ?? window;
 		return {
 			attachActivityListeners: (callback) => {
-				const events = ['keydown', 'compositionend', 'pointerdown', 'pointermove', 'wheel', 'touchstart', 'focus'] as const;
+				const events = [
+					'keydown',
+					'compositionend',
+					'pointerdown',
+					'pointermove',
+					'wheel',
+					'touchstart',
+					'focus',
+				] as const;
 				let pointerFrame: number | null = null;
 				let latestPointerEvent: Event | null = null;
 				const handler = (event: Event) => {
-					if (event.type !== 'pointermove' || typeof win.requestAnimationFrame !== 'function') {
+					if (
+						event.type !== 'pointermove' ||
+						typeof win.requestAnimationFrame !== 'function'
+					) {
 						callback(event);
 						return;
 					}
@@ -217,12 +272,14 @@ export default class ActivityMapPlugin extends Plugin {
 						if (latest) callback(latest);
 					});
 				};
-				for (const event of events) win.addEventListener(event, handler, { capture: true, passive: true });
+				for (const event of events)
+					win.addEventListener(event, handler, { capture: true, passive: true });
 				return () => {
 					if (pointerFrame !== null) win.cancelAnimationFrame(pointerFrame);
 					pointerFrame = null;
 					latestPointerEvent = null;
-					for (const event of events) win.removeEventListener(event, handler, { capture: true });
+					for (const event of events)
+						win.removeEventListener(event, handler, { capture: true });
 				};
 			},
 			onBlur: (callback) => {
@@ -234,23 +291,34 @@ export default class ActivityMapPlugin extends Plugin {
 
 	private registerPopoutEvents(coordinator: TrackingCoordinator): void {
 		const unsubs = new WeakMap<Window, () => void>();
-		this.registerEvent(this.app.workspace.on('window-open', (_workspaceWindow, win) => {
-			const id = `window-${this.nextWindowId++}`;
-			this.windowById.set(id, win);
-			unsubs.set(win, coordinator.registerWindow(id));
-		}));
-		this.registerEvent(this.app.workspace.on('window-close', (_workspaceWindow, win) => {
-			unsubs.get(win)?.();
-			for (const [id, candidate] of this.windowById) if (candidate === win) this.windowById.delete(id);
-		}));
+		this.registerEvent(
+			this.app.workspace.on('window-open', (_workspaceWindow, win) => {
+				const id = `window-${this.nextWindowId++}`;
+				this.windowById.set(id, win);
+				unsubs.set(win, coordinator.registerWindow(id));
+			}),
+		);
+		this.registerEvent(
+			this.app.workspace.on('window-close', (_workspaceWindow, win) => {
+				unsubs.get(win)?.();
+				for (const [id, candidate] of this.windowById)
+					if (candidate === win) this.windowById.delete(id);
+			}),
+		);
 	}
 
 	private registerVaultIdentityEvents(registry: FileRegistry): void {
 		this.app.workspace.onLayoutReady(() => {
-			this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
-				void (file instanceof TFolder ? registry.renameFolder(oldPath, file.path) : registry.rename(oldPath, file.path));
-			}));
-			this.registerEvent(this.app.vault.on('delete', (file) => void this.markDeleted(registry, file)));
+			this.registerEvent(
+				this.app.vault.on('rename', (file, oldPath) => {
+					void (file instanceof TFolder
+						? registry.renameFolder(oldPath, file.path)
+						: registry.rename(oldPath, file.path));
+				}),
+			);
+			this.registerEvent(
+				this.app.vault.on('delete', (file) => void this.markDeleted(registry, file)),
+			);
 		});
 	}
 

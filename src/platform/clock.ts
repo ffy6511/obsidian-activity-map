@@ -43,10 +43,7 @@ export class SystemClock implements Clock {
  * rejected by callers (the engine reports them without increasing metrics), so
  * this helper is the single place that defines "how much time passed".
  */
-export function monotonicDelta(
-	start: ClockSample,
-	end: ClockSample,
-): number {
+export function monotonicDelta(start: ClockSample, end: ClockSample): number {
 	return end.monotonicMs - start.monotonicMs;
 }
 

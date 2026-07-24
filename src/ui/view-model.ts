@@ -17,7 +17,10 @@ export interface ActivityMapViewModel {
 	queryGeneration: number;
 }
 
-export function initialViewModel(settings: ActivityMapSettings, today: string): ActivityMapViewModel {
+export function initialViewModel(
+	settings: ActivityMapSettings,
+	today: string,
+): ActivityMapViewModel {
 	return {
 		loadState: 'loading',
 		query: headerPopoverDefaultQuery(settings, today),
@@ -31,7 +34,10 @@ export function initialViewModel(settings: ActivityMapSettings, today: string): 
 }
 
 /** Create the fresh root query used whenever a Header Popover opens. */
-export function headerPopoverDefaultQuery(settings: ActivityMapSettings, today: string): DistributionQuery {
+export function headerPopoverDefaultQuery(
+	settings: ActivityMapSettings,
+	today: string,
+): DistributionQuery {
 	return {
 		metric: settings.headerPopoverMetric,
 		range: headerPopoverRange(settings.headerPopoverRange, today),

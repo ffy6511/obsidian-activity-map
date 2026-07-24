@@ -52,13 +52,13 @@ export class NdjsonShardStore {
 	 * Append records to a shard. An unreadable or corrupt existing shard aborts
 	 * before mutation; recordId deduplication makes uncertain append retries safe.
 	 */
-	async append(
-		path: string,
-		records: readonly ValidatedEventEnvelope[],
-	): Promise<AppendResult> {
+	async append(path: string, records: readonly ValidatedEventEnvelope[]): Promise<AppendResult> {
 		const queue = this.queues.get(path) ?? Promise.resolve();
 		const run = queue.then(() => this.appendSerialized(path, records));
-		this.queues.set(path, run.catch(() => undefined));
+		this.queues.set(
+			path,
+			run.catch(() => undefined),
+		);
 		return run;
 	}
 
@@ -153,7 +153,10 @@ export class NdjsonShardStore {
 			}
 			return { before: records.length, after: kept.length };
 		});
-		this.queues.set(path, run.catch(() => undefined));
+		this.queues.set(
+			path,
+			run.catch(() => undefined),
+		);
 		return run;
 	}
 
@@ -165,7 +168,10 @@ export class NdjsonShardStore {
 				await this.adapter.remove(path);
 			}
 		});
-		this.queues.set(path, run.catch(() => undefined));
+		this.queues.set(
+			path,
+			run.catch(() => undefined),
+		);
 		return run;
 	}
 

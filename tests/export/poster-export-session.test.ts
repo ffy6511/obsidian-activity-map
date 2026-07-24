@@ -1,19 +1,39 @@
 import { describe, expect, it } from '../helpers/test-harness';
 
 import type { DistributionItem, DistributionResult } from '../../src/query/distribution-query';
-import { POSTER_PNG_RASTER_SCALE, PosterExportSession } from '../../src/export/poster-export-session';
+import {
+	POSTER_PNG_RASTER_SCALE,
+	PosterExportSession,
+} from '../../src/export/poster-export-session';
 import { DEFAULT_POSTER_THEME } from '../../src/export/poster-theme';
 
 function distribution(): DistributionResult {
 	const item: DistributionItem = {
-		id: 'dir:projects', kind: 'directory', label: 'Projects', path: 'projects', value: 90_000,
-		percentOfScope: 1, memberIds: ['file-a'],
+		id: 'dir:projects',
+		kind: 'directory',
+		label: 'Projects',
+		path: 'projects',
+		value: 90_000,
+		percentOfScope: 1,
+		memberIds: ['file-a'],
 	};
 	return {
-		query: { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-21' }, path: 'work/projects', view: 'children', groupBy: 'path' },
+		query: {
+			metric: 'activeMs',
+			range: { mode: 'day', localDate: '2026-07-21' },
+			path: 'work/projects',
+			view: 'children',
+			groupBy: 'path',
+		},
 		maxChartItems: 8,
-		scopeTotal: 90_000, vaultTotal: 90_000, percentOfVault: 1, denominatorDays: null,
-		coverage: { firstDate: '2026-07-21', lastDate: '2026-07-21' }, chartItems: [item], detailItems: [item], warnings: [],
+		scopeTotal: 90_000,
+		vaultTotal: 90_000,
+		percentOfVault: 1,
+		denominatorDays: null,
+		coverage: { firstDate: '2026-07-21', lastDate: '2026-07-21' },
+		chartItems: [item],
+		detailItems: [item],
+		warnings: [],
 	};
 }
 
@@ -31,23 +51,33 @@ describe('poster export session', () => {
 	it('defaults to a high-resolution Wide PNG while retaining SVG and JPG export support', async () => {
 		const source = distribution();
 		const downloads: Array<{ blob: Blob; filename: string }> = [];
-		const rasterized: Array<{ svg: string; width: number; height: number; format: 'png' | 'jpg' }> = [];
-		const session = new PosterExportSession({ query: source.query, distribution: source }, {
-			wordmarkDataUrl: 'data:image/png;base64,d29yZG1hcms=',
-			theme: DEFAULT_POSTER_THEME,
-			destination: {
-				download(blob, filename) {
-					downloads.push({ blob, filename });
-					return { outcome: 'downloaded', message: `Downloaded ${filename}` };
+		const rasterized: Array<{
+			svg: string;
+			width: number;
+			height: number;
+			format: 'png' | 'jpg';
+		}> = [];
+		const session = new PosterExportSession(
+			{ query: source.query, distribution: source },
+			{
+				wordmarkDataUrl: 'data:image/png;base64,d29yZG1hcms=',
+				theme: DEFAULT_POSTER_THEME,
+				destination: {
+					download(blob, filename) {
+						downloads.push({ blob, filename });
+						return { outcome: 'downloaded', message: `Downloaded ${filename}` };
+					},
+				},
+				rasterizer: {
+					async rasterize(args) {
+						rasterized.push(args);
+						return new Blob([args.format], {
+							type: args.format === 'png' ? 'image/png' : 'image/jpeg',
+						});
+					},
 				},
 			},
-			rasterizer: {
-				async rasterize(args) {
-					rasterized.push(args);
-					return new Blob([args.format], { type: args.format === 'png' ? 'image/png' : 'image/jpeg' });
-				},
-			},
-		});
+		);
 		expect(session.getLayout()).toBe('wide');
 		expect(session.getFormat()).toBe('png');
 		expect(session.getExportLabel()).toBe('Wide PNG');
@@ -82,7 +112,9 @@ describe('poster export session', () => {
 	it('omits the SVG caption only for the live editor preview, never the downloaded poster', () => {
 		const session = createSession(distribution());
 		session.setCaption('One visible caption');
-		expect(session.preview({ includeCaption: false }).svg.includes('One visible caption')).toBeFalse();
+		expect(
+			session.preview({ includeCaption: false }).svg.includes('One visible caption'),
+		).toBeFalse();
 		expect(session.preview().svg.includes('One visible caption')).toBeTrue();
 	});
 
@@ -97,10 +129,17 @@ describe('poster export session', () => {
 });
 
 function createSession(source: DistributionResult): PosterExportSession {
-	return new PosterExportSession({ query: source.query, distribution: source }, {
-		wordmarkDataUrl: 'data:image/png;base64,d29yZG1hcms=',
-		theme: DEFAULT_POSTER_THEME,
-		destination: { download: () => ({ outcome: 'downloaded', message: 'Downloaded' }) },
-		rasterizer: { async rasterize() { return new Blob(); } },
-	});
+	return new PosterExportSession(
+		{ query: source.query, distribution: source },
+		{
+			wordmarkDataUrl: 'data:image/png;base64,d29yZG1hcms=',
+			theme: DEFAULT_POSTER_THEME,
+			destination: { download: () => ({ outcome: 'downloaded', message: 'Downloaded' }) },
+			rasterizer: {
+				async rasterize() {
+					return new Blob();
+				},
+			},
+		},
+	);
 }

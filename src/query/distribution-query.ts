@@ -115,12 +115,7 @@ export function runDistributionQuery(args: {
 	for (const s of summaries) {
 		warnings.push(...s.summary.warnings);
 	}
-	const detailItems = buildDetailItems(
-		scopeProjection,
-		query,
-		scopeTotal,
-		warnings,
-	);
+	const detailItems = buildDetailItems(scopeProjection, query, scopeTotal, warnings);
 	const chartItems = buildChartItems(detailItems, maxChartItems, scopeTotal);
 
 	const percentOfVault = vaultTotal > 0 ? scopeTotal / vaultTotal : 0;
@@ -143,10 +138,18 @@ export function runDistributionQuery(args: {
 function mergeSummaries(
 	summaries: readonly QuerySummaryInput[],
 ): Record<string, { activeMs: number; editingMs: number; openCount: number; typedChars: number }> {
-	const out: Record<string, { activeMs: number; editingMs: number; openCount: number; typedChars: number }> = {};
+	const out: Record<
+		string,
+		{ activeMs: number; editingMs: number; openCount: number; typedChars: number }
+	> = {};
 	for (const { summary } of summaries) {
 		for (const [fileId, metrics] of Object.entries(summary.metricsByFileId)) {
-			const bucket = (out[fileId] ??= { activeMs: 0, editingMs: 0, openCount: 0, typedChars: 0 });
+			const bucket = (out[fileId] ??= {
+				activeMs: 0,
+				editingMs: 0,
+				openCount: 0,
+				typedChars: 0,
+			});
 			bucket.activeMs += metrics.activeMs;
 			bucket.editingMs += metrics.editingMs;
 			bucket.openCount += metrics.openCount;
@@ -156,7 +159,10 @@ function mergeSummaries(
 	return out;
 }
 
-function totalAll(projection: { groups: { total: number }[]; deleted: { value: number }[] }): number {
+function totalAll(projection: {
+	groups: { total: number }[];
+	deleted: { value: number }[];
+}): number {
 	let total = 0;
 	for (const g of projection.groups) {
 		total += g.total;
@@ -221,7 +227,11 @@ function buildDetailItems(
 	return items;
 }
 
-function appendFileItems(items: DistributionItem[], files: readonly ProjectedFile[], scopeTotal: number): void {
+function appendFileItems(
+	items: DistributionItem[],
+	files: readonly ProjectedFile[],
+	scopeTotal: number,
+): void {
 	for (const file of files) {
 		const path = file.path;
 		items.push({

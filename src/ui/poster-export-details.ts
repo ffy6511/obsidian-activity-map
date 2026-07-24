@@ -23,8 +23,12 @@ export function renderPosterExportDetails(args: {
 		},
 	});
 	filename.addEventListener('input', () => args.session.setFilename(filename.value));
-	filename.addEventListener('change', () => { filename.value = args.session.getFilename(); });
-	const update = () => { filename.value = args.session.getFilename(); };
+	filename.addEventListener('change', () => {
+		filename.value = args.session.getFilename();
+	});
+	const update = () => {
+		filename.value = args.session.getFilename();
+	};
 	update();
 	return { update };
 }

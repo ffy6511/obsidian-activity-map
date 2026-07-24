@@ -27,9 +27,7 @@ export class CheckpointRepository implements TrackingCheckpointPort {
 
 	/** Load and validate the checkpoint; quarantines invalid files. */
 	async load(): Promise<CheckpointLoadResult> {
-		const result = await this.store.load<RuntimeCheckpoint>((raw) =>
-			validateCheckpoint(raw),
-		);
+		const result = await this.store.load<RuntimeCheckpoint>((raw) => validateCheckpoint(raw));
 		if (!result.value) {
 			const exists = await this.store.primaryExists();
 			return {

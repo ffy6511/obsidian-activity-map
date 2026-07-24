@@ -3,7 +3,13 @@ import { describe, expect, it } from '../helpers/test-harness';
 import { HeartbeatMonitor } from '../../src/tracking/heartbeat-monitor';
 import type { ClockSample } from '../../src/platform/clock';
 
-function monitor(opts?: Partial<{ expectedIntervalMs: number; idleThresholdMs: number; jitterTolerance: number }>): HeartbeatMonitor {
+function monitor(
+	opts?: Partial<{
+		expectedIntervalMs: number;
+		idleThresholdMs: number;
+		jitterTolerance: number;
+	}>,
+): HeartbeatMonitor {
 	return new HeartbeatMonitor({
 		expectedIntervalMs: opts?.expectedIntervalMs ?? 30_000,
 		idleThresholdMs: opts?.idleThresholdMs ?? 180_000,
@@ -28,7 +34,11 @@ describe('heartbeat monitor', () => {
 	});
 
 	it('detects drift beyond tolerance', () => {
-		const m = monitor({ expectedIntervalMs: 30_000, jitterTolerance: 2, idleThresholdMs: 180_000 });
+		const m = monitor({
+			expectedIntervalMs: 30_000,
+			jitterTolerance: 2,
+			idleThresholdMs: 180_000,
+		});
 		const v = m.classify(sample(0), sample(120_000));
 		expect(v.kind).toBe('drift');
 		if (v.kind === 'drift') {
@@ -39,7 +49,11 @@ describe('heartbeat monitor', () => {
 	});
 
 	it('flags drift beyond the idle threshold as sleep-like', () => {
-		const m = monitor({ expectedIntervalMs: 30_000, jitterTolerance: 2, idleThresholdMs: 180_000 });
+		const m = monitor({
+			expectedIntervalMs: 30_000,
+			jitterTolerance: 2,
+			idleThresholdMs: 180_000,
+		});
 		const v = m.classify(sample(0), sample(600_000));
 		expect(v.kind).toBe('drift');
 		if (v.kind === 'drift') {

@@ -1,7 +1,4 @@
-import type {
-	DistributionQuery,
-	DistributionResult,
-} from '../query/distribution-query';
+import type { DistributionQuery, DistributionResult } from '../query/distribution-query';
 import {
 	buildChartModel,
 	donutPath,
@@ -75,14 +72,12 @@ interface PosterGeometry {
 const MAX_CAPTION_LENGTH = 280;
 const MAX_CAPTION_LINES = 3;
 const POSTER_LEGEND_MAX_ITEMS = 7;
-const POSTER_CONTEXT_FONT =
-	'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+const POSTER_CONTEXT_FONT = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
 const POSTER_FOOTER_FONT = 'ui-sans-serif, system-ui, sans-serif';
 const POSTER_FOOTER_INSET = 48;
 // This stack is intentionally system-only: the downloaded SVG carries no font
 // payload and the PNG/JPG rasterization uses the same family available to Obsidian.
-const POSTER_CAPTION_FONT =
-	"Georgia, 'Times New Roman', 'Songti SC', STSong, SimSun, serif";
+const POSTER_CAPTION_FONT = "Georgia, 'Times New Roman', 'Songti SC', STSong, SimSun, serif";
 
 /**
  * Shared Wide-caption metrics for the DOM editor and standalone SVG. Keeping
@@ -116,11 +111,7 @@ export function escapeXml(value: string): string {
 }
 
 export function posterMimeType(format: PosterFormat): string {
-	return format === 'svg'
-		? 'image/svg+xml'
-		: format === 'png'
-			? 'image/png'
-			: 'image/jpeg';
+	return format === 'svg' ? 'image/svg+xml' : format === 'png' ? 'image/png' : 'image/jpeg';
 }
 
 /** Produces a bounded ASCII filename without user-controlled path segments. */
@@ -165,13 +156,7 @@ export function renderPoster(request: PosterRenderRequest): PosterRenderResult {
 		chart.items.length === 0
 			? `${title}. No activity in ${rangeLabel(query)}.`
 			: `${title}. ${chart.items.map((item) => `${item.label}: ${formatMetric(item.value, query.metric, request.distribution.denominatorDays)} (${formatPercent(item.percentOfScope)})`).join('; ')}.`;
-	const donut = renderDonut(
-		chart,
-		geometry,
-		query,
-		request.distribution.denominatorDays,
-		theme,
-	);
+	const donut = renderDonut(chart, geometry, query, request.distribution.denominatorDays, theme);
 	const legend = renderLegend(
 		chart,
 		geometry,
@@ -208,19 +193,10 @@ function renderHeader(
 	return `<text x="${geometry.header.x}" y="${geometry.header.metricY}" text-anchor="end" fill="${escapeXml(theme.muted)}" font-family="${POSTER_CONTEXT_FONT}" font-size="${geometry.header.metricSize}" letter-spacing="1.6">${escapeXml(metric)}</text><text x="${geometry.header.x}" y="${geometry.header.rangeY}" text-anchor="end" fill="${escapeXml(theme.text)}" font-family="${escapeXml(theme.fontFamily)}" font-size="${geometry.header.rangeSize}" font-weight="600">${escapeXml(range)}</text>`;
 }
 
-function renderCaption(
-	caption: string,
-	geometry: PosterGeometry,
-	theme: PosterTheme,
-): string {
+function renderCaption(caption: string, geometry: PosterGeometry, theme: PosterTheme): string {
 	if (!caption) return '';
-	const lines = wrapCaption(
-		caption,
-		geometry.caption.maxWidth,
-		geometry.caption.fontSize,
-	);
-	const firstLineY =
-		geometry.caption.y - (lines.length - 1) * geometry.caption.lineHeight;
+	const lines = wrapCaption(caption, geometry.caption.maxWidth, geometry.caption.fontSize);
+	const firstLineY = geometry.caption.y - (lines.length - 1) * geometry.caption.lineHeight;
 	const centerX = geometry.width / 2;
 	const spans = lines
 		.map(
@@ -264,11 +240,7 @@ function renderLegend(
 			const y = geometry.legend.y + index * geometry.legend.rowHeight;
 			const color = inlineChartColor(item.color, theme);
 			const label = truncate(item.label, geometry.legend.labelMaxLength);
-			const value = formatMetric(
-				item.value,
-				query.metric,
-				denominatorDays,
-			);
+			const value = formatMetric(item.value, query.metric, denominatorDays);
 			return `<g><circle cx="${geometry.legend.x}" cy="${y}" r="${geometry.legend.swatchRadius}" fill="${escapeXml(color)}" stroke="${escapeXml(theme.border)}" stroke-width="1"/><text x="${geometry.legend.x + geometry.legend.swatchRadius * 2 + 16}" y="${y + geometry.legend.labelSize * 0.34}" fill="${escapeXml(theme.muted)}" font-family="${escapeXml(theme.fontFamily)}" font-size="${geometry.legend.labelSize}" font-weight="400">${escapeXml(label)}</text><text x="${geometry.legend.valueX}" y="${y + geometry.legend.valueSize * 0.34}" text-anchor="end" fill="${escapeXml(theme.muted)}" font-family="${escapeXml(theme.fontFamily)}" font-size="${geometry.legend.valueSize}" font-weight="400">${escapeXml(value)}</text><text x="${geometry.legend.percentX}" y="${y + geometry.legend.valueSize * 0.34}" text-anchor="end" fill="${escapeXml(theme.muted)}" font-family="${escapeXml(theme.fontFamily)}" font-size="${geometry.legend.valueSize}" font-weight="400">${escapeXml(formatPercent(item.percentOfScope))}</text></g>`;
 		})
 		.join('');
@@ -279,10 +251,7 @@ function posterChartModel(distribution: DistributionResult): ChartModel {
 	if (chart.items.length <= POSTER_LEGEND_MAX_ITEMS) return chart;
 	const visible = chart.items.slice(0, POSTER_LEGEND_MAX_ITEMS - 1);
 	const remainder = chart.items.slice(POSTER_LEGEND_MAX_ITEMS - 1);
-	const remainderValue = remainder.reduce(
-		(total, item) => total + item.value,
-		0,
-	);
+	const remainderValue = remainder.reduce((total, item) => total + item.value, 0);
 	const items = [
 		...visible,
 		{
@@ -303,20 +272,14 @@ function posterChartModel(distribution: DistributionResult): ChartModel {
 		items: items.map((item): ChartItem => {
 			const startAngle = cursor;
 			const endAngle =
-				startAngle +
-				(chart.total > 0
-					? (item.value / chart.total) * Math.PI * 2
-					: 0);
+				startAngle + (chart.total > 0 ? (item.value / chart.total) * Math.PI * 2 : 0);
 			cursor = endAngle;
 			return { ...item, startAngle, endAngle };
 		}),
 	};
 }
 
-function layoutGeometry(
-	layout: PosterLayout,
-	itemCount: number,
-): PosterGeometry {
+function layoutGeometry(layout: PosterLayout, itemCount: number): PosterGeometry {
 	if (layout === 'wide') {
 		return {
 			width: WIDE_POSTER_CAPTION_PREVIEW.sourceWidth,
@@ -425,24 +388,20 @@ function layoutGeometry(
 
 function wideCaptionSourceWidth(): number {
 	return Math.round(
-		(WIDE_POSTER_CAPTION_PREVIEW.sourceWidth *
-			WIDE_POSTER_CAPTION_PREVIEW.widthPercent) /
-			100,
+		(WIDE_POSTER_CAPTION_PREVIEW.sourceWidth * WIDE_POSTER_CAPTION_PREVIEW.widthPercent) / 100,
 	);
 }
 
 function wideCaptionSourceFontSize(): number {
 	return Math.round(
-		(WIDE_POSTER_CAPTION_PREVIEW.sourceWidth *
-			WIDE_POSTER_CAPTION_PREVIEW.fontSizePercent) /
+		(WIDE_POSTER_CAPTION_PREVIEW.sourceWidth * WIDE_POSTER_CAPTION_PREVIEW.fontSizePercent) /
 			100,
 	);
 }
 
 function wideCaptionSourceLineHeight(): number {
 	return Math.round(
-		wideCaptionSourceFontSize() *
-			WIDE_POSTER_CAPTION_PREVIEW.lineHeightMultiplier,
+		wideCaptionSourceFontSize() * WIDE_POSTER_CAPTION_PREVIEW.lineHeightMultiplier,
 	);
 }
 
@@ -461,11 +420,7 @@ function normalizedCaption(caption: string | undefined): string {
  * conservative width model favors an earlier wrap over text spilling into the
  * chart. The textarea remains the only editable layer in the mounted preview.
  */
-function wrapCaption(
-	caption: string,
-	maxWidth: number,
-	fontSize: number,
-): string[] {
+function wrapCaption(caption: string, maxWidth: number, fontSize: number): string[] {
 	const lines: string[] = [];
 	for (const paragraph of caption.split('\n')) {
 		const wrapped = wrapCaptionParagraph(paragraph, maxWidth, fontSize);
@@ -481,11 +436,7 @@ function wrapCaption(
 	return visible;
 }
 
-function wrapCaptionParagraph(
-	paragraph: string,
-	maxWidth: number,
-	fontSize: number,
-): string[] {
+function wrapCaptionParagraph(paragraph: string, maxWidth: number, fontSize: number): string[] {
 	const tokens = paragraph.trim().match(/\S+/gu) ?? [];
 	const lines: string[] = [];
 	let line = '';
@@ -503,10 +454,7 @@ function wrapCaptionParagraph(
 		const characters = Array.from(token);
 		line = '';
 		for (const character of characters) {
-			if (
-				line &&
-				captionWidth(`${line}${character}`, fontSize) > maxWidth
-			) {
+			if (line && captionWidth(`${line}${character}`, fontSize) > maxWidth) {
 				lines.push(line);
 				line = character;
 			} else {
@@ -518,24 +466,16 @@ function wrapCaptionParagraph(
 	return lines;
 }
 
-function truncateCaptionLine(
-	value: string,
-	maxWidth: number,
-	fontSize: number,
-): string {
+function truncateCaptionLine(value: string, maxWidth: number, fontSize: number): string {
 	const characters = Array.from(value.trimEnd());
-	while (
-		characters.length > 0 &&
-		captionWidth(`${characters.join('')}…`, fontSize) > maxWidth
-	)
+	while (characters.length > 0 && captionWidth(`${characters.join('')}…`, fontSize) > maxWidth)
 		characters.pop();
 	return `${characters.join('').trimEnd()}…`;
 }
 
 function captionWidth(value: string, fontSize: number): number {
 	return Array.from(value).reduce(
-		(width, character) =>
-			width + captionCharacterWidth(character) * fontSize,
+		(width, character) => width + captionCharacterWidth(character) * fontSize,
 		0,
 	);
 }

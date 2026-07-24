@@ -13,12 +13,13 @@
 
 import type { ClosedSessionSegment, RecoveryDecision, TypedInputRecord } from '../domain/activity';
 import type { ActivityMapSettings } from '../domain/settings';
-import type {
-	FileIdentityPort,
-	TrackingRecordSink,
-} from '../tracking/ports';
+import type { FileIdentityPort, TrackingRecordSink } from '../tracking/ports';
 import { localDateFor } from '../platform/clock';
-import { buildAdjustmentEnvelope, buildSessionEnvelope, buildTypedInputEnvelope } from './event-envelope';
+import {
+	buildAdjustmentEnvelope,
+	buildSessionEnvelope,
+	buildTypedInputEnvelope,
+} from './event-envelope';
 import { FileRegistry } from './file-registry';
 import { NdjsonShardStore } from './ndjson-shard-store';
 import { sessionShardPath, type PathAdapter } from './paths';
@@ -54,7 +55,8 @@ export class DataServices implements TrackingRecordSink, FileIdentityPort {
 
 	private readonly registry: FileRegistry;
 	private readonly pathAdapter: PathAdapter;
-	private readonly onShardChanged: ((deviceId: string, localDate: string) => Promise<void>) | undefined;
+	private readonly onShardChanged:
+		((deviceId: string, localDate: string) => Promise<void>) | undefined;
 
 	/** Update the effective device id after a settings change. */
 	setDeviceId(deviceId: string): void {
@@ -72,9 +74,7 @@ export class DataServices implements TrackingRecordSink, FileIdentityPort {
 			byDate.set(record.localDate, bucket);
 		}
 		for (const [localDate, bucket] of byDate) {
-			const envelopes = bucket.map((segment) =>
-				buildSessionEnvelope(segment, this.deviceId),
-			);
+			const envelopes = bucket.map((segment) => buildSessionEnvelope(segment, this.deviceId));
 			const path = sessionShardPath(this.pathAdapter, this.deviceId, localDate);
 			await this.shardStore.append(path, envelopes);
 			await this.onShardChanged?.(this.deviceId, localDate);
@@ -84,10 +84,7 @@ export class DataServices implements TrackingRecordSink, FileIdentityPort {
 	async appendRecoveryDecision(decision: RecoveryDecision): Promise<void> {
 		// Adjustments stay with the candidate's source file and event-time date;
 		// decision time can be on a later day after a prompt remained pending.
-		const localDate = localDateFor(
-			Date.parse(decision.intervalStartedAt),
-			this.timeZone,
-		);
+		const localDate = localDateFor(Date.parse(decision.intervalStartedAt), this.timeZone);
 		const envelopes = [
 			buildAdjustmentEnvelope(
 				decision,
@@ -111,7 +108,10 @@ export class DataServices implements TrackingRecordSink, FileIdentityPort {
 		}
 		for (const [localDate, bucket] of byDate) {
 			const path = sessionShardPath(this.pathAdapter, this.deviceId, localDate);
-			await this.shardStore.append(path, bucket.map((record) => buildTypedInputEnvelope(record, this.deviceId)));
+			await this.shardStore.append(
+				path,
+				bucket.map((record) => buildTypedInputEnvelope(record, this.deviceId)),
+			);
 			await this.onShardChanged?.(this.deviceId, localDate);
 		}
 	}

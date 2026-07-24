@@ -30,7 +30,11 @@ describe('CodeMirror typed-input bridge', () => {
 		const view = { file: { path: 'notes/a.md' }, currentMode: mode };
 		expect(belongsToMarkdownEditor(mode as never, view as never)).toBe(true);
 		expect(belongsToMarkdownEditor(view as never, view as never)).toBe(true);
-		expect(belongsToMarkdownEditor({ file: { path: 'notes/a.md' } } as never, view as never)).toBe(false);
-		expect(belongsToMarkdownEditor({ file: { path: 'notes/b.md' } } as never, view as never)).toBe(false);
+		expect(
+			belongsToMarkdownEditor({ file: { path: 'notes/a.md' } } as never, view as never),
+		).toBe(false);
+		expect(
+			belongsToMarkdownEditor({ file: { path: 'notes/b.md' } } as never, view as never),
+		).toBe(false);
 	});
 });

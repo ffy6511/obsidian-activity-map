@@ -10,7 +10,7 @@ async function sourceFiles(dir: string): Promise<string[]> {
 	const out: string[] = [];
 	for (const entry of await readdir(dir, { withFileTypes: true })) {
 		const target = path.join(dir, entry.name);
-		if (entry.isDirectory()) out.push(...await sourceFiles(target));
+		if (entry.isDirectory()) out.push(...(await sourceFiles(target)));
 		else if (entry.name.endsWith('.ts')) out.push(target);
 	}
 	return out;
@@ -18,22 +18,45 @@ async function sourceFiles(dir: string): Promise<string[]> {
 
 describe('privacy, bundle, and release artifact boundary', () => {
 	it('keeps runtime source free of Electron, Node runtime, network, and telemetry APIs', async () => {
-		const runtime = (await Promise.all((await sourceFiles(path.join(ROOT, 'src'))).map((file) => readFile(file, 'utf8')))).join('\n');
-		for (const forbidden of ["from 'electron'", 'from "electron"', "from 'node:", 'require("electron")', 'fetch(', 'XMLHttpRequest', 'WebSocket(', 'sendBeacon(', 'localStorage', 'sessionStorage', 'indexedDB']) {
+		const runtime = (
+			await Promise.all(
+				(await sourceFiles(path.join(ROOT, 'src'))).map((file) => readFile(file, 'utf8')),
+			)
+		).join('\n');
+		for (const forbidden of [
+			"from 'electron'",
+			'from "electron"',
+			"from 'node:",
+			'require("electron")',
+			'fetch(',
+			'XMLHttpRequest',
+			'WebSocket(',
+			'sendBeacon(',
+			'localStorage',
+			'sessionStorage',
+			'indexedDB',
+		]) {
 			expect(runtime.includes(forbidden)).toBeFalse();
 		}
 	});
 
 	it('keeps the manifest cross-platform and package runtime dependency-free', async () => {
-		const manifest = JSON.parse(await readFile(path.join(ROOT, 'manifest.json'), 'utf8')) as { isDesktopOnly?: boolean; version?: string };
-		const packageJson = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8')) as { dependencies?: Record<string, string>; version?: string };
+		const manifest = JSON.parse(await readFile(path.join(ROOT, 'manifest.json'), 'utf8')) as {
+			isDesktopOnly?: boolean;
+			version?: string;
+		};
+		const packageJson = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8')) as {
+			dependencies?: Record<string, string>;
+			version?: string;
+		};
 		expect(manifest.isDesktopOnly).toBeFalse();
 		expect(manifest.version).toBe(packageJson.version);
 		expect(Object.keys(packageJson.dependencies ?? {})).toHaveLength(0);
 	});
 
 	it('verifies the generated install set when the production bundle is present', async () => {
-		for (const file of ['manifest.json', 'styles.css']) expect(existsSync(path.join(ROOT, file))).toBeTrue();
+		for (const file of ['manifest.json', 'styles.css'])
+			expect(existsSync(path.join(ROOT, file))).toBeTrue();
 		const bundlePath = path.join(ROOT, 'main.js');
 		if (!existsSync(bundlePath)) return;
 		const bundle = await readFile(bundlePath, 'utf8');

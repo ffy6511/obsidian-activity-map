@@ -29,10 +29,18 @@ export function installDomEnvironment(): { document: Document; window: Window } 
 	const selectValues = new WeakMap<object, string>();
 	Object.defineProperty(window.HTMLSelectElement.prototype, 'value', {
 		configurable: true,
-		get(this: HTMLSelectElement) { return selectValues.get(this) ?? ''; },
-		set(this: HTMLSelectElement, value: string) { selectValues.set(this, value); },
+		get(this: HTMLSelectElement) {
+			return selectValues.get(this) ?? '';
+		},
+		set(this: HTMLSelectElement, value: string) {
+			selectValues.set(this, value);
+		},
 	});
-	const create = function (this: Element, tag: string, options: ElementOptions = {}): HTMLElement {
+	const create = function (
+		this: Element,
+		tag: string,
+		options: ElementOptions = {},
+	): HTMLElement {
 		const child = document.createElement(tag);
 		applyOptions(child, options);
 		this.appendChild(child);
@@ -45,18 +53,34 @@ export function installDomEnvironment(): { document: Document; window: Window } 
 	};
 	Object.assign(html, {
 		createEl: create,
-		createDiv(this: Element, options?: ElementOptions) { return create.call(this, 'div', options); },
-		createSpan(this: Element, options?: ElementOptions) { return create.call(this, 'span', options); },
+		createDiv(this: Element, options?: ElementOptions) {
+			return create.call(this, 'div', options);
+		},
+		createSpan(this: Element, options?: ElementOptions) {
+			return create.call(this, 'span', options);
+		},
 		createSvg,
-		empty(this: Element) { this.replaceChildren(); },
-		addClass(this: Element, cls: string) { this.classList.add(cls); },
-		removeClass(this: Element, cls: string) { this.classList.remove(cls); },
-		toggleClass(this: Element, cls: string, value: boolean) { this.classList.toggle(cls, value); },
-		setAttr(this: Element, name: string, value: string) { this.setAttribute(name, value); },
+		empty(this: Element) {
+			this.replaceChildren();
+		},
+		addClass(this: Element, cls: string) {
+			this.classList.add(cls);
+		},
+		removeClass(this: Element, cls: string) {
+			this.classList.remove(cls);
+		},
+		toggleClass(this: Element, cls: string, value: boolean) {
+			this.classList.toggle(cls, value);
+		},
+		setAttr(this: Element, name: string, value: string) {
+			this.setAttribute(name, value);
+		},
 	});
 	Object.assign(element, {
 		createSvg,
-		empty(this: Element) { this.replaceChildren(); },
+		empty(this: Element) {
+			this.replaceChildren();
+		},
 	});
 	Object.assign(svg, { createSvg });
 	return { document, window };
@@ -65,7 +89,10 @@ export function installDomEnvironment(): { document: Document; window: Window } 
 function applyOptions(element: HTMLElement, options: ElementOptions): void {
 	if (options.cls) element.className = options.cls;
 	if (options.text !== undefined) element.textContent = options.text;
-	if (options.value !== undefined && 'value' in element) (element as HTMLInputElement).value = options.value;
-	if (options.type !== undefined && 'type' in element) (element as HTMLInputElement).type = options.type;
-	for (const [name, value] of Object.entries(options.attr ?? {})) element.setAttribute(name, value);
+	if (options.value !== undefined && 'value' in element)
+		(element as HTMLInputElement).value = options.value;
+	if (options.type !== undefined && 'type' in element)
+		(element as HTMLInputElement).type = options.type;
+	for (const [name, value] of Object.entries(options.attr ?? {}))
+		element.setAttribute(name, value);
 }

@@ -92,7 +92,10 @@ export function expectReject(promise: Promise<unknown>): RejectExpectation {
 			}
 			if (matcher) {
 				const re = typeof matcher === 'string' ? new RegExp(matcher) : matcher;
-				assert.ok(re.test(message), `expected rejection message to match ${matcher}, got: ${message}`);
+				assert.ok(
+					re.test(message),
+					`expected rejection message to match ${matcher}, got: ${message}`,
+				);
 			}
 		},
 		async toBeTruthy() {

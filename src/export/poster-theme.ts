@@ -42,7 +42,8 @@ export function posterThemeFromDocument(document: Document): PosterTheme {
 	const body = document.body;
 	if (!view || !body) return DEFAULT_POSTER_THEME;
 	const styles = view.getComputedStyle(body);
-	const color = (variable: string, fallback: string) => resolveThemeColor(document, variable, fallback);
+	const color = (variable: string, fallback: string) =>
+		resolveThemeColor(document, variable, fallback);
 	return {
 		background: color('--background-primary', DEFAULT_POSTER_THEME.background),
 		border: color('--background-modifier-border', DEFAULT_POSTER_THEME.border),
@@ -51,7 +52,10 @@ export function posterThemeFromDocument(document: Document): PosterTheme {
 		accent: color('--interactive-accent', DEFAULT_POSTER_THEME.accent),
 		fontFamily: styles.fontFamily.trim() || DEFAULT_POSTER_THEME.fontFamily,
 		chartColors: Object.fromEntries(
-			Object.entries(DEFAULT_CHART_COLORS).map(([token, fallback]) => [token, color(token.slice(4, -1), fallback)]),
+			Object.entries(DEFAULT_CHART_COLORS).map(([token, fallback]) => [
+				token,
+				color(token.slice(4, -1), fallback),
+			]),
 		),
 	};
 }
@@ -68,7 +72,8 @@ export function completePosterTheme(theme: PosterTheme | undefined): PosterTheme
 function resolveThemeColor(document: Document, variable: string, fallback: string): string {
 	const view = document.defaultView;
 	const body = document.body;
-	if (!view || !body || !view.getComputedStyle(body).getPropertyValue(variable).trim()) return fallback;
+	if (!view || !body || !view.getComputedStyle(body).getPropertyValue(variable).trim())
+		return fallback;
 	const probe = body.createSpan();
 	probe.style.color = `var(${variable})`;
 	probe.hidden = true;

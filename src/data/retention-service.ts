@@ -78,12 +78,22 @@ export class RetentionService {
 			const key = `${shard.deviceId}/${shard.localDate}`;
 			if (args.protectedShardKeys?.has(key)) {
 				processed.push({ ...shard, outcome: 'kept-unreadable' });
-				args.onProgress?.({ operation: 'retention', completed: index + 1, total: shards.length, ...shard });
+				args.onProgress?.({
+					operation: 'retention',
+					completed: index + 1,
+					total: shards.length,
+					...shard,
+				});
 				continue;
 			}
 			if (shard.localDate >= args.cutoffDate) {
 				processed.push({ ...shard, outcome: 'kept-within-window' });
-				args.onProgress?.({ operation: 'retention', completed: index + 1, total: shards.length, ...shard });
+				args.onProgress?.({
+					operation: 'retention',
+					completed: index + 1,
+					total: shards.length,
+					...shard,
+				});
 				continue;
 			}
 			// Eligibility: a verified daily summary must exist before removal.
@@ -98,10 +108,19 @@ export class RetentionService {
 				summary.deviceId !== shard.deviceId ||
 				summary.localDate !== shard.localDate ||
 				raw.diagnostics.length > 0 ||
-				summary.sourceFingerprint !== raw.records.map((record) => record.recordId).sort().join('|')
+				summary.sourceFingerprint !==
+					raw.records
+						.map((record) => record.recordId)
+						.sort()
+						.join('|')
 			) {
 				processed.push({ ...shard, outcome: 'kept-summary-missing' });
-				args.onProgress?.({ operation: 'retention', completed: index + 1, total: shards.length, ...shard });
+				args.onProgress?.({
+					operation: 'retention',
+					completed: index + 1,
+					total: shards.length,
+					...shard,
+				});
 				continue;
 			}
 			try {
@@ -111,7 +130,12 @@ export class RetentionService {
 				// An unreadable/unremovable shard is kept; report and continue.
 				processed.push({ ...shard, outcome: 'kept-unreadable' });
 			}
-			args.onProgress?.({ operation: 'retention', completed: index + 1, total: shards.length, ...shard });
+			args.onProgress?.({
+				operation: 'retention',
+				completed: index + 1,
+				total: shards.length,
+				...shard,
+			});
 		}
 		return { processed, watermark: args.nowIso };
 	}

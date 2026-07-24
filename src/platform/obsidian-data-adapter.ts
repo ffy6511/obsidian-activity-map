@@ -17,7 +17,9 @@ export class ObsidianDataAdapter implements JsonFileAdapter, PathAdapter {
 		configDir: string,
 	) {
 		this.configDir = configDir;
-		this.manifestPath = manifest.dir ? normalizePath(`${manifest.dir}/manifest.json`) : undefined;
+		this.manifestPath = manifest.dir
+			? normalizePath(`${manifest.dir}/manifest.json`)
+			: undefined;
 	}
 
 	normalize(path: string): string {
@@ -108,6 +110,8 @@ export class ObsidianShardInventory implements ShardInventory {
 				}
 			}
 		}
-		return out.sort((a, b) => `${a.deviceId}/${a.localDate}`.localeCompare(`${b.deviceId}/${b.localDate}`));
+		return out.sort((a, b) =>
+			`${a.deviceId}/${a.localDate}`.localeCompare(`${b.deviceId}/${b.localDate}`),
+		);
 	}
 }

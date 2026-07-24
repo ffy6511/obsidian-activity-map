@@ -46,7 +46,9 @@ export class HeaderActionManager {
 		this.eventRefs.push(workspace.on('file-open', () => this.synchronize()));
 		this.eventRefs.push(workspace.on('window-open', () => this.synchronize()));
 		this.eventRefs.push(workspace.on('window-close', () => this.synchronize()));
-		this.unsubscribe = this.dependencies.controller.subscribe(() => this.refreshPresentations());
+		this.unsubscribe = this.dependencies.controller.subscribe(() =>
+			this.refreshPresentations(),
+		);
 		this.synchronize();
 	}
 
@@ -88,33 +90,40 @@ export class HeaderActionManager {
 			}
 			this.refreshPresentations();
 		} catch (error) {
-			this.dependencies.reportWarning(`File-header integration unavailable: ${error instanceof Error ? error.message : String(error)}`);
+			this.dependencies.reportWarning(
+				`File-header integration unavailable: ${error instanceof Error ? error.message : String(error)}`,
+			);
 		}
 	}
 
 	private create(view: FileView, filePath: string): HeaderEntry {
 		let popover: SummaryPopover | null = null;
-		const action = view.addAction('chart-pie', 'Activity Map: starting', () => popover?.togglePinned());
+		const action = view.addAction('chart-pie', 'Activity Map: starting', () =>
+			popover?.togglePinned(),
+		);
 		action.addClass('activity-map-header-action');
 		action.setAttr('data-activity-map-owner', 'activity-map');
 		action.setAttr('aria-expanded', 'false');
-		const miniDonut = this.dependencies.createMiniDonut?.(action) ?? new HeaderMiniDonut(action);
+		const miniDonut =
+			this.dependencies.createMiniDonut?.(action) ?? new HeaderMiniDonut(action);
 		popover = new SummaryPopover(
 			action,
 			this.dependencies.controller,
 			this.dependencies.openFile,
-			(event, targetEl, path) => previewFileOnHover({
-				workspace: this.dependencies.workspace,
-				hoverParent: view.leaf,
-				event,
-				targetEl,
-				filePath: path,
-			}),
+			(event, targetEl, path) =>
+				previewFileOnHover({
+					workspace: this.dependencies.workspace,
+					hoverParent: view.leaf,
+					event,
+					targetEl,
+					filePath: path,
+				}),
 			() => view.leaf.hoverPopover?.hoverEl ?? null,
 			this.dependencies.app,
 		);
 		const ownerWindow = action.ownerDocument.defaultView;
-		const supportsHover = ownerWindow?.matchMedia?.('(hover: hover) and (pointer: fine)').matches === true;
+		const supportsHover =
+			ownerWindow?.matchMedia?.('(hover: hover) and (pointer: fine)').matches === true;
 		if (supportsHover) {
 			action.addEventListener('pointerenter', () => popover.open());
 			action.addEventListener('pointerleave', () => popover.scheduleClose());
@@ -137,12 +146,21 @@ export class HeaderActionManager {
 			const presentation = statusPresentation(snapshot, entry.filePath);
 			entry.action.setAttr('aria-label', presentation.label);
 			entry.action.setAttr('title', presentation.label);
-			entry.action.removeClasses(['is-active', 'is-idle', 'is-pending', 'is-paused', 'is-untrackable', 'is-degraded']);
+			entry.action.removeClasses([
+				'is-active',
+				'is-idle',
+				'is-pending',
+				'is-paused',
+				'is-untrackable',
+				'is-degraded',
+			]);
 			entry.action.addClass(presentation.className);
-			entry.miniDonut.update(headerDonutSlices(this.headerDistribution, snapshot, {
-				nowMs: Date.now(),
-				idleThresholdMs: model.settings.idleThresholdMs,
-			}));
+			entry.miniDonut.update(
+				headerDonutSlices(this.headerDistribution, snapshot, {
+					nowMs: Date.now(),
+					idleThresholdMs: model.settings.idleThresholdMs,
+				}),
+			);
 		}
 		this.refreshHeaderDistribution(model.queryGeneration);
 	}
@@ -150,27 +168,34 @@ export class HeaderActionManager {
 	private refreshHeaderDistribution(generation: number): void {
 		if (this.headerLoading || this.headerGeneration === generation) return;
 		this.headerLoading = true;
-		void this.dependencies.controller.getHeaderDistribution().then((distribution) => {
-			if (this.stopped) return;
-			this.headerDistribution = distribution;
-			this.headerGeneration = generation;
-			const snapshot = this.dependencies.controller.getViewModel().tracking;
-			const model = this.dependencies.controller.getViewModel();
-			const slices = headerDonutSlices(distribution, snapshot, {
-				nowMs: Date.now(),
-				idleThresholdMs: model.settings.idleThresholdMs,
+		void this.dependencies.controller
+			.getHeaderDistribution()
+			.then((distribution) => {
+				if (this.stopped) return;
+				this.headerDistribution = distribution;
+				this.headerGeneration = generation;
+				const snapshot = this.dependencies.controller.getViewModel().tracking;
+				const model = this.dependencies.controller.getViewModel();
+				const slices = headerDonutSlices(distribution, snapshot, {
+					nowMs: Date.now(),
+					idleThresholdMs: model.settings.idleThresholdMs,
+				});
+				for (const entry of this.entries) entry.miniDonut.update(slices);
+			})
+			.catch((error: unknown) => {
+				this.headerGeneration = generation;
+				this.headerDistribution = null;
+				for (const entry of this.entries) entry.miniDonut.update([]);
+				this.dependencies.reportWarning(
+					`Header distribution unavailable: ${error instanceof Error ? error.message : String(error)}`,
+				);
+			})
+			.finally(() => {
+				this.headerLoading = false;
+				const current = this.dependencies.controller.getViewModel().queryGeneration;
+				if (!this.stopped && current !== this.headerGeneration)
+					this.refreshHeaderDistribution(current);
 			});
-			for (const entry of this.entries) entry.miniDonut.update(slices);
-		}).catch((error: unknown) => {
-			this.headerGeneration = generation;
-			this.headerDistribution = null;
-			for (const entry of this.entries) entry.miniDonut.update([]);
-			this.dependencies.reportWarning(`Header distribution unavailable: ${error instanceof Error ? error.message : String(error)}`);
-		}).finally(() => {
-			this.headerLoading = false;
-			const current = this.dependencies.controller.getViewModel().queryGeneration;
-			if (!this.stopped && current !== this.headerGeneration) this.refreshHeaderDistribution(current);
-		});
 	}
 
 	private remove(entry: HeaderEntry): void {

@@ -66,7 +66,9 @@ export interface EditorChangeSource {
 /** Source of trusted activity events for one window. */
 export interface ActivityEventSource {
 	/** Register trusted keyboard/composition/pointer/wheel/touch/focus listeners. */
-	attachActivityListeners(onActivity: (event: { isTrusted?: boolean; type?: string }) => void): () => void;
+	attachActivityListeners(
+		onActivity: (event: { isTrusted?: boolean; type?: string }) => void,
+	): () => void;
 	/** Subscribe to window blur. */
 	onBlur(cb: () => void): () => void;
 }
@@ -210,7 +212,8 @@ export class TrackingCoordinator {
 			!Number.isSafeInteger(commit.typedChars) ||
 			commit.typedChars <= 0 ||
 			(commit.source !== 'insert-text' && commit.source !== 'ime-commit')
-		) return;
+		)
+			return;
 		const target = this.currentTypedTarget(commit.windowId, commit.leafId);
 		if (!target) return;
 		this.appendTypedInput(commit, target, this.opts.clock.now());
@@ -368,7 +371,10 @@ export class TrackingCoordinator {
 		});
 	}
 
-	private currentTypedTarget(windowId: string, leafId: string): TrackingSnapshot['currentTarget'] {
+	private currentTypedTarget(
+		windowId: string,
+		leafId: string,
+	): TrackingSnapshot['currentTarget'] {
 		const activeLeaf = this.opts.workspace.getActiveLeaf();
 		const snapshot = this.lastSnapshot;
 		if (

@@ -319,7 +319,9 @@
 .activity-map-chart-popover .activity-map-popover-chart,
 .activity-map-chart-popover .activity-map-popover-path,
 .activity-map-chart-popover .activity-map-popover-legend {
-	transition: opacity 160ms ease, transform 160ms ease;
+	transition:
+		opacity 160ms ease,
+		transform 160ms ease;
 	animation: activity-map-query-result-in 160ms ease-out;
 }
 
@@ -679,7 +681,9 @@
 	overflow-y: var(--activity-map-poster-caption-overflow, hidden);
 	overflow-wrap: anywhere;
 	transform: translateX(-50%);
-	transition: border-bottom-color 120ms ease, border-bottom-style 120ms ease;
+	transition:
+		border-bottom-color 120ms ease,
+		border-bottom-style 120ms ease;
 }
 
 /* Chromium sizes a content field from its placeholder or current text. Keep the

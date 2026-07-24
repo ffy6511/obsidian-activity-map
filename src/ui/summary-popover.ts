@@ -7,7 +7,11 @@ import { distributionActivation } from './distribution-activation';
 import { renderBreadcrumbs } from './components/breadcrumbs';
 import { renderChartLegend, type ChartLegendHandle } from './components/chart-legend';
 import { renderDonutChart, type ChartItem } from './components/donut-chart';
-import { renderRangeControls, type RangeControlAction, type RangeControlsHandle } from './components/range-controls';
+import {
+	renderRangeControls,
+	type RangeControlAction,
+	type RangeControlsHandle,
+} from './components/range-controls';
 import { withLiveActivity } from './live-distribution';
 
 export function createDistributionGroupingAction(args: {
@@ -37,7 +41,9 @@ export function createTrackingAction(args: {
 		icon: args.paused ? 'play' : 'pause',
 		label: args.paused ? 'Resume activity tracking' : 'Pause activity tracking',
 		id: 'tracking-toggle',
-		onActivate: () => { args.onTracking(args.getCurrentPaused() ? 'resume' : 'pause'); },
+		onActivate: () => {
+			args.onTracking(args.getCurrentPaused() ? 'resume' : 'pause');
+		},
 	};
 }
 
@@ -64,7 +70,9 @@ export class SummaryPopover {
 	private pinned = false;
 	private expandedOther: string[] | null = null;
 	private lastRenderKey = '';
-	private distributionView: { update(distribution: import('../query/distribution-query').DistributionResult): boolean } | null = null;
+	private distributionView: {
+		update(distribution: import('../query/distribution-query').DistributionResult): boolean;
+	} | null = null;
 	private controlsView: RangeControlsHandle | null = null;
 	private posterModal: { close(): void } | null = null;
 	private openingPoster = false;
@@ -73,7 +81,11 @@ export class SummaryPopover {
 		private readonly trigger: HTMLElement,
 		private readonly controller: ActivityMapController,
 		private readonly openFile: (filePath: string) => Promise<void>,
-		private readonly previewFile?: (event: MouseEvent, targetEl: HTMLElement, filePath: string) => void,
+		private readonly previewFile?: (
+			event: MouseEvent,
+			targetEl: HTMLElement,
+			filePath: string,
+		) => void,
 		private readonly getNativePreview?: () => HTMLElement | null,
 		private readonly app?: App,
 	) {}
@@ -94,7 +106,11 @@ export class SummaryPopover {
 		popover.addEventListener('focusout', (event) => {
 			const next = event.relatedTarget;
 			const OwnerNode = doc.defaultView?.Node;
-			if (!OwnerNode || !(next instanceof OwnerNode) || (!popover.contains(next) && !this.trigger.contains(next))) {
+			if (
+				!OwnerNode ||
+				!(next instanceof OwnerNode) ||
+				(!popover.contains(next) && !this.trigger.contains(next))
+			) {
 				this.scheduleClose();
 			}
 		});
@@ -119,12 +135,16 @@ export class SummaryPopover {
 			}
 		};
 		doc.addEventListener('pointerdown', this.outsideHandler, true);
-		void this.controller.dispatch({ kind: 'set-query', query: this.controller.getHeaderDefaultQuery() });
+		void this.controller.dispatch({
+			kind: 'set-query',
+			query: this.controller.getHeaderDefaultQuery(),
+		});
 		this.unsubscribe = this.controller.subscribe((model) => this.renderIfChanged(model));
-		this.liveTimer = doc.defaultView?.setInterval(() => {
-			const model = this.controller.getViewModel();
-			if (isLiveTodayQuery(model)) this.updateLiveDistribution(model);
-		}, 1_000) ?? null;
+		this.liveTimer =
+			doc.defaultView?.setInterval(() => {
+				const model = this.controller.getViewModel();
+				if (isLiveTodayQuery(model)) this.updateLiveDistribution(model);
+			}, 1_000) ?? null;
 		this.position();
 	}
 
@@ -148,30 +168,38 @@ export class SummaryPopover {
 	scheduleClose(): void {
 		if (this.pinned) return;
 		this.cancelClose();
-		this.closeTimer = this.trigger.ownerDocument.defaultView?.setTimeout(() => {
-			this.closeTimer = null;
-			if (!this.shouldStayOpen()) {
-				this.close(false);
-			} else if (!this.pinned && this.nativePreview()) {
-				// Page Preview is mounted outside this Popover. Recheck after its own
-				// hover lifecycle finishes so the source row remains connected meanwhile.
-				this.scheduleClose();
-			}
-		}, 180) ?? null;
+		this.closeTimer =
+			this.trigger.ownerDocument.defaultView?.setTimeout(() => {
+				this.closeTimer = null;
+				if (!this.shouldStayOpen()) {
+					this.close(false);
+				} else if (!this.pinned && this.nativePreview()) {
+					// Page Preview is mounted outside this Popover. Recheck after its own
+					// hover lifecycle finishes so the source row remains connected meanwhile.
+					this.scheduleClose();
+				}
+			}, 180) ?? null;
 	}
 
 	cancelClose(): void {
-		if (this.closeTimer !== null) this.trigger.ownerDocument.defaultView?.clearTimeout(this.closeTimer);
+		if (this.closeTimer !== null)
+			this.trigger.ownerDocument.defaultView?.clearTimeout(this.closeTimer);
 		this.closeTimer = null;
 	}
 
 	close(restoreFocus: boolean): void {
 		this.cancelClose();
-		if (this.outsideHandler) this.trigger.ownerDocument.removeEventListener('pointerdown', this.outsideHandler, true);
+		if (this.outsideHandler)
+			this.trigger.ownerDocument.removeEventListener(
+				'pointerdown',
+				this.outsideHandler,
+				true,
+			);
 		this.outsideHandler = null;
 		this.unsubscribe?.();
 		this.unsubscribe = null;
-		if (this.liveTimer !== null) this.trigger.ownerDocument.defaultView?.clearInterval(this.liveTimer);
+		if (this.liveTimer !== null)
+			this.trigger.ownerDocument.defaultView?.clearInterval(this.liveTimer);
 		this.liveTimer = null;
 		this.controlsView?.destroy();
 		this.element?.remove();
@@ -196,11 +224,18 @@ export class SummaryPopover {
 		const margin = 8;
 		const width = popoverRect.width || 440;
 		const height = popoverRect.height || 620;
-		const left = Math.max(margin, Math.min(triggerRect.left, (viewport?.innerWidth ?? triggerRect.right + width) - width - margin));
+		const left = Math.max(
+			margin,
+			Math.min(
+				triggerRect.left,
+				(viewport?.innerWidth ?? triggerRect.right + width) - width - margin,
+			),
+		);
 		const below = triggerRect.bottom + 6;
-		const top = below + height <= (viewport?.innerHeight ?? below + height)
-			? below
-			: Math.max(margin, triggerRect.top - height - 6);
+		const top =
+			below + height <= (viewport?.innerHeight ?? below + height)
+				? below
+				: Math.max(margin, triggerRect.top - height - 6);
 		popover.style.left = `${String(left)}px`;
 		popover.style.top = `${String(top)}px`;
 	}
@@ -229,7 +264,8 @@ export class SummaryPopover {
 	private render(model: ActivityMapViewModel): void {
 		const popover = this.element;
 		if (!popover) return;
-		const focusedId = (popover.ownerDocument.activeElement as HTMLElement | null)?.dataset.activityMapId;
+		const focusedId = (popover.ownerDocument.activeElement as HTMLElement | null)?.dataset
+			.activityMapId;
 		this.controlsView?.destroy();
 		this.controlsView = null;
 		popover.empty();
@@ -237,17 +273,23 @@ export class SummaryPopover {
 		this.distributionView = null;
 		const distribution = model.distribution
 			? withLiveActivity(model.distribution, model.tracking, {
-				nowMs: Date.now(),
-				idleThresholdMs: model.settings.idleThresholdMs,
-			})
+					nowMs: Date.now(),
+					idleThresholdMs: model.settings.idleThresholdMs,
+				})
 			: null;
 
 		this.controlsView = renderRangeControls({
 			container: popover,
 			metric: model.query.metric,
 			range: model.query.range,
-			onMetric: (metric) => { this.expandedOther = null; void this.controller.dispatch({ kind: 'set-metric', metric }); },
-			onRange: (range) => { this.expandedOther = null; void this.controller.dispatch({ kind: 'set-range', range }); },
+			onMetric: (metric) => {
+				this.expandedOther = null;
+				void this.controller.dispatch({ kind: 'set-metric', metric });
+			},
+			onRange: (range) => {
+				this.expandedOther = null;
+				void this.controller.dispatch({ kind: 'set-range', range });
+			},
 			leadingActions: [
 				this.trackingAction(model),
 				this.groupingAction(model),
@@ -256,17 +298,32 @@ export class SummaryPopover {
 		});
 
 		if (model.loadState === 'loading') {
-			popover.createEl('p', { text: 'Loading activity…', cls: 'activity-map-state', attr: { 'aria-live': 'polite' } });
+			popover.createEl('p', {
+				text: 'Loading activity…',
+				cls: 'activity-map-state',
+				attr: { 'aria-live': 'polite' },
+			});
 		} else if (model.loadState === 'error') {
-			popover.createEl('p', { text: model.error ?? 'Activity query failed.', cls: 'activity-map-state mod-error', attr: { role: 'alert' } });
+			popover.createEl('p', {
+				text: model.error ?? 'Activity query failed.',
+				cls: 'activity-map-state mod-error',
+				attr: { role: 'alert' },
+			});
 		} else if (!distribution || distribution.detailItems.length === 0) {
-			popover.createEl('p', { text: 'No activity was recorded for this range.', cls: 'activity-map-state' });
+			popover.createEl('p', {
+				text: 'No activity was recorded for this range.',
+				cls: 'activity-map-state',
+			});
 		} else {
 			this.renderDistribution(popover, model, distribution);
 		}
-		if (!distribution || distribution.detailItems.length === 0) this.renderCurrentPath(popover, model);
+		if (!distribution || distribution.detailItems.length === 0)
+			this.renderCurrentPath(popover, model);
 		const css = popover.ownerDocument.defaultView?.CSS;
-		if (focusedId && css) popover.querySelector<HTMLElement>(`[data-activity-map-id="${css.escape(focusedId)}"]`)?.focus();
+		if (focusedId && css)
+			popover
+				.querySelector<HTMLElement>(`[data-activity-map-id="${css.escape(focusedId)}"]`)
+				?.focus();
 		this.position();
 	}
 
@@ -274,8 +331,12 @@ export class SummaryPopover {
 		return createDistributionGroupingAction({
 			groupBy: model.query.groupBy,
 			getCurrentGrouping: () => this.controller.getViewModel().query.groupBy,
-			onBeforeActivate: () => { this.expandedOther = null; },
-			onGrouping: (groupBy) => { void this.controller.dispatch({ kind: 'set-grouping', groupBy }); },
+			onBeforeActivate: () => {
+				this.expandedOther = null;
+			},
+			onGrouping: (groupBy) => {
+				void this.controller.dispatch({ kind: 'set-grouping', groupBy });
+			},
 		});
 	}
 
@@ -283,13 +344,18 @@ export class SummaryPopover {
 		return createTrackingAction({
 			paused: model.tracking?.state === 'paused',
 			getCurrentPaused: () => this.controller.getViewModel().tracking?.state === 'paused',
-			onTracking: (kind) => { void this.controller.dispatch({ kind }); },
+			onTracking: (kind) => {
+				void this.controller.dispatch({ kind });
+			},
 		});
 	}
 
 	private posterExportAction(model: ActivityMapViewModel): RangeControlAction {
 		return createPosterExportAction({
-			available: this.app !== undefined && model.loadState === 'ready' && model.distribution !== null,
+			available:
+				this.app !== undefined &&
+				model.loadState === 'ready' &&
+				model.distribution !== null,
 			onExport: () => this.openPosterExport(),
 		});
 	}
@@ -305,20 +371,32 @@ export class SummaryPopover {
 		this.openingPoster = true;
 		// The modal bundles a PNG data URL. Keep that binary-only module outside
 		// the Popover's unit-test import path while freezing this click's data now.
-		void import('./poster-export-modal').then(({ PosterExportModal }) => {
-			if (!this.app || this.posterModal) return;
-			const modal = new PosterExportModal(this.app, this.trigger, {
-				query: distribution.query,
-				distribution,
-			}, () => { this.posterModal = null; });
-			this.posterModal = modal;
-			modal.open();
-			this.close(false);
-		}).catch((error: unknown) => {
-			this.controller.reportWarning(`Poster export is unavailable: ${error instanceof Error ? error.message : String(error)}`);
-		}).finally(() => {
-			this.openingPoster = false;
-		});
+		void import('./poster-export-modal')
+			.then(({ PosterExportModal }) => {
+				if (!this.app || this.posterModal) return;
+				const modal = new PosterExportModal(
+					this.app,
+					this.trigger,
+					{
+						query: distribution.query,
+						distribution,
+					},
+					() => {
+						this.posterModal = null;
+					},
+				);
+				this.posterModal = modal;
+				modal.open();
+				this.close(false);
+			})
+			.catch((error: unknown) => {
+				this.controller.reportWarning(
+					`Poster export is unavailable: ${error instanceof Error ? error.message : String(error)}`,
+				);
+			})
+			.finally(() => {
+				this.openingPoster = false;
+			});
 	}
 
 	private renderDistribution(
@@ -340,14 +418,19 @@ export class SummaryPopover {
 		});
 		this.renderCurrentPath(chartColumn, model);
 		const items = this.expandedOther
-			? distribution.detailItems.filter((item) => item.memberIds.some((id) => this.expandedOther?.includes(id)))
+			? distribution.detailItems.filter((item) =>
+					item.memberIds.some((id) => this.expandedOther?.includes(id)),
+				)
 			: distribution.detailItems;
 		const legend = result.createDiv({ cls: 'activity-map-popover-legend' });
 		if (this.expandedOther) {
 			const heading = legend.createDiv({ cls: 'activity-map-detail-heading' });
 			heading.createSpan({ text: 'Other items' });
 			const close = heading.createEl('button', { text: 'Show all' });
-			close.addEventListener('click', () => { this.expandedOther = null; this.renderIfChanged(this.controller.getViewModel(), true); });
+			close.addEventListener('click', () => {
+				this.expandedOther = null;
+				this.renderIfChanged(this.controller.getViewModel(), true);
+			});
 		}
 		legendHandle = renderChartLegend({
 			container: legend,
@@ -355,14 +438,20 @@ export class SummaryPopover {
 			items,
 			onActivate: (item) => this.activateItem(item),
 			onHighlight: (item) => chartHandle.highlight(item?.id ?? null),
-			onFileHover: (event, targetEl, filePath) => this.previewFile?.(event, targetEl, filePath),
+			onFileHover: (event, targetEl, filePath) =>
+				this.previewFile?.(event, targetEl, filePath),
 		});
 		this.distributionView = {
 			update: (nextDistribution) => {
 				const nextItems = this.expandedOther
-					? nextDistribution.detailItems.filter((item) => item.memberIds.some((id) => this.expandedOther?.includes(id)))
+					? nextDistribution.detailItems.filter((item) =>
+							item.memberIds.some((id) => this.expandedOther?.includes(id)),
+						)
 					: nextDistribution.detailItems;
-				return chartHandle.update(nextDistribution) && legendHandle.update(nextDistribution, nextItems);
+				return (
+					chartHandle.update(nextDistribution) &&
+					legendHandle.update(nextDistribution, nextItems)
+				);
 			},
 		};
 	}
@@ -378,17 +467,27 @@ export class SummaryPopover {
 
 	private renderCurrentPath(popover: HTMLElement, model: ActivityMapViewModel): void {
 		const path = popover.createDiv({ cls: 'activity-map-popover-path' });
-		renderBreadcrumbs(path, model.query.path, model.query.view, (nextPath) => {
-			this.expandedOther = null;
-			void this.controller.dispatch({ kind: 'set-path', path: nextPath });
-		}, true);
+		renderBreadcrumbs(
+			path,
+			model.query.path,
+			model.query.view,
+			(nextPath) => {
+				this.expandedOther = null;
+				void this.controller.dispatch({ kind: 'set-path', path: nextPath });
+			},
+			true,
+		);
 	}
 
 	private activateItem(item: DistributionItem | ChartItem): void {
 		const activation = distributionActivation(item);
 		if (activation.kind === 'navigate') {
 			this.expandedOther = null;
-			void this.controller.dispatch({ kind: 'set-path', path: activation.path, view: activation.view });
+			void this.controller.dispatch({
+				kind: 'set-path',
+				path: activation.path,
+				view: activation.view,
+			});
 		} else if (activation.kind === 'expand-other') {
 			this.expandedOther = activation.memberIds;
 			this.renderIfChanged(this.controller.getViewModel(), true);
@@ -402,25 +501,28 @@ export class SummaryPopover {
 		if (!popover) return false;
 		const active = this.trigger.ownerDocument.activeElement;
 		const nativePreview = this.nativePreview();
-		return this.pinned ||
+		return (
+			this.pinned ||
 			this.trigger.matches(':hover') ||
 			popover.matches(':hover') ||
 			this.trigger.contains(active) ||
 			popover.contains(active) ||
-			nativePreview !== null;
+			nativePreview !== null
+		);
 	}
 
 	private nativePreview(): HTMLElement | null {
 		const preview = this.getNativePreview?.() ?? null;
 		return preview?.isConnected ? preview : null;
 	}
-
 }
 
 function isLiveTodayQuery(model: ActivityMapViewModel): boolean {
-	return model.loadState === 'ready' &&
+	return (
+		model.loadState === 'ready' &&
 		model.distribution !== null &&
 		model.tracking?.state === 'active' &&
 		model.query.metric === 'activeMs' &&
-		model.query.range.mode === 'day';
+		model.query.range.mode === 'day'
+	);
 }

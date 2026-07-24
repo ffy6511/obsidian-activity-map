@@ -58,18 +58,36 @@ export class RebuildService {
 				});
 			} catch {
 				outcomes.push({ ...target, outcome: 'failed' });
-				args.onProgress?.({ operation: 'rebuild', completed: index + 1, total: targets.length, ...target });
+				args.onProgress?.({
+					operation: 'rebuild',
+					completed: index + 1,
+					total: targets.length,
+					...target,
+				});
 				continue;
 			}
 			if (rebuilt.rawUnavailable) {
 				// Raw evidence gone: keep the prior verified summary, report unavailable.
 				outcomes.push({ ...target, outcome: 'unavailable' });
-				args.onProgress?.({ operation: 'rebuild', completed: index + 1, total: targets.length, ...target });
+				args.onProgress?.({
+					operation: 'rebuild',
+					completed: index + 1,
+					total: targets.length,
+					...target,
+				});
 				continue;
 			}
-			if (existing && sameMetrics(existing.metricsByFileId, rebuilt.summary.metricsByFileId)) {
+			if (
+				existing &&
+				sameMetrics(existing.metricsByFileId, rebuilt.summary.metricsByFileId)
+			) {
 				outcomes.push({ ...target, outcome: 'unchanged' });
-				args.onProgress?.({ operation: 'rebuild', completed: index + 1, total: targets.length, ...target });
+				args.onProgress?.({
+					operation: 'rebuild',
+					completed: index + 1,
+					total: targets.length,
+					...target,
+				});
 				continue;
 			}
 			try {
@@ -86,7 +104,12 @@ export class RebuildService {
 			} catch {
 				outcomes.push({ ...target, outcome: 'failed' });
 			}
-			args.onProgress?.({ operation: 'rebuild', completed: index + 1, total: targets.length, ...target });
+			args.onProgress?.({
+				operation: 'rebuild',
+				completed: index + 1,
+				total: targets.length,
+				...target,
+			});
 		}
 		return { outcomes };
 	}
@@ -94,8 +117,14 @@ export class RebuildService {
 
 /** Structural equality of two metrics maps (used to detect no-op rebuilds). */
 function sameMetrics(
-	a: Record<string, { activeMs: number; editingMs: number; openCount: number; typedChars: number }>,
-	b: Record<string, { activeMs: number; editingMs: number; openCount: number; typedChars: number }>,
+	a: Record<
+		string,
+		{ activeMs: number; editingMs: number; openCount: number; typedChars: number }
+	>,
+	b: Record<
+		string,
+		{ activeMs: number; editingMs: number; openCount: number; typedChars: number }
+	>,
 ): boolean {
 	const aKeys = Object.keys(a);
 	const bKeys = Object.keys(b);
@@ -108,7 +137,12 @@ function sameMetrics(
 		if (!av || !bv) {
 			return false;
 		}
-		if (av.activeMs !== bv.activeMs || av.editingMs !== bv.editingMs || av.openCount !== bv.openCount || av.typedChars !== bv.typedChars) {
+		if (
+			av.activeMs !== bv.activeMs ||
+			av.editingMs !== bv.editingMs ||
+			av.openCount !== bv.openCount ||
+			av.typedChars !== bv.typedChars
+		) {
 			return false;
 		}
 	}

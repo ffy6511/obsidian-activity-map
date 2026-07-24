@@ -14,7 +14,8 @@ export type AverageWindowDays = 7 | 30 | 90 | 'all';
 export type HeaderPopoverMetric = 'activeMs' | 'editingMs' | 'openCount' | 'typedChars';
 
 /** Persisted range choice; a day always resolves to the current local day when reopened. */
-export type HeaderPopoverRange = 'day' | 'average-7' | 'average-30' | 'average-90' | 'average-all' | 'all';
+export type HeaderPopoverRange =
+	'day' | 'average-7' | 'average-30' | 'average-90' | 'average-all' | 'all';
 
 /**
  * Runtime-validated plugin settings. Persisted JSON is normalized through
@@ -86,11 +87,23 @@ function isAverageWindow(value: unknown): value is AverageWindowDays {
 }
 
 function isHeaderPopoverMetric(value: unknown): value is HeaderPopoverMetric {
-	return value === 'activeMs' || value === 'editingMs' || value === 'openCount' || value === 'typedChars';
+	return (
+		value === 'activeMs' ||
+		value === 'editingMs' ||
+		value === 'openCount' ||
+		value === 'typedChars'
+	);
 }
 
 function isHeaderPopoverRange(value: unknown): value is HeaderPopoverRange {
-	return value === 'day' || value === 'average-7' || value === 'average-30' || value === 'average-90' || value === 'average-all' || value === 'all';
+	return (
+		value === 'day' ||
+		value === 'average-7' ||
+		value === 'average-30' ||
+		value === 'average-90' ||
+		value === 'average-all' ||
+		value === 'all'
+	);
 }
 
 /**
@@ -154,8 +167,6 @@ export function normalizeSettings(input: unknown): ActivityMapSettings {
 			? source.excludedPathGlobs.filter((g): g is string => typeof g === 'string')
 			: [],
 		retentionWatermark:
-			typeof source.retentionWatermark === 'string'
-				? source.retentionWatermark
-				: null,
+			typeof source.retentionWatermark === 'string' ? source.retentionWatermark : null,
 	};
 }

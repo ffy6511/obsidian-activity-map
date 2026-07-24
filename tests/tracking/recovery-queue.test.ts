@@ -59,7 +59,9 @@ describe('recovery queue automatic exclusion', () => {
 		// Auto-excluded candidates are not in pendingCandidates (resolved).
 		expect(q.pendingCandidates()).toHaveLength(0);
 		// But appear as undoable within the deadline.
-		expect(q.undoableExclusions({ nowMs: Date.parse('2026-01-01T00:02:05.000Z') })).toHaveLength(1);
+		expect(
+			q.undoableExclusions({ nowMs: Date.parse('2026-01-01T00:02:05.000Z') }),
+		).toHaveLength(1);
 	});
 
 	it('undo before the deadline returns the interval to pending', () => {
@@ -154,12 +156,20 @@ describe('recovery queue user decisions', () => {
 	it('resolving one candidate does not mutate another', () => {
 		const q = queue();
 		q.createOrdinaryCandidate({
-			candidateId: 'c1', fileId: 'f', pathAtEvent: 'a.md',
-			startedAt: 's', endedAt: 'e', gapMs: 10_000,
+			candidateId: 'c1',
+			fileId: 'f',
+			pathAtEvent: 'a.md',
+			startedAt: 's',
+			endedAt: 'e',
+			gapMs: 10_000,
 		});
 		q.createOrdinaryCandidate({
-			candidateId: 'c2', fileId: 'f', pathAtEvent: 'b.md',
-			startedAt: 's', endedAt: 'e', gapMs: 20_000,
+			candidateId: 'c2',
+			fileId: 'f',
+			pathAtEvent: 'b.md',
+			startedAt: 's',
+			endedAt: 'e',
+			gapMs: 20_000,
 		});
 		q.include({ candidateId: 'c1', decidedAt: 'now' });
 		expect(q.pendingCandidates()).toHaveLength(1);
@@ -169,8 +179,12 @@ describe('recovery queue user decisions', () => {
 	it('a second decision on the same candidate is idempotent at the queue level', () => {
 		const q = queue();
 		q.createOrdinaryCandidate({
-			candidateId: 'c1', fileId: 'f', pathAtEvent: 'a.md',
-			startedAt: 's', endedAt: 'e', gapMs: 10_000,
+			candidateId: 'c1',
+			fileId: 'f',
+			pathAtEvent: 'a.md',
+			startedAt: 's',
+			endedAt: 'e',
+			gapMs: 10_000,
 		});
 		const first = q.include({ candidateId: 'c1', decidedAt: 't1' });
 		const second = q.include({ candidateId: 'c1', decidedAt: 't2' });
@@ -183,8 +197,12 @@ describe('recovery queue restore', () => {
 	it('restore reconstructs pending and recent decisions', () => {
 		const q = queue();
 		q.createOrdinaryCandidate({
-			candidateId: 'c1', fileId: 'f', pathAtEvent: 'a.md',
-			startedAt: 's', endedAt: 'e', gapMs: 10_000,
+			candidateId: 'c1',
+			fileId: 'f',
+			pathAtEvent: 'a.md',
+			startedAt: 's',
+			endedAt: 'e',
+			gapMs: 10_000,
 		});
 		q.include({ candidateId: 'c1', decidedAt: 'now' });
 		const pending = q.allCandidates();

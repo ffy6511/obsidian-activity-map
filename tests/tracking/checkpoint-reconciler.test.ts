@@ -151,7 +151,11 @@ describe('checkpoint reconciliation', () => {
 		expect(h.sessions[0]?.activeMs).toBe(5_000);
 		expect(h.engine.pendingRecovery()).toHaveLength(0);
 		if (!checkpoint.currentTarget) throw new Error('fixture target missing');
-		h.engine.submit({ kind: 'focus-target', sample: sample(210_000), target: checkpoint.currentTarget });
+		h.engine.submit({
+			kind: 'focus-target',
+			sample: sample(210_000),
+			target: checkpoint.currentTarget,
+		});
 		expect(h.engine.pendingRecovery()[0]?.gapMs).toBe(205_000);
 	});
 

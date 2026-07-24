@@ -19,15 +19,29 @@ describe('CodeMirror typed-input finalizer', () => {
 
 	it('counts ordinary applied typed transactions immediately', () => {
 		const tracker = new ImeCommitTracker();
-		expect(tracker.observeTransaction({ typedChars: 2, isComposition: false }))
-			.toEqual({ typedChars: 2, source: 'insert-text' });
+		expect(tracker.observeTransaction({ typedChars: 2, isComposition: false })).toEqual({
+			typedChars: 2,
+			source: 'insert-text',
+		});
 	});
 
 	it('accepts only document-changing input.type transactions', () => {
-		expect(isAppliedTypedInput({ docChanged: true, isUserEvent: (event) => event === 'input.type' }))
-			.toBeTrue();
-		for (const kind of ['input.paste', 'input.drop', 'input.complete', 'history.undo', 'programmatic']) {
-			expect(isAppliedTypedInput({ docChanged: true, isUserEvent: (event) => event === kind })).toBeFalse();
+		expect(
+			isAppliedTypedInput({
+				docChanged: true,
+				isUserEvent: (event) => event === 'input.type',
+			}),
+		).toBeTrue();
+		for (const kind of [
+			'input.paste',
+			'input.drop',
+			'input.complete',
+			'history.undo',
+			'programmatic',
+		]) {
+			expect(
+				isAppliedTypedInput({ docChanged: true, isUserEvent: (event) => event === kind }),
+			).toBeFalse();
 		}
 		expect(isAppliedTypedInput({ docChanged: false, isUserEvent: () => true })).toBeFalse();
 	});
@@ -36,12 +50,16 @@ describe('CodeMirror typed-input finalizer', () => {
 		const tracker = new ImeCommitTracker();
 		tracker.beginComposition();
 		for (const chars of [5, 6, 8]) {
-			expect(tracker.observeTransaction({ typedChars: chars, isComposition: true })).toBeNull();
+			expect(
+				tracker.observeTransaction({ typedChars: chars, isComposition: true }),
+			).toBeNull();
 		}
 		const generation = tracker.endComposition({ fallbackChars: 2, isTrusted: true });
 		expect(generation).not.toBeNull();
-		expect(tracker.observeTransaction({ typedChars: 2, isComposition: true }))
-			.toEqual({ typedChars: 2, source: 'ime-commit' });
+		expect(tracker.observeTransaction({ typedChars: 2, isComposition: true })).toEqual({
+			typedChars: 2,
+			source: 'ime-commit',
+		});
 		expect(tracker.finalize(generation ?? -1)).toBeNull();
 	});
 
@@ -57,8 +75,10 @@ describe('CodeMirror typed-input finalizer', () => {
 		const tracker = new ImeCommitTracker();
 		tracker.beginComposition();
 		const generation = tracker.endComposition({ fallbackChars: 2, isTrusted: true });
-		expect(tracker.observeTransaction({ typedChars: 2, isComposition: false }))
-			.toEqual({ typedChars: 2, source: 'ime-commit' });
+		expect(tracker.observeTransaction({ typedChars: 2, isComposition: false })).toEqual({
+			typedChars: 2,
+			source: 'ime-commit',
+		});
 		expect(tracker.finalize(generation ?? -1)).toBeNull();
 	});
 
@@ -66,7 +86,9 @@ describe('CodeMirror typed-input finalizer', () => {
 		const tracker = new ImeCommitTracker();
 		tracker.beginComposition();
 		for (const chars of [1, 2, 2, 3]) {
-			expect(tracker.observeTransaction({ typedChars: chars, isComposition: true })).toBeNull();
+			expect(
+				tracker.observeTransaction({ typedChars: chars, isComposition: true }),
+			).toBeNull();
 		}
 		const generation = tracker.endComposition({ fallbackChars: 0, isTrusted: false });
 		expect(tracker.finalize(generation ?? -1)).toEqual({ typedChars: 3, source: 'ime-commit' });
@@ -79,8 +101,10 @@ describe('CodeMirror typed-input finalizer', () => {
 		expect(tracker.observeTransaction({ typedChars: 0, isComposition: true })).toBeNull();
 		const generation = tracker.endComposition({ fallbackChars: 0, isTrusted: false });
 		expect(tracker.finalize(generation ?? -1)).toBeNull();
-		expect(tracker.observeTransaction({ typedChars: 1, isComposition: false }))
-			.toEqual({ typedChars: 1, source: 'insert-text' });
+		expect(tracker.observeTransaction({ typedChars: 1, isComposition: false })).toEqual({
+			typedChars: 1,
+			source: 'insert-text',
+		});
 	});
 
 	it('treats a trusted empty end as cancellation even when it has a provisional update', () => {

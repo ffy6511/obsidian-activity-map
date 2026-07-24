@@ -37,9 +37,7 @@ export interface TrackingCheckpointPort {
  * the durable registry; the runtime never assigns IDs itself.
  */
 export interface FileIdentityPort {
-	resolve(file: {
-		path: string;
-	}): Promise<{ fileId: string; currentPath: string }>;
+	resolve(file: { path: string }): Promise<{ fileId: string; currentPath: string }>;
 }
 
 /** Observer notified after every externally visible transition. */
@@ -55,13 +53,18 @@ export class InMemoryTrackingSink implements TrackingRecordSink {
 	private readonly failures: ReadonlyArray<keyof TrackingRecordSink> | null;
 	private calls = 0;
 
-	constructor(opts: { failAppendSessionsAfter?: number; failAppendTypedInputsAfter?: number } = {}) {
+	constructor(
+		opts: { failAppendSessionsAfter?: number; failAppendTypedInputsAfter?: number } = {},
+	) {
 		this.failures =
-			opts.failAppendSessionsAfter !== undefined || opts.failAppendTypedInputsAfter !== undefined
+			opts.failAppendSessionsAfter !== undefined ||
+			opts.failAppendTypedInputsAfter !== undefined
 				? ([
-					...(opts.failAppendSessionsAfter !== undefined ? ['appendSessions'] : []),
-					...(opts.failAppendTypedInputsAfter !== undefined ? ['appendTypedInputs'] : []),
-				] as Array<keyof TrackingRecordSink>)
+						...(opts.failAppendSessionsAfter !== undefined ? ['appendSessions'] : []),
+						...(opts.failAppendTypedInputsAfter !== undefined
+							? ['appendTypedInputs']
+							: []),
+					] as Array<keyof TrackingRecordSink>)
 				: null;
 		this.failThreshold = opts.failAppendSessionsAfter ?? Infinity;
 		this.typedFailThreshold = opts.failAppendTypedInputsAfter ?? Infinity;
@@ -71,10 +74,7 @@ export class InMemoryTrackingSink implements TrackingRecordSink {
 	private typedCalls = 0;
 
 	async appendSessions(records: readonly ClosedSessionSegment[]): Promise<void> {
-		if (
-			this.failures?.includes('appendSessions') &&
-			this.calls >= this.failThreshold
-		) {
+		if (this.failures?.includes('appendSessions') && this.calls >= this.failThreshold) {
 			throw new Error('injected appendSessions failure');
 		}
 		this.calls += 1;
@@ -88,7 +88,10 @@ export class InMemoryTrackingSink implements TrackingRecordSink {
 	}
 
 	async appendTypedInputs(records: readonly TypedInputRecord[]): Promise<void> {
-		if (this.failures?.includes('appendTypedInputs') && this.typedCalls >= this.typedFailThreshold) {
+		if (
+			this.failures?.includes('appendTypedInputs') &&
+			this.typedCalls >= this.typedFailThreshold
+		) {
 			throw new Error('injected appendTypedInputs failure');
 		}
 		this.typedCalls += 1;

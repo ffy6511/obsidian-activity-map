@@ -276,7 +276,10 @@ describe('tracking coordinator lifecycle', () => {
 	it('stays idle until a trusted resume signal and creates the gap at resume', async () => {
 		const clock = createFakeClock();
 		const ws = fakeWorkspace(leaf('l1', 'notes/a.md'));
-		const { coordinator, sink, snapshots, mainSource } = makeCoordinator({ clock, workspace: ws.source });
+		const { coordinator, sink, snapshots, mainSource } = makeCoordinator({
+			clock,
+			workspace: ws.source,
+		});
 		coordinator.start();
 		await flush(clock, 5_000);
 		mainSource.fireActivity();
@@ -304,7 +307,10 @@ describe('tracking coordinator lifecycle', () => {
 		const clock = createFakeClock();
 		const now = clock.now().wallMs;
 		const ws = fakeWorkspace(leaf('l1', 'notes/a.md'));
-		const { coordinator, snapshots, mainSource } = makeCoordinator({ clock, workspace: ws.source });
+		const { coordinator, snapshots, mainSource } = makeCoordinator({
+			clock,
+			workspace: ws.source,
+		});
 		const checkpoint: RuntimeCheckpoint = {
 			schemaVersion: 1,
 			state: 'active',
@@ -332,7 +338,10 @@ describe('tracking coordinator lifecycle', () => {
 	it('checkpoints a recovery decision after its durable append boundary', async () => {
 		const clock = createFakeClock();
 		const ws = fakeWorkspace(leaf('l1', 'notes/a.md'));
-		const { coordinator, checkpoint, sink, mainSource } = makeCoordinator({ clock, workspace: ws.source });
+		const { coordinator, checkpoint, sink, mainSource } = makeCoordinator({
+			clock,
+			workspace: ws.source,
+		});
 		coordinator.start();
 		await flush(clock, 5_000);
 		mainSource.fireActivity();
@@ -343,7 +352,10 @@ describe('tracking coordinator lifecycle', () => {
 		await flush(clock);
 		const candidate = coordinator.getSnapshot()?.pendingRecovery[0];
 		expect(candidate).toBeDefined();
-		await coordinator.resolveRecovery({ candidateId: candidate?.candidateId ?? '', kind: 'include' });
+		await coordinator.resolveRecovery({
+			candidateId: candidate?.candidateId ?? '',
+			kind: 'include',
+		});
 		await coordinator.settle();
 		expect(sink.decisions).toHaveLength(1);
 		expect(checkpoint.snapshot?.pendingRecovery).toHaveLength(0);
@@ -380,17 +392,22 @@ describe('tracking coordinator lifecycle', () => {
 		await flush(clock);
 		expect(sink.typedInputs).toHaveLength(1);
 		expect(sink.typedInputs[0]).toMatchObject({
-			fileId: 'file-1', pathAtEvent: 'notes/a.md', typedChars: 2, source: 'insert-text',
-		});
-		expect(JSON.stringify(sink.typedInputs[0])).toBe(JSON.stringify({
-			recordId: sink.typedInputs[0]?.recordId,
 			fileId: 'file-1',
 			pathAtEvent: 'notes/a.md',
-			occurredAt: sink.typedInputs[0]?.occurredAt,
-			localDate: sink.typedInputs[0]?.localDate,
 			typedChars: 2,
 			source: 'insert-text',
-		}));
+		});
+		expect(JSON.stringify(sink.typedInputs[0])).toBe(
+			JSON.stringify({
+				recordId: sink.typedInputs[0]?.recordId,
+				fileId: 'file-1',
+				pathAtEvent: 'notes/a.md',
+				occurredAt: sink.typedInputs[0]?.occurredAt,
+				localDate: sink.typedInputs[0]?.localDate,
+				typedChars: 2,
+				source: 'insert-text',
+			}),
+		);
 		await coordinator.stop();
 	});
 
@@ -413,8 +430,11 @@ describe('tracking coordinator lifecycle', () => {
 		const { coordinator, sink } = makeCoordinator({ clock, workspace: ws.source });
 		coordinator.start();
 		await flush(clock, 5_000);
-		for (const typedChars of [0, -1, 1.5]) coordinator.onTypedInputCommit(typedCommit({ typedChars }));
-		coordinator.onTypedInputCommit(typedCommit({ source: 'invalid-source' as TypedInputCommit['source'] }));
+		for (const typedChars of [0, -1, 1.5])
+			coordinator.onTypedInputCommit(typedCommit({ typedChars }));
+		coordinator.onTypedInputCommit(
+			typedCommit({ source: 'invalid-source' as TypedInputCommit['source'] }),
+		);
 		await flush(clock);
 		expect(sink.typedInputs).toHaveLength(0);
 		await coordinator.stop();
@@ -453,7 +473,11 @@ describe('tracking coordinator lifecycle', () => {
 		coordinator.onTypedInputCommit(typedCommit({ typedChars: 1 }, 'next'));
 		await flush(clock);
 		expect(sink.typedInputs).toHaveLength(1);
-		expect(sink.typedInputs[0]).toMatchObject({ fileId: 'file-2', pathAtEvent: 'notes/b.md', typedChars: 1 });
+		expect(sink.typedInputs[0]).toMatchObject({
+			fileId: 'file-2',
+			pathAtEvent: 'notes/b.md',
+			typedChars: 1,
+		});
 		await coordinator.stop();
 	});
 

@@ -37,17 +37,22 @@ export class PosterExportModal extends Modal {
 		frame.setCssProps({
 			'--activity-map-poster-caption-width': `${String(WIDE_POSTER_CAPTION_PREVIEW.widthPercent)}%`,
 			'--activity-map-poster-caption-font-size': `${String(WIDE_POSTER_CAPTION_PREVIEW.fontSizePercent)}cqw`,
-			'--activity-map-poster-caption-line-height': String(WIDE_POSTER_CAPTION_PREVIEW.lineHeightMultiplier),
+			'--activity-map-poster-caption-line-height': String(
+				WIDE_POSTER_CAPTION_PREVIEW.lineHeightMultiplier,
+			),
 			'--activity-map-poster-caption-bottom': `${String(WIDE_POSTER_CAPTION_PREVIEW.editorBottomPercent)}%`,
 		});
-		const image = frame.createEl('img', { cls: 'activity-map-poster-preview-image', attr: { alt: 'Activity poster preview' } });
+		const image = frame.createEl('img', {
+			cls: 'activity-map-poster-preview-image',
+			attr: { alt: 'Activity poster preview' },
+		});
 		this.previewImage = image;
 		const caption = renderPosterCaptionEditor({
 			container: frame,
 			value: this.session.getCaption(),
 			onCaption: (value) => {
-			this.session.setCaption(value);
-			this.refreshPreview();
+				this.session.setCaption(value);
+				this.refreshPreview();
 			},
 		});
 		this.captionEditor = caption;
@@ -58,11 +63,20 @@ export class PosterExportModal extends Modal {
 		const exportButton = actions.createEl('button', {
 			text: 'Download',
 			cls: 'mod-cta activity-map-poster-export-button',
-			attr: { 'data-activity-map-id': 'poster-export', 'aria-label': `Download ${this.session.getExportLabel()}` },
+			attr: {
+				'data-activity-map-id': 'poster-export',
+				'aria-label': `Download ${this.session.getExportLabel()}`,
+			},
 		});
-		const close = actions.createEl('button', { text: 'Cancel', cls: 'activity-map-poster-close-button' });
+		const close = actions.createEl('button', {
+			text: 'Cancel',
+			cls: 'activity-map-poster-close-button',
+		});
 		close.addEventListener('click', () => this.close());
-		const status = footer.createSpan({ cls: 'activity-map-poster-status', attr: { 'aria-live': 'polite' } });
+		const status = footer.createSpan({
+			cls: 'activity-map-poster-status',
+			attr: { 'aria-live': 'polite' },
+		});
 		exportButton.addEventListener('click', () => {
 			void this.export(exportButton, close, status);
 		});
@@ -85,7 +99,11 @@ export class PosterExportModal extends Modal {
 		image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(poster.svg)}`;
 	}
 
-	private async export(exportButton: HTMLButtonElement, closeButton: HTMLButtonElement, status: HTMLElement): Promise<void> {
+	private async export(
+		exportButton: HTMLButtonElement,
+		closeButton: HTMLButtonElement,
+		status: HTMLElement,
+	): Promise<void> {
 		exportButton.disabled = true;
 		closeButton.disabled = true;
 		status.textContent = 'Preparing download…';

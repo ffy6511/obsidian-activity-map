@@ -40,7 +40,9 @@ export class HeaderMiniDonut implements HeaderMiniDonutPort {
 
 	update(slices: readonly HeaderDonutSlice[]): void {
 		const normalized = normalizeSlices(slices);
-		const signature = normalized.map((slice) => `${slice.id}:${slice.ratio}:${slice.color}`).join('|');
+		const signature = normalized
+			.map((slice) => `${slice.id}:${slice.ratio}:${slice.color}`)
+			.join('|');
 		if (signature === this.signature) return;
 		this.signature = signature;
 
@@ -65,7 +67,10 @@ export class HeaderMiniDonut implements HeaderMiniDonutPort {
 				this.nodes.set(slice.id, node);
 			}
 			node.setAttribute('stroke', slice.color);
-			node.setAttribute('stroke-dasharray', `${String(slice.ratio)} ${String(1 - slice.ratio)}`);
+			node.setAttribute(
+				'stroke-dasharray',
+				`${String(slice.ratio)} ${String(1 - slice.ratio)}`,
+			);
 			node.setAttribute('stroke-dashoffset', String(-cursor));
 			cursor += slice.ratio;
 			this.svg.appendChild(node);

@@ -42,7 +42,11 @@ function run(args: {
 describe('distribution query root view', () => {
 	it('groups the vault root into top-level directories and local files', () => {
 		// Day 2026-07-14: projects (a,b under proj1), root.md, deleted archive.
-		const result = run({ path: '', view: 'children', range: { mode: 'day', localDate: '2026-07-14' } });
+		const result = run({
+			path: '',
+			view: 'children',
+			range: { mode: 'day', localDate: '2026-07-14' },
+		});
 		const labels = result.detailItems.map((i) => i.label);
 		expect(labels).toContain('projects');
 		// The vault total includes everything recorded that day.
@@ -52,7 +56,11 @@ describe('distribution query root view', () => {
 	});
 
 	it('exposes deleted history as a deleted item with last-known path in members', () => {
-		const result = run({ path: '', view: 'children', range: { mode: 'day', localDate: '2026-07-14' } });
+		const result = run({
+			path: '',
+			view: 'children',
+			range: { mode: 'day', localDate: '2026-07-14' },
+		});
 		const deleted = result.detailItems.find((i) => i.kind === 'deleted');
 		expect(deleted).toBeDefined();
 		expect(deleted?.value).toBe(10_000);
@@ -72,9 +80,20 @@ describe('distribution query root view', () => {
 			},
 		};
 		const result = runDistributionQuery({
-			query: { metric: 'typedChars', range: { mode: 'day', localDate: '2026-07-14' }, path: '', view: 'children', groupBy: 'path' },
-			resolved: resolveRange({ range: { mode: 'day', localDate: '2026-07-14' }, recordedDates: ['2026-07-14'] }),
-			summaries: [{ summary: typed }], registryEntries: sampleRegistry(), maxChartItems: 8,
+			query: {
+				metric: 'typedChars',
+				range: { mode: 'day', localDate: '2026-07-14' },
+				path: '',
+				view: 'children',
+				groupBy: 'path',
+			},
+			resolved: resolveRange({
+				range: { mode: 'day', localDate: '2026-07-14' },
+				recordedDates: ['2026-07-14'],
+			}),
+			summaries: [{ summary: typed }],
+			registryEntries: sampleRegistry(),
+			maxChartItems: 8,
 		});
 		expect(result.scopeTotal).toBe(16);
 		expect(result.detailItems.find((item) => item.id === 'dir:projects')?.value).toBe(11);
@@ -97,7 +116,11 @@ describe('distribution query directory drill-down', () => {
 	});
 
 	it('includes deleted history only within the selected last-known directory', () => {
-		const archive = run({ path: 'archive', view: 'children', range: { mode: 'day', localDate: '2026-07-14' } });
+		const archive = run({
+			path: 'archive',
+			view: 'children',
+			range: { mode: 'day', localDate: '2026-07-14' },
+		});
 		const deleted = archive.detailItems.find((item) => item.kind === 'deleted');
 		expect(deleted?.memberIds).toContain('file-c');
 		expect(deleted?.value).toBe(10_000);
@@ -114,14 +137,26 @@ describe('distribution query directory drill-down', () => {
 				'unknown-file': { activeMs: 3_000, editingMs: 0, openCount: 1, typedChars: 0 },
 			},
 		};
-		const query = (path: string) => runDistributionQuery({
-			query: { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-14' }, path, view: 'children', groupBy: 'path' },
-			resolved: resolveRange({ range: { mode: 'day', localDate: '2026-07-14' }, recordedDates: sampleRecordedDates() }),
-			summaries: [{ summary: withUnknown }],
-			registryEntries: registry,
-			maxChartItems: 8,
-		});
-		expect(query('').detailItems.find((item) => item.kind === 'deleted')?.memberIds).toContain('unknown-file');
+		const query = (path: string) =>
+			runDistributionQuery({
+				query: {
+					metric: 'activeMs',
+					range: { mode: 'day', localDate: '2026-07-14' },
+					path,
+					view: 'children',
+					groupBy: 'path',
+				},
+				resolved: resolveRange({
+					range: { mode: 'day', localDate: '2026-07-14' },
+					recordedDates: sampleRecordedDates(),
+				}),
+				summaries: [{ summary: withUnknown }],
+				registryEntries: registry,
+				maxChartItems: 8,
+			});
+		expect(query('').detailItems.find((item) => item.kind === 'deleted')?.memberIds).toContain(
+			'unknown-file',
+		);
 		expect(query('projects').detailItems.some((item) => item.kind === 'deleted')).toBeFalse();
 	});
 
@@ -187,10 +222,9 @@ describe('distribution query file grouping', () => {
 			groupBy: 'file',
 			range: { mode: 'day', localDate: '2026-07-14' },
 		});
-		expect(fileResult.detailItems.filter((item) => item.kind === 'file').map((item) => item.id)).toEqual([
-			'file:file-a',
-			'file:file-b',
-		]);
+		expect(
+			fileResult.detailItems.filter((item) => item.kind === 'file').map((item) => item.id),
+		).toEqual(['file:file-a', 'file:file-b']);
 		expect(fileResult.scopeTotal).toBe(pathResult.scopeTotal);
 		expect(fileResult.vaultTotal).toBe(pathResult.vaultTotal);
 	});
@@ -203,30 +237,75 @@ describe('distribution query file grouping', () => {
 			range: { mode: 'all' },
 			maxChartItems: 2,
 		});
-		expect(result.detailItems.find((item) => item.kind === 'deleted')?.memberIds).toContain('file-c');
+		expect(result.detailItems.find((item) => item.kind === 'deleted')?.memberIds).toContain(
+			'file-c',
+		);
 		expect(result.chartItems.some((item) => item.kind === 'other')).toBeTrue();
 	});
 
 	it('orders equal-value files with identical basenames independently of input order', () => {
 		const registryEntries: Record<string, FileRegistryEntry> = {
-			a: { fileId: 'a', currentPath: 'x/u/same.md', lastKnownPath: 'x/u/same.md', state: 'present', firstSeenAt: '2026-07-01T00:00:00.000Z', lastSeenAt: '2026-07-22T00:00:00.000Z' },
-			b: { fileId: 'b', currentPath: 'x/v/same.md', lastKnownPath: 'x/v/same.md', state: 'present', firstSeenAt: '2026-07-01T00:00:00.000Z', lastSeenAt: '2026-07-22T00:00:00.000Z' },
+			a: {
+				fileId: 'a',
+				currentPath: 'x/u/same.md',
+				lastKnownPath: 'x/u/same.md',
+				state: 'present',
+				firstSeenAt: '2026-07-01T00:00:00.000Z',
+				lastSeenAt: '2026-07-22T00:00:00.000Z',
+			},
+			b: {
+				fileId: 'b',
+				currentPath: 'x/v/same.md',
+				lastKnownPath: 'x/v/same.md',
+				state: 'present',
+				firstSeenAt: '2026-07-01T00:00:00.000Z',
+				lastSeenAt: '2026-07-22T00:00:00.000Z',
+			},
 		};
 		const resultFor = (fileIds: readonly ('a' | 'b')[]) => {
 			const metricsByFileId: DailySummary['metricsByFileId'] = {};
-			for (const fileId of fileIds) metricsByFileId[fileId] = { activeMs: 10_000, editingMs: 0, openCount: 1, typedChars: 0 };
+			for (const fileId of fileIds)
+				metricsByFileId[fileId] = {
+					activeMs: 10_000,
+					editingMs: 0,
+					openCount: 1,
+					typedChars: 0,
+				};
 			const summary: DailySummary = {
-				schemaVersion: 1, deviceId: 'd', localDate: '2026-07-22', generatedAt: '2026-07-22T23:59:59.000Z',
-				sourceRecordCount: 2, sourceFingerprint: fileIds.join(','), metricsByFileId, warnings: [],
+				schemaVersion: 1,
+				deviceId: 'd',
+				localDate: '2026-07-22',
+				generatedAt: '2026-07-22T23:59:59.000Z',
+				sourceRecordCount: 2,
+				sourceFingerprint: fileIds.join(','),
+				metricsByFileId,
+				warnings: [],
 			};
 			return runDistributionQuery({
-				query: { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-22' }, path: 'x', view: 'children', groupBy: 'file' },
-				resolved: resolveRange({ range: { mode: 'day', localDate: '2026-07-22' }, recordedDates: ['2026-07-22'] }),
-				summaries: [{ summary }], registryEntries, maxChartItems: 8,
+				query: {
+					metric: 'activeMs',
+					range: { mode: 'day', localDate: '2026-07-22' },
+					path: 'x',
+					view: 'children',
+					groupBy: 'file',
+				},
+				resolved: resolveRange({
+					range: { mode: 'day', localDate: '2026-07-22' },
+					recordedDates: ['2026-07-22'],
+				}),
+				summaries: [{ summary }],
+				registryEntries,
+				maxChartItems: 8,
 			});
 		};
-		expect(resultFor(['a', 'b']).detailItems.map((item) => item.id)).toEqual(['file:a', 'file:b']);
-		expect(resultFor(['b', 'a']).detailItems.map((item) => item.id)).toEqual(['file:a', 'file:b']);
+		expect(resultFor(['a', 'b']).detailItems.map((item) => item.id)).toEqual([
+			'file:a',
+			'file:b',
+		]);
+		expect(resultFor(['b', 'a']).detailItems.map((item) => item.id)).toEqual([
+			'file:a',
+			'file:b',
+		]);
 	});
 });
 
@@ -302,7 +381,11 @@ describe('query cache', () => {
 			view: 'children' as const,
 			groupBy: 'path' as const,
 		};
-		const result = run({ path: '', view: 'children', range: { mode: 'day', localDate: '2026-07-14' } });
+		const result = run({
+			path: '',
+			view: 'children',
+			range: { mode: 'day', localDate: '2026-07-14' },
+		});
 		expect(cache.getQuery(query)).toBeNull();
 		cache.putQuery(query, result);
 		expect(cache.getQuery(query)).not.toBeNull();

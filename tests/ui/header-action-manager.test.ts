@@ -2,7 +2,11 @@ import { describe, expect, it } from '../helpers/test-harness';
 import type { FileView } from 'obsidian';
 
 import { HeaderActionManager } from '../../src/ui/header-action-manager';
-import { HeaderMiniDonut, headerDonutSlices, type HeaderDonutSlice } from '../../src/ui/header-mini-donut';
+import {
+	HeaderMiniDonut,
+	headerDonutSlices,
+	type HeaderDonutSlice,
+} from '../../src/ui/header-mini-donut';
 import type { DistributionResult } from '../../src/query/distribution-query';
 
 interface FakeAction {
@@ -27,13 +31,27 @@ function action(): FakeAction {
 		attrs: {},
 		classes: new Set(),
 		ownerDocument: { defaultView: { matchMedia: () => ({ matches: false }) } },
-		addClass(value) { this.classes.add(value); },
-		setAttr(name, value) { this.attrs[name] = value; },
+		addClass(value) {
+			this.classes.add(value);
+		},
+		setAttr(name, value) {
+			this.attrs[name] = value;
+		},
 		addEventListener() {},
-		removeClasses(values) { for (const value of values) this.classes.delete(value); },
-		removeClass(value) { this.classes.delete(value); },
-		toggleClass(value, enabled) { if (enabled) this.classes.add(value); else this.classes.delete(value); },
-		remove() { this.removed = true; this.isConnected = false; },
+		removeClasses(values) {
+			for (const value of values) this.classes.delete(value);
+		},
+		removeClass(value) {
+			this.classes.delete(value);
+		},
+		toggleClass(value, enabled) {
+			if (enabled) this.classes.add(value);
+			else this.classes.delete(value);
+		},
+		remove() {
+			this.removed = true;
+			this.isConnected = false;
+		},
 	};
 }
 
@@ -43,15 +61,36 @@ describe('header action manager', () => {
 			children: FakeSvgNode[] = [];
 			readonly attrs: Record<string, string> = {};
 			parent: FakeSvgNode | null = null;
-			setAttribute(name: string, value: string) { this.attrs[name] = value; }
-			appendChild(child: FakeSvgNode) { this.children = this.children.filter((node) => node !== child); child.parent = this; this.children.push(child); return child; }
-			remove() { if (this.parent) this.parent.children = this.parent.children.filter((node) => node !== this); }
-			createSvg() { const node = new FakeSvgNode(); node.parent = this; this.children.push(node); return node; }
+			setAttribute(name: string, value: string) {
+				this.attrs[name] = value;
+			}
+			appendChild(child: FakeSvgNode) {
+				this.children = this.children.filter((node) => node !== child);
+				child.parent = this;
+				this.children.push(child);
+				return child;
+			}
+			remove() {
+				if (this.parent)
+					this.parent.children = this.parent.children.filter((node) => node !== this);
+			}
+			createSvg() {
+				const node = new FakeSvgNode();
+				node.parent = this;
+				this.children.push(node);
+				return node;
+			}
 		}
 		const host = {
 			children: [] as FakeSvgNode[],
-			empty() { this.children = []; },
-			createSvg() { const node = new FakeSvgNode(); this.children.push(node); return node; },
+			empty() {
+				this.children = [];
+			},
+			createSvg() {
+				const node = new FakeSvgNode();
+				this.children.push(node);
+				return node;
+			},
 		};
 		const donut = new HeaderMiniDonut(host as never);
 		const svg = host.children[0];
@@ -76,21 +115,53 @@ describe('header action manager', () => {
 
 	it('adds an unclosed session to its actual vault-root slice', () => {
 		const distribution: DistributionResult = {
-			query: { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-21' }, path: '', view: 'children', groupBy: 'path' },
+			query: {
+				metric: 'activeMs',
+				range: { mode: 'day', localDate: '2026-07-21' },
+				path: '',
+				view: 'children',
+				groupBy: 'path',
+			},
 			maxChartItems: 8,
 			scopeTotal: 100,
 			vaultTotal: 100,
 			percentOfVault: 1,
 			denominatorDays: null,
 			coverage: null,
-			chartItems: [{ id: 'dir:inbox', kind: 'directory', label: 'inbox', path: 'inbox', value: 100, percentOfScope: 1, memberIds: ['f1'] }],
-			detailItems: [{ id: 'dir:inbox', kind: 'directory', label: 'inbox', path: 'inbox', value: 100, percentOfScope: 1, memberIds: ['f1'] }],
+			chartItems: [
+				{
+					id: 'dir:inbox',
+					kind: 'directory',
+					label: 'inbox',
+					path: 'inbox',
+					value: 100,
+					percentOfScope: 1,
+					memberIds: ['f1'],
+				},
+			],
+			detailItems: [
+				{
+					id: 'dir:inbox',
+					kind: 'directory',
+					label: 'inbox',
+					path: 'inbox',
+					value: 100,
+					percentOfScope: 1,
+					memberIds: ['f1'],
+				},
+			],
 			warnings: [],
 		};
 		const slices = headerDonutSlices(distribution, {
-			state: 'active', reason: 'active', currentTarget: { fileId: 'f2', path: 'projects/a.md', windowId: 'w', leafId: 'l' },
-			sessionStartedAt: '2026-07-21T00:00:00.000Z', lastTrustedActivityAt: '2026-07-21T00:00:10.000Z',
-			pendingRecovery: [], recentDecisions: [], degradedReason: null, sampledAt: '2026-07-21T00:00:10.000Z',
+			state: 'active',
+			reason: 'active',
+			currentTarget: { fileId: 'f2', path: 'projects/a.md', windowId: 'w', leafId: 'l' },
+			sessionStartedAt: '2026-07-21T00:00:00.000Z',
+			lastTrustedActivityAt: '2026-07-21T00:00:10.000Z',
+			pendingRecovery: [],
+			recentDecisions: [],
+			degradedReason: null,
+			sampledAt: '2026-07-21T00:00:10.000Z',
 		});
 		expect(slices.map((slice) => slice.id)).toEqual(['dir:projects', 'dir:inbox']);
 		expect(slices[1]?.ratio).toBeGreaterThan(0);
@@ -105,30 +176,90 @@ describe('header action manager', () => {
 		const updates: HeaderDonutSlice[][] = [];
 		const view = (path: string, target: FakeAction) => ({
 			file: { path },
-			addAction() { actionIndex += 1; return target; },
+			addAction() {
+				actionIndex += 1;
+				return target;
+			},
 		});
 		const viewA = view('a.md', first);
 		const viewB = view('b.md', second);
 		leaves = [{ view: viewA }, { view: viewB }];
 		const refs: object[] = [];
 		const workspace = {
-			on() { const ref = {}; refs.push(ref); return ref; },
+			on() {
+				const ref = {};
+				refs.push(ref);
+				return ref;
+			},
 			offref() {},
-			iterateAllLeaves(callback: (leaf: unknown) => void) { leaves.forEach(callback); },
+			iterateAllLeaves(callback: (leaf: unknown) => void) {
+				leaves.forEach(callback);
+			},
 		};
 		const controller = {
-			subscribe(listener: () => void) { listener(); return () => {}; },
-			getViewModel() { return { tracking: null, queryGeneration: 0, settings: { idleThresholdMs: 180_000 } }; },
+			subscribe(listener: () => void) {
+				listener();
+				return () => {};
+			},
+			getViewModel() {
+				return {
+					tracking: null,
+					queryGeneration: 0,
+					settings: { idleThresholdMs: 180_000 },
+				};
+			},
 			getHeaderDistribution: async () => ({
-				query: { metric: 'activeMs', range: { mode: 'day', localDate: '2026-07-21' }, path: '', view: 'children' },
-				scopeTotal: 100, vaultTotal: 100, percentOfVault: 1, denominatorDays: null, coverage: null, warnings: [],
+				query: {
+					metric: 'activeMs',
+					range: { mode: 'day', localDate: '2026-07-21' },
+					path: '',
+					view: 'children',
+				},
+				scopeTotal: 100,
+				vaultTotal: 100,
+				percentOfVault: 1,
+				denominatorDays: null,
+				coverage: null,
+				warnings: [],
 				chartItems: [
-					{ id: 'dir:a', kind: 'directory', label: 'a', path: 'a', value: 25, percentOfScope: 0.25, memberIds: ['a'] },
-					{ id: 'dir:b', kind: 'directory', label: 'b', path: 'b', value: 75, percentOfScope: 0.75, memberIds: ['b'] },
+					{
+						id: 'dir:a',
+						kind: 'directory',
+						label: 'a',
+						path: 'a',
+						value: 25,
+						percentOfScope: 0.25,
+						memberIds: ['a'],
+					},
+					{
+						id: 'dir:b',
+						kind: 'directory',
+						label: 'b',
+						path: 'b',
+						value: 75,
+						percentOfScope: 0.75,
+						memberIds: ['b'],
+					},
 				],
 				detailItems: [
-					{ id: 'dir:a', kind: 'directory', label: 'a', path: 'a', value: 25, percentOfScope: 0.25, memberIds: ['a'] },
-					{ id: 'dir:b', kind: 'directory', label: 'b', path: 'b', value: 75, percentOfScope: 0.75, memberIds: ['b'] },
+					{
+						id: 'dir:a',
+						kind: 'directory',
+						label: 'a',
+						path: 'a',
+						value: 25,
+						percentOfScope: 0.25,
+						memberIds: ['a'],
+					},
+					{
+						id: 'dir:b',
+						kind: 'directory',
+						label: 'b',
+						path: 'b',
+						value: 75,
+						percentOfScope: 0.75,
+						memberIds: ['b'],
+					},
 				],
 			}),
 		};
@@ -137,7 +268,10 @@ describe('header action manager', () => {
 			controller: controller as never,
 			openFile: async () => {},
 			isFileView: (candidate): candidate is FileView => Boolean(candidate),
-			createMiniDonut: () => { donutCount += 1; return { update: (slices) => updates.push([...slices]) }; },
+			createMiniDonut: () => {
+				donutCount += 1;
+				return { update: (slices) => updates.push([...slices]) };
+			},
 			reportWarning: () => {},
 		});
 		manager.start();
@@ -146,7 +280,9 @@ describe('header action manager', () => {
 		expect(actionIndex).toBe(2);
 		expect(donutCount).toBe(2);
 		expect(first.attrs['aria-label']).toBe('Activity Map: starting');
-		expect(updates.some((slices) => slices.length === 2 && slices[0]?.ratio === 0.25)).toBeTrue();
+		expect(
+			updates.some((slices) => slices.length === 2 && slices[0]?.ratio === 0.25),
+		).toBeTrue();
 		leaves = [{ view: viewB }];
 		manager.synchronize();
 		expect(first.removed).toBeTrue();
@@ -159,10 +295,23 @@ describe('header action manager', () => {
 		const warnings: string[] = [];
 		const manager = new HeaderActionManager({
 			workspace: {
-				on: () => ({}), offref: () => {},
-				iterateAllLeaves: () => { throw new Error('unsupported'); },
+				on: () => ({}),
+				offref: () => {},
+				iterateAllLeaves: () => {
+					throw new Error('unsupported');
+				},
 			} as never,
-			controller: { subscribe: () => () => {}, getViewModel: () => ({ tracking: null, queryGeneration: 0, settings: { idleThresholdMs: 180_000 } }), getHeaderDistribution: async () => { throw new Error('unavailable'); } } as never,
+			controller: {
+				subscribe: () => () => {},
+				getViewModel: () => ({
+					tracking: null,
+					queryGeneration: 0,
+					settings: { idleThresholdMs: 180_000 },
+				}),
+				getHeaderDistribution: async () => {
+					throw new Error('unavailable');
+				},
+			} as never,
 			openFile: async () => {},
 			isFileView: (candidate): candidate is FileView => Boolean(candidate),
 			createMiniDonut: () => ({ update: () => {} }),

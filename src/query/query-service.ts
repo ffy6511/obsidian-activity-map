@@ -4,7 +4,11 @@ import type { ShardInventory } from '../data/retention-service';
 import type { ActivityMapSettings } from '../domain/settings';
 import type { DataWarning } from '../data/daily-summary-repository';
 import { resolveRange } from './date-range';
-import { runDistributionQuery, type DistributionQuery, type DistributionResult } from './distribution-query';
+import {
+	runDistributionQuery,
+	type DistributionQuery,
+	type DistributionResult,
+} from './distribution-query';
 
 /** Loads one consistent registry/summary snapshot for a distribution query. */
 export class LocalQueryService {
@@ -38,7 +42,10 @@ export class LocalQueryService {
 		});
 	}
 
-	async getStatusSummary(filePath: string, today: string): Promise<{ fileActiveMs: number; vaultActiveMs: number }> {
+	async getStatusSummary(
+		filePath: string,
+		today: string,
+	): Promise<{ fileActiveMs: number; vaultActiveMs: number }> {
 		const available = await this.inventory.listDailySummaries();
 		const fileId = this.registry.snapshot().pathIndex[filePath] ?? null;
 		let fileActiveMs = 0;

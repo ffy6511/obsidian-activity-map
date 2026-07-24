@@ -27,14 +27,7 @@ export interface TrackingTarget {
  * recovery-decision eligibility, so it must be distinguishable, not implicit.
  */
 export type SessionClosureReason =
-	| 'file-switch'
-	| 'blur'
-	| 'idle'
-	| 'sleep'
-	| 'pause'
-	| 'shutdown'
-	| 'untrackable'
-	| 'degraded';
+	'file-switch' | 'blur' | 'idle' | 'sleep' | 'pause' | 'shutdown' | 'untrackable' | 'degraded';
 
 /**
  * An immutable, persisted-as-evidence session fragment.
@@ -112,12 +105,7 @@ export interface RecoveryDecision {
 
 /** Lifecycle states of the tracking runtime. See ARCHITECTURE.md Tracking Runtime. */
 export type RuntimeStateName =
-	| 'stopped'
-	| 'untrackable'
-	| 'active'
-	| 'idle'
-	| 'paused'
-	| 'degraded';
+	'stopped' | 'untrackable' | 'active' | 'idle' | 'paused' | 'degraded';
 
 /** Why a snapshot was published. UI surfaces map these to status text and icons. */
 export type SnapshotReason =

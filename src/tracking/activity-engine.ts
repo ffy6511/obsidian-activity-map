@@ -35,11 +35,7 @@ import {
 	type ClockSample,
 } from '../platform/clock';
 import { EditingBurst } from './editing-burst';
-import {
-	RecoveryQueue,
-	AUTO_EXCLUSION_UNDO_MS,
-	type PendingCandidate,
-} from './recovery-queue';
+import { RecoveryQueue, AUTO_EXCLUSION_UNDO_MS, type PendingCandidate } from './recovery-queue';
 
 const MAX_LIVE_CHECKPOINT_INTERVAL_MS = 30_000;
 
@@ -195,8 +191,7 @@ export class ActivityEngine {
 		if (this.open && sample.monotonicMs < this.open.lastTrustedActivitySample.monotonicMs) {
 			return;
 		}
-		const sameFile =
-			this.open !== null && this.open.target.fileId === target.fileId;
+		const sameFile = this.open !== null && this.open.target.fileId === target.fileId;
 		if (this.open === null) {
 			if (this.state === 'idle' && this.idleGap) {
 				// The timer only closes earned time. The first trusted resume target
@@ -393,9 +388,7 @@ export class ActivityEngine {
 		}
 		const activeMs = Math.max(
 			0,
-			Math.round(
-				monotonicDelta(session.startedSample, closeSample),
-			),
+			Math.round(monotonicDelta(session.startedSample, closeSample)),
 		);
 		// Close any open edit burst with a hard clip at the close instant.
 		session.editBurst.closeHard(closeSample.wallMs);
@@ -507,16 +500,14 @@ export class ActivityEngine {
 		// Idempotency: if the candidate is already resolved, return its prior
 		// decision without re-emitting, so duplicate UI clicks cannot duplicate
 		// the adjustment evidence.
-		const alreadyDecided = this.recovery.recentDecisionsView().find(
-			(d) => d.candidateId === args.candidateId && !d.automatic,
-		);
+		const alreadyDecided = this.recovery
+			.recentDecisionsView()
+			.find((d) => d.candidateId === args.candidateId && !d.automatic);
 		if (alreadyDecided) {
 			return alreadyDecided;
 		}
 		const decision =
-			args.kind === 'include'
-				? this.recovery.include(args)
-				: this.recovery.exclude(args);
+			args.kind === 'include' ? this.recovery.include(args) : this.recovery.exclude(args);
 		if (decision) {
 			this.callbacks.onEmit({ segments: [], decisions: [decision] });
 			if (args.sample) {
@@ -556,9 +547,7 @@ export class ActivityEngine {
 			reason: this.stateReason,
 			currentTarget: this.open?.target ?? null,
 			sessionStartedAt: this.open ? toIso(this.open.startedAtMs) : null,
-			lastTrustedActivityAt: this.open
-				? toIso(this.open.lastTrustedActivityMs)
-				: null,
+			lastTrustedActivityAt: this.open ? toIso(this.open.lastTrustedActivityMs) : null,
 			pendingRecovery: this.recovery.pendingCandidates(),
 			recentDecisions: this.recovery.recentDecisionsView(),
 			degradedReason: this.degradedReason,
@@ -601,20 +590,22 @@ export class ActivityEngine {
 			state: this.state,
 			currentTarget: this.open?.target ?? null,
 			sessionStartedAt: this.open ? toIso(this.open.startedAtMs) : null,
-			lastTrustedActivityAt: this.open
-				? toIso(this.open.lastTrustedActivityMs)
-				: null,
-			editBurst: this.open && editState?.lastEditAt !== null
-				? {
-						fileId: this.open.target.fileId,
-						lastEditAt: toIso(editState?.lastEditAt ?? this.open.lastTrustedActivityMs),
-						silenceMs: this.settings.editSilenceMs,
-						completedMs: editState?.completedMs ?? 0,
-						openSince: editState?.openSince === null || editState?.openSince === undefined
-							? null
-							: toIso(editState.openSince),
-					}
-				: null,
+			lastTrustedActivityAt: this.open ? toIso(this.open.lastTrustedActivityMs) : null,
+			editBurst:
+				this.open && editState?.lastEditAt !== null
+					? {
+							fileId: this.open.target.fileId,
+							lastEditAt: toIso(
+								editState?.lastEditAt ?? this.open.lastTrustedActivityMs,
+							),
+							silenceMs: this.settings.editSilenceMs,
+							completedMs: editState?.completedMs ?? 0,
+							openSince:
+								editState?.openSince === null || editState?.openSince === undefined
+									? null
+									: toIso(editState.openSince),
+						}
+					: null,
 			pendingRecovery: [...this.recovery.pendingCandidates()],
 			recentDecisions: [...this.recovery.recentDecisionsView()],
 			savedAt: toIso(sample.wallMs),
@@ -696,9 +687,6 @@ export class ActivityEngine {
 
 // --- helpers -----------------------------------------------------------
 
-function sameFileAfterBlur(
-	last: TrackingTarget | null,
-	current: TrackingTarget,
-): boolean {
+function sameFileAfterBlur(last: TrackingTarget | null, current: TrackingTarget): boolean {
 	return last !== null && last.fileId === current.fileId;
 }

@@ -1,9 +1,6 @@
 import { describe, expect, it } from '../helpers/test-harness';
 
-import type {
-	DistributionItem,
-	DistributionResult,
-} from '../../src/query/distribution-query';
+import type { DistributionItem, DistributionResult } from '../../src/query/distribution-query';
 import {
 	WIDE_POSTER_CAPTION_PREVIEW,
 	escapeXml,
@@ -12,23 +9,18 @@ import {
 	renderPoster,
 	safePosterFilename,
 } from '../../src/export/poster-exporter';
-import {
-	DEFAULT_POSTER_THEME,
-	type PosterTheme,
-} from '../../src/export/poster-theme';
+import { DEFAULT_POSTER_THEME, type PosterTheme } from '../../src/export/poster-theme';
 
 const wordmark = 'data:image/png;base64,d29yZG1hcms=';
 
 function wideCaptionMetrics(): { fontSize: number; lineHeight: number } {
 	const fontSize = Math.round(
-		WIDE_POSTER_CAPTION_PREVIEW.sourceWidth
-			* WIDE_POSTER_CAPTION_PREVIEW.fontSizePercent / 100,
+		(WIDE_POSTER_CAPTION_PREVIEW.sourceWidth * WIDE_POSTER_CAPTION_PREVIEW.fontSizePercent) /
+			100,
 	);
 	return {
 		fontSize,
-		lineHeight: Math.round(
-			fontSize * WIDE_POSTER_CAPTION_PREVIEW.lineHeightMultiplier,
-		),
+		lineHeight: Math.round(fontSize * WIDE_POSTER_CAPTION_PREVIEW.lineHeightMultiplier),
 	};
 }
 
@@ -81,30 +73,20 @@ describe('poster exporter', () => {
 				distribution: source,
 				wordmarkDataUrl: wordmark,
 			});
-			expect(
-				result.svg.startsWith(
-					'<svg xmlns="http://www.w3.org/2000/svg"',
-				),
-			).toBeTrue();
+			expect(result.svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBeTrue();
 			expect(result.svg.endsWith('</svg>')).toBeTrue();
 			expect(
 				result.svg.includes(
 					'<title id="activity-map-poster-title">Activity Map Activity poster</title>',
 				),
 			).toBeTrue();
-			expect(
-				result.svg.includes('<desc id="activity-map-poster-desc">'),
-			).toBeTrue();
+			expect(result.svg.includes('<desc id="activity-map-poster-desc">')).toBeTrue();
 			expect(result.svg.includes(`href="${wordmark}"`)).toBeTrue();
 			expect(result.svg.includes('Vault / work/projects')).toBeTrue();
 			expect(result.svg.includes('1m 30s')).toBeTrue();
 			expect(result.svg.includes('75%')).toBeTrue();
 			for (const item of result.chart.items)
-				expect(
-					result.svg.includes(
-						`fill="${inlineChartColor(item.color)}"`,
-					),
-				).toBeTrue();
+				expect(result.svg.includes(`fill="${inlineChartColor(item.color)}"`)).toBeTrue();
 			expect(result.svg.includes('var(--')).toBeFalse();
 			expect(result.filename.endsWith(`-${layout}.svg`)).toBeTrue();
 		}
@@ -160,10 +142,7 @@ describe('poster exporter', () => {
 			accent: '#8ba7ff',
 			fontFamily: 'Aptos, sans-serif',
 			chartColors: Object.fromEntries(
-				Object.keys(DEFAULT_POSTER_THEME.chartColors).map((token) => [
-					token,
-					'#4ee0b3',
-				]),
+				Object.keys(DEFAULT_POSTER_THEME.chartColors).map((token) => [token, '#4ee0b3']),
 			),
 		};
 		const result = renderPoster({
@@ -173,37 +152,26 @@ describe('poster exporter', () => {
 			wordmarkDataUrl: wordmark,
 			theme,
 		});
-		for (const color of [
-			theme.background,
-			theme.border,
-			theme.text,
-			theme.muted,
-			'#4ee0b3',
-		]) {
+		for (const color of [theme.background, theme.border, theme.text, theme.muted, '#4ee0b3']) {
 			expect(result.svg.includes(color)).toBeTrue();
 		}
 		expect(result.svg.includes(theme.accent)).toBeFalse();
-		expect(
-			result.svg.includes('font-family="Aptos, sans-serif"'),
-		).toBeTrue();
+		expect(result.svg.includes('font-family="Aptos, sans-serif"')).toBeTrue();
 		expect(result.svg.includes('#f8fafc')).toBeFalse();
 		expect(result.svg.includes('var(--')).toBeFalse();
 	});
 
 	it('matches the Popover visual structure: seven legend rows, no underlines, and a path below the donut', () => {
 		const source = distribution();
-		const items = Array.from(
-			{ length: 9 },
-			(_, index): DistributionItem => ({
-				id: `file:${String(index)}`,
-				kind: 'file',
-				label: `Activity ${String(index + 1)}`,
-				path: `activity-${String(index + 1)}.md`,
-				value: 9 - index,
-				percentOfScope: (9 - index) / 45,
-				memberIds: [`file-${String(index)}`],
-			}),
-		);
+		const items = Array.from({ length: 9 }, (_, index): DistributionItem => ({
+			id: `file:${String(index)}`,
+			kind: 'file',
+			label: `Activity ${String(index + 1)}`,
+			path: `activity-${String(index + 1)}.md`,
+			value: 9 - index,
+			percentOfScope: (9 - index) / 45,
+			memberIds: [`file-${String(index)}`],
+		}));
 		source.scopeTotal = 45;
 		source.vaultTotal = 45;
 		source.chartItems = items;
@@ -217,12 +185,8 @@ describe('poster exporter', () => {
 		expect(result.chart.items).toHaveLength(7);
 		expect(result.chart.items.at(-1)?.label).toBe('Other');
 		expect(result.svg.includes('<line ')).toBeFalse();
-		expect(
-			result.svg.includes('text-anchor="middle" fill="#64748b"'),
-		).toBeTrue();
-		expect(
-			result.svg.includes('font-weight="400">Other</text>'),
-		).toBeTrue();
+		expect(result.svg.includes('text-anchor="middle" fill="#64748b"')).toBeTrue();
+		expect(result.svg.includes('font-weight="400">Other</text>')).toBeTrue();
 	});
 
 	it('uses the Wide poster hierarchy: top wordmark and context, caption above the lower-right local-first footer', () => {
@@ -237,9 +201,7 @@ describe('poster exporter', () => {
 		const wordmarkPosition = result.svg.indexOf('<image href=');
 		const context = result.svg.indexOf('ACTIVITY</text>');
 		const caption = result.svg.indexOf('A quiet week of focused');
-		const footer = result.svg.indexOf(
-			'Activity Map · Local-first activity insight</text>',
-		);
+		const footer = result.svg.indexOf('Activity Map · Local-first activity insight</text>');
 		expect(wordmarkPosition).toBeGreaterThanOrEqual(0);
 		expect(context).toBeGreaterThan(wordmarkPosition);
 		expect(caption).toBeGreaterThan(context);
@@ -249,15 +211,11 @@ describe('poster exporter', () => {
 				`font-family="Georgia, 'Times New Roman', 'Songti SC', STSong, SimSun, serif" font-size="${String(captionMetrics.fontSize)}" font-weight="600"`,
 			),
 		).toBeTrue();
-		expect(
-			result.svg.includes('<text x="1392" y="742" text-anchor="end"'),
-		).toBeTrue();
+		expect(result.svg.includes('<text x="1392" y="742" text-anchor="end"')).toBeTrue();
 		expect(result.svg.includes('@font-face')).toBeFalse();
 		expect(result.svg.includes('data:font/')).toBeFalse();
 		expect(
-			result.svg.includes(
-				'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-			),
+			result.svg.includes('ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'),
 		).toBeTrue();
 	});
 
@@ -277,9 +235,7 @@ describe('poster exporter', () => {
 			)?.[1] ?? '';
 		expect(captionMarkup.match(/<tspan /gu) ?? []).toHaveLength(3);
 		expect(captionMarkup.endsWith('…</tspan>')).toBeTrue();
-		expect(
-			captionMarkup.includes(`dy="${String(captionMetrics.lineHeight)}"`),
-		).toBeTrue();
+		expect(captionMarkup.includes(`dy="${String(captionMetrics.lineHeight)}"`)).toBeTrue();
 	});
 
 	it('keeps the Wide legend top-aligned with the donut and reserves a lower caption band', () => {
@@ -290,9 +246,7 @@ describe('poster exporter', () => {
 			distribution: distribution(),
 			wordmarkDataUrl: wordmark,
 		});
-		expect(
-			result.svg.includes('<circle cx="590" cy="161" r="9"'),
-		).toBeTrue();
+		expect(result.svg.includes('<circle cx="590" cy="161" r="9"')).toBeTrue();
 		expect(result.svg.includes('x="330" y="526"')).toBeTrue();
 		expect(result.svg.includes('x="1110"')).toBeTrue();
 		expect(result.svg.includes('x="1240"')).toBeTrue();
@@ -317,11 +271,7 @@ describe('poster exporter', () => {
 			'activity-map-activeMs-2026-07-21-Quarterly-Review-wide.jpg',
 		);
 		expect(
-			safePosterFilename(
-				{ ...query, path: 'x'.repeat(200) },
-				'portrait',
-				'png',
-			).length,
+			safePosterFilename({ ...query, path: 'x'.repeat(200) }, 'portrait', 'png').length,
 		).toBeLessThanOrEqual(120);
 		expect(posterMimeType('svg')).toBe('image/svg+xml');
 		expect(posterMimeType('png')).toBe('image/png');

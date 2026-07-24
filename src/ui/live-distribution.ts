@@ -1,6 +1,11 @@
 import type { TrackingSnapshot } from '../domain/activity';
 import { localDateFor } from '../platform/clock';
-import { buildChartItems, compareDistributionItems, type DistributionItem, type DistributionResult } from '../query/distribution-query';
+import {
+	buildChartItems,
+	compareDistributionItems,
+	type DistributionItem,
+	type DistributionResult,
+} from '../query/distribution-query';
 import { liveTodayMs } from './live-today';
 
 export interface LiveDistributionOptions {
@@ -22,12 +27,14 @@ export function withLiveActivity(
 ): DistributionResult {
 	const target = snapshot?.currentTarget;
 	const range = distribution.query.range;
-	if (!target || distribution.query.metric !== 'activeMs' || range.mode !== 'day') return distribution;
+	if (!target || distribution.query.metric !== 'activeMs' || range.mode !== 'day')
+		return distribution;
 
 	const sampledAt = Date.parse(snapshot?.sampledAt ?? '');
-	const nowMs = Number.isFinite(options.nowMs) ? options.nowMs as number : sampledAt;
+	const nowMs = Number.isFinite(options.nowMs) ? (options.nowMs as number) : sampledAt;
 	const timeZone = options.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
-	if (!Number.isFinite(nowMs) || localDateFor(nowMs, timeZone) !== range.localDate) return distribution;
+	if (!Number.isFinite(nowMs) || localDateFor(nowMs, timeZone) !== range.localDate)
+		return distribution;
 
 	const liveMs = liveTodayMs(snapshot, {
 		nowMs,
@@ -86,8 +93,13 @@ function scopeOwner(
 	if (segments.length === 1) {
 		return { id: `file:${fileId}`, kind: 'file', label: relative, path: filePath };
 	}
-	const directoryPath = scopePath ? `${scopePath}/${segments[0]}` : segments[0] as string;
-	return { id: `dir:${directoryPath}`, kind: 'directory', label: segments[0] as string, path: directoryPath };
+	const directoryPath = scopePath ? `${scopePath}/${segments[0]}` : (segments[0] as string);
+	return {
+		id: `dir:${directoryPath}`,
+		kind: 'directory',
+		label: segments[0] as string,
+		path: directoryPath,
+	};
 }
 
 function addToOwner(

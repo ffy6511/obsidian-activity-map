@@ -68,9 +68,8 @@ export function reconcileCheckpoint(args: {
 	}
 	engine.restore(checkpoint, nowSample);
 	if (checkpoint.state === 'active' && checkpoint.currentTarget) {
-		const currentTarget = args.currentTarget === undefined
-			? checkpoint.currentTarget
-			: args.currentTarget;
+		const currentTarget =
+			args.currentTarget === undefined ? checkpoint.currentTarget : args.currentTarget;
 		const lastTrustedAt = Date.parse(checkpoint.lastTrustedActivityAt ?? '');
 		const gapMs = nowSample.wallMs - lastTrustedAt;
 		const sameForegroundTarget = currentTarget?.fileId === checkpoint.currentTarget.fileId;
@@ -82,7 +81,11 @@ export function reconcileCheckpoint(args: {
 			// trusted sample and never awards the offline/startup gap.
 			engine.submit({ kind: 'idle-confirm', sample: nowSample });
 			if (!sameForegroundTarget) {
-				engine.submit({ kind: 'untrackable', sample: nowSample, reason: 'checkpoint-target-mismatch' });
+				engine.submit({
+					kind: 'untrackable',
+					sample: nowSample,
+					reason: 'checkpoint-target-mismatch',
+				});
 			}
 		} else {
 			// A recent, still-foreground checkpoint may continue through the same

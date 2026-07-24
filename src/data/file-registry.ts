@@ -41,7 +41,10 @@ export interface ResolvedIdentity {
 
 /** Generate a file id using the standard crypto UUID API. */
 function newFileId(): string {
-	const win = typeof window !== 'undefined' ? (window as { crypto?: { randomUUID?: () => string } }) : undefined;
+	const win =
+		typeof window !== 'undefined'
+			? (window as { crypto?: { randomUUID?: () => string } })
+			: undefined;
 	if (win?.crypto && typeof win.crypto.randomUUID === 'function') {
 		return win.crypto.randomUUID();
 	}
@@ -256,5 +259,9 @@ function validateRegistryFile(raw: unknown): FileRegistryFile {
 		throw new Error('registry-pathIndex-invalid');
 	}
 	// Shallow-validate each entry; trust the rest after boundary validation.
-	return { schemaVersion: 1, entries: entries as Record<string, FileRegistryEntry>, pathIndex: pathIndex as Record<string, string> };
+	return {
+		schemaVersion: 1,
+		entries: entries as Record<string, FileRegistryEntry>,
+		pathIndex: pathIndex as Record<string, string>,
+	};
 }

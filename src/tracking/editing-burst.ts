@@ -135,11 +135,7 @@ export class EditingBurst {
 	}
 
 	/** Restore from a checkpoint snapshot of intervals. */
-	restore(
-		completedMs: number,
-		openSince: number | null,
-		openLastEdit: number | null,
-	): void {
+	restore(completedMs: number, openSince: number | null, openLastEdit: number | null): void {
 		this.intervals.length = 0;
 		this.carriedMs = Number.isFinite(completedMs) ? Math.max(0, completedMs) : 0;
 		this.openSince = openSince;
