@@ -91,6 +91,10 @@ Activity Map is local-first. It does not itself upload, sync, sell, or send your
 - It does not read or store note content, selected text, or the actual strings you type.
 - Poster downloads are created and saved locally.
 
+### Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development, validation, and pull-request guidance.
+
 ### License
 
 [MIT](LICENSE)
@@ -154,6 +158,10 @@ Activity Map 坚持本地优先：插件自身不会上传、同步、出售或�
 - 插件只在本地保存构建统计所需的活动元数据。
 - 不读取或保存笔记正文、选中文本，也不保存你实际输入的字符串。
 - 海报只在本机生成和保存。
+
+### 参与贡献
+
+开发、验证和 Pull Request 说明见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ### 许可证
 
