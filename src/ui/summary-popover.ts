@@ -136,6 +136,8 @@ export class SummaryPopover {
 		 * tests inject a no-op so the Popover renders without Obsidian at runtime.
 		 */
 		private readonly renderIcon: (container: HTMLElement, icon: string) => void = setIcon,
+		/** Notifies the header manager when a preserved fixed Popover is dismissed. */
+		private readonly onClose?: (popover: SummaryPopover) => void,
 	) {}
 
 	open(): void {
@@ -198,12 +200,26 @@ export class SummaryPopover {
 
 	togglePinned(): void {
 		if (!this.element) this.open();
-		this.pinned = !this.pinned;
-		this.trigger.toggleClass('is-pinned', this.pinned);
-		this.trigger.setAttr('aria-pressed', String(this.pinned));
-		this.element?.toggleClass('is-pinned', this.pinned);
+		this.setPinned(!this.pinned);
+	}
+
+	/** Keeps this Popover visible even if opening a file replaces its header action. */
+	pin(): void {
+		if (!this.element) return;
+		this.setPinned(true);
+	}
+
+	isPinned(): boolean {
+		return this.pinned;
+	}
+
+	private setPinned(pinned: boolean): void {
+		this.pinned = pinned;
+		this.trigger.toggleClass('is-pinned', pinned);
+		this.trigger.setAttr('aria-pressed', String(pinned));
+		this.element?.toggleClass('is-pinned', pinned);
 		if (
-			this.pinned ||
+			pinned ||
 			this.trigger.matches(':hover') ||
 			this.trigger.ownerDocument.activeElement === this.trigger
 		) {
@@ -270,11 +286,19 @@ export class SummaryPopover {
 		this.trigger.setAttr('aria-expanded', 'false');
 		this.trigger.setAttr('aria-pressed', 'false');
 		if (restoreFocus && this.trigger.isConnected) this.trigger.focus();
+		this.onClose?.(this);
 	}
 
 	private position(): void {
 		const popover = this.element;
 		if (!popover) return;
+		// Opening a file can replace the owning header action before a queued
+		// render runs. An ordinary Popover has no safe anchor then and must close.
+		// A fixed Popover intentionally retains its last resolved viewport position.
+		if (!this.trigger.isConnected) {
+			if (!this.pinned) this.close(false);
+			return;
+		}
 		const viewport = this.trigger.ownerDocument.defaultView;
 		const triggerRect = this.trigger.getBoundingClientRect();
 		const popoverRect = popover.getBoundingClientRect();
@@ -722,7 +746,12 @@ export class SummaryPopover {
 		source: ChartActivationSource,
 		groupBy: DistributionGrouping,
 	): void {
-		if (groupBy === 'file' && item.kind === 'file' && source !== 'touch') {
+		if (
+			groupBy === 'file' &&
+			item.kind === 'file' &&
+			source !== 'touch' &&
+			!shouldOpenInNewTab(event)
+		) {
 			if (this.armedFileItemId === item.id) {
 				this.clearArmedFile();
 				this.activateItem(item, event);
@@ -768,6 +797,9 @@ export class SummaryPopover {
 			this.expandedOther = activation.memberIds;
 			this.renderIfChanged(this.controller.getViewModel(), true);
 		} else if (activation.kind === 'open-file') {
+			// File activation can replace the active leaf. Pin before the request so
+			// the user can keep exploring this result after the workspace changes.
+			this.pin();
 			void this.openFile({
 				filePath: activation.path,
 				openInNewTab: shouldOpenInNewTab(event),

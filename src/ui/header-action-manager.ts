@@ -29,6 +29,10 @@ export interface HeaderActionDependencies {
 export class HeaderActionManager {
 	private readonly entriesByView = new WeakMap<FileView, HeaderEntry>();
 	private readonly entries = new Set<HeaderEntry>();
+	// A pinned Popover may outlive the header action that originally anchored it
+	// after a file-open replaces that leaf. Retain it solely for plugin teardown;
+	// SummaryPopover removes itself from this set on Escape or outside dismissal.
+	private readonly detachedPinnedPopovers = new Set<SummaryPopover>();
 	private readonly eventRefs: EventRef[] = [];
 	private unsubscribe: (() => void) | null = null;
 	private stopped = false;
@@ -59,8 +63,10 @@ export class HeaderActionManager {
 		this.eventRefs.length = 0;
 		this.unsubscribe?.();
 		this.unsubscribe = null;
-		for (const entry of this.entries) this.remove(entry);
+		for (const entry of this.entries) this.remove(entry, false);
 		this.entries.clear();
+		for (const popover of this.detachedPinnedPopovers) popover.close(false);
+		this.detachedPinnedPopovers.clear();
 	}
 
 	/** Public for deterministic lifecycle tests and layout-ready composition. */
@@ -125,6 +131,8 @@ export class HeaderActionManager {
 			// Popover and creating a fresh one with the new path, so the captured
 			// path stays correct for this Popover's lifetime.
 			() => filePath,
+			undefined,
+			(closedPopover) => this.detachedPinnedPopovers.delete(closedPopover),
 		);
 		const ownerWindow = action.ownerDocument.defaultView;
 		const supportsHover =
@@ -203,8 +211,10 @@ export class HeaderActionManager {
 			});
 	}
 
-	private remove(entry: HeaderEntry): void {
-		entry.popover.close(false);
+	private remove(entry: HeaderEntry, preservePinned = true): void {
+		if (preservePinned && entry.popover.isPinned())
+			this.detachedPinnedPopovers.add(entry.popover);
+		else entry.popover.close(false);
 		entry.action.remove();
 	}
 }

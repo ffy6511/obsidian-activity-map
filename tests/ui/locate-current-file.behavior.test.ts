@@ -162,7 +162,7 @@ describe('locate-file pure helpers', () => {
 });
 
 describe('locate current file behavior', () => {
-	it('arms a file-mode slice until leave, then opens only on its next activation', async () => {
+	it('arms ordinary file-mode clicks while a first Cmd-click opens and pins immediately', async () => {
 		const { document } = installDomEnvironment();
 		const item = chartFileItem('a', 'notes/a.md', 10);
 		const { controller } = makeController({ rootItems: [item], groupBy: 'file' });
@@ -227,18 +227,15 @@ describe('locate current file behavior', () => {
 
 		actions.activateChartItem(
 			item,
-			{ key: 'Enter', metaKey: false, ctrlKey: false } as KeyboardEvent,
-			'keyboard',
-			'file',
-		);
-		expect(slice?.classList.contains('is-file-activation-armed')).toBeTrue();
-		actions.activateChartItem(
-			item,
-			{ key: 'Enter', metaKey: false, ctrlKey: true } as KeyboardEvent,
-			'keyboard',
+			{ metaKey: true, ctrlKey: false } as MouseEvent,
+			'mouse',
 			'file',
 		);
 		expect(opens).toEqual([{ filePath: 'notes/a.md', openInNewTab: true }]);
+		expect(slice?.classList.contains('is-file-activation-armed')).toBeFalse();
+		expect(
+			document.querySelector('.activity-map-chart-popover')?.classList.contains('is-pinned'),
+		).toBe(true);
 
 		actions.activateChartItem(
 			item,
@@ -335,6 +332,98 @@ describe('locate current file behavior', () => {
 		]);
 
 		popover.close(false);
+	});
+
+	it('pins before opening a file and retains its last position after the header action detaches', async () => {
+		const { document } = installDomEnvironment();
+		const item = chartFileItem('a', 'notes/a.md', 10);
+		const { controller } = makeController({ rootItems: [item] });
+		const trigger = document.createElement('button');
+		document.body.appendChild(trigger);
+		const window = document.defaultView as unknown as {
+			setTimeout: () => number;
+			clearTimeout: () => void;
+			setInterval: () => number;
+			clearInterval: () => void;
+		};
+		window.setTimeout = () => 0;
+		window.clearTimeout = () => {};
+		window.setInterval = () => 0;
+		window.clearInterval = () => {};
+		const opens: Array<{ filePath: string; openInNewTab: boolean }> = [];
+		const popover = new SummaryPopover(
+			trigger,
+			controller,
+			async (request) => {
+				opens.push(request);
+			},
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			() => {},
+		);
+		popover.open();
+		await Promise.resolve();
+		await Promise.resolve();
+
+		const actions = popover as unknown as {
+			activateItem(item: DistributionItem, event: MouseEvent): void;
+		};
+		actions.activateItem(item, { metaKey: true, ctrlKey: false } as MouseEvent);
+
+		expect(opens).toEqual([{ filePath: 'notes/a.md', openInNewTab: true }]);
+		const fixedPopover = document.querySelector<HTMLElement>('.activity-map-chart-popover');
+		expect(fixedPopover?.classList.contains('is-pinned')).toBeTrue();
+		expect(trigger.getAttribute('aria-pressed')).toBe('true');
+		if (!fixedPopover) throw new Error('pinned Popover missing');
+		const previousLeft = fixedPopover.style.left;
+		const previousTop = fixedPopover.style.top;
+		trigger.remove();
+
+		(popover as unknown as { position(): void }).position();
+
+		expect(document.querySelector('.activity-map-chart-popover')).toBe(fixedPopover);
+		expect(fixedPopover.style.left).toBe(previousLeft);
+		expect(fixedPopover.style.top).toBe(previousTop);
+		popover.close(false);
+	});
+
+	it('closes instead of positioning from a detached header action', async () => {
+		const { document } = installDomEnvironment();
+		const item = chartFileItem('a', 'notes/a.md', 10);
+		const { controller } = makeController({ rootItems: [item] });
+		const trigger = document.createElement('button');
+		document.body.appendChild(trigger);
+		const window = document.defaultView as unknown as {
+			setTimeout: () => number;
+			clearTimeout: () => void;
+			setInterval: () => number;
+			clearInterval: () => void;
+		};
+		window.setTimeout = () => 0;
+		window.clearTimeout = () => {};
+		window.setInterval = () => 0;
+		window.clearInterval = () => {};
+		const popover = new SummaryPopover(
+			trigger,
+			controller,
+			async () => {},
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			() => {},
+		);
+		popover.open();
+		await Promise.resolve();
+		await Promise.resolve();
+		trigger.remove();
+
+		(popover as unknown as { position(): void }).position();
+
+		expect(document.querySelector('.activity-map-chart-popover')).toBeNull();
+		expect(trigger.getAttribute('aria-expanded')).toBe('false');
 	});
 
 	it('highlights the slice and legend row for the file in file grouping', async () => {

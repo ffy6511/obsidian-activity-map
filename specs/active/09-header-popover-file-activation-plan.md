@@ -33,11 +33,12 @@ In file grouping, a chart slice currently opens its file on the first activation
 
 Goals:
 
-- In desktop file grouping, the first trusted primary click on a real file slice scrolls its matching legend row into view and arms only that slice; it does not open the file.
+- In desktop file grouping, the first trusted unmodified primary click on a real file slice scrolls its matching legend row into view and arms only that slice; it does not open the file.
 - While that armed slice remains under the pointer, give it a jump affordance and show one muted Popover-bottom instruction: `Click the slice again to open the file · cmd/ctrl-click opens a new tab.`
 - Clear the armed state on that slice's `pointerleave`, keyboard `blur`, an activation of another item, a structural re-render, or Popover close. Do not use a timer.
-- The second trusted primary click on the armed slice opens the file in the current leaf; with `Cmd` on macOS or `Ctrl` on Windows/Linux it opens an explicit new tab.
+- The second trusted primary click on the armed slice opens the file in the current leaf. A trusted `Cmd` on macOS or `Ctrl` on Windows/Linux opens an explicit new tab immediately, including as the first file-slice activation.
 - File-grouping legend file rows remain one-click activation targets and always use the jump cursor; their `Cmd/Ctrl` activation opens an explicit new tab.
+- Every file opening pins the Popover so the result remains available for further file activation. If the old header action is replaced, the fixed Popover retains its last resolved viewport position until its normal dismissal.
 - Preserve the existing one-activation behavior for path grouping, directories, `Local files`, `Other`, deleted items, Page Preview, and non-mouse/touch activation.
 - Provide keyboard-equivalent arming and opening behavior with a stateful accessible name and the same bottom instruction.
 
@@ -64,6 +65,8 @@ The two-step behavior is a local presentation state keyed by one chart item ID. 
 Trusted primary mouse activation on a chart item
   -> groupBy !== file or item.kind !== file
        -> existing activation contract unchanged
+  -> Cmd/Ctrl is held
+       -> clear any arm, pin the Popover, and open an explicit new tab
   -> armedFileItemId !== item.id
        -> cancel any other arm
        -> scroll the matching legend row into view
@@ -71,14 +74,13 @@ Trusted primary mouse activation on a chart item
        -> chart slice gains alias cursor and armed accessible name
        -> Popover footer announces the second-click and Cmd/Ctrl instruction
   -> armedFileItemId === item.id
-       -> open file (Cmd/Ctrl ? explicit 'tab' : reusable leaf)
-       -> clear arm before the open request
+       -> clear arm, pin the Popover, and open in the current leaf
 
 Armed file slice pointerleave / keyboard blur
   -> clear armedFileItemId, cursor class, accessible name, and footer text
 
 Trusted file-row activation in file grouping
-  -> open file immediately (Cmd/Ctrl ? explicit 'tab' : reusable leaf)
+  -> pin the Popover, then open immediately (Cmd/Ctrl ? explicit 'tab' : reusable leaf)
 
 Trusted touch activation
   -> retain the current single-activation behavior; no hover-only arm state
@@ -124,6 +126,7 @@ interface ArmedFileSlice {
 
 - Synthetic clicks, secondary/middle buttons, and untrusted keyboard events cannot arm or open a file.
 - An arm is cleared before any file-opening request, so a rejected `openLinkText()` promise cannot leave a stale jump cursor or instruction behind.
+- Every file-opening request clears any arm and enters the existing pinned state before it changes the active leaf. A queued position pass closes an unpinned Popover with a detached anchor; a pinned Popover keeps its last resolved viewport coordinates instead of calculating a top-left fallback position.
 - A live in-place distribution update may retain the arm only if the same chart item DOM identity survives. Any structural update, grouping/path/range/metric change, `Other` expansion, or Popover close clears it.
 - The existing locate timer and locate icon remain unchanged. This feature never calls the timer-based locate method; it reuses only the safe legend-row scroll/highlight primitives needed to reveal the clicked file.
 - The native Page Preview `defaultMod` hover source remains preview-only. A modifier click reaches the trusted activation path once and must not open a preview leaf or duplicate the open request.
@@ -164,7 +167,7 @@ Preserve the current shared activation semantics while allowing an eligible file
 
 ### Goal
 
-Make the file-mode chart's first click a clear locate action and reserve direct opening for a visibly armed second click or direct legend-row activation.
+Make an unmodified file-mode chart click a clear locate action while reserving direct opening for a visibly armed second click, a modifier click, or direct legend-row activation.
 
 ### Tasks
 
@@ -190,10 +193,11 @@ Make the file-mode chart's first click a clear locate action and reserve direct 
 
 ### Acceptance Criteria
 
-- [x] In file grouping, the first desktop primary click on a present file slice scrolls its existing legend row into view and displays the armed cursor and bottom instruction without opening a leaf.
+- [x] In file grouping, the first desktop primary click without `Cmd/Ctrl` on a present file slice scrolls its existing legend row into view and displays the armed cursor and bottom instruction without opening a leaf.
 - [x] The armed state ends immediately when the pointer leaves that slice or its keyboard focus blurs; it has no timer and cannot survive a structural Popover change or close.
-- [x] The same armed slice opens once on its second trusted primary click; `Cmd/Ctrl` on that second click opens an explicit new tab.
+- [x] The same armed slice opens once on its second trusted primary click; `Cmd/Ctrl` opens an explicit new tab whether used on the first or second file-slice activation.
 - [x] File-grouping legend file rows show the jump cursor and open directly on one click, including the explicit new-tab modifier path.
+- [x] A file opening automatically pins the Popover and retains it at its last resolved viewport position if the old header action disappears.
 - [x] Path grouping and all non-file item interactions retain their current one-activation behavior.
 - [x] The temporary footer is muted, layout-stable, accessible, and absent from the visible Popover outside the armed state.
 - [x] Keyboard and touch paths remain usable without depending on a cursor.
@@ -233,15 +237,15 @@ Record the approved interaction accurately without promoting fixture-only checks
 | A hidden timer makes a second click unpredictable | Expire only on `pointerleave`/`blur` and lifecycle replacement; do not schedule a timer. |
 | A chart click changes directory behavior | Gate arming on `groupBy === 'file' && item.kind === 'file'`; all other items use the existing activation contract. |
 | A boolean new-leaf request opens a split | Use the public explicit pane type `'tab'`, not boolean `true`. |
-| The first click shifts the Popover and loses the pointer target | Keep a stable one-line footer slot whose text is empty while unarmed. |
+| A file open replaces its header anchor and repositions the Popover | Pin before opening; preserve the last resolved fixed position while a pinned Popover's anchor is detached. |
 | Cmd/Ctrl hover preview and click double-open a file | Preserve Page Preview as preview-only and assert exactly one workspace open call per trusted click. |
 | Touch cannot use hover or a cursor | Retain current single-tap activation and test it separately. |
 | Accessibility relies only on cursor shape or color | Update the armed slice's accessible instruction, announce the footer, and retain keyboard activation. |
 
 ## Post-Critic Acceptance
 
-- [ ] In real Obsidian desktop file grouping, the owner clicks a present file slice once and confirms its row scrolls into view, the jump cursor and muted instruction appear, and no file opens; moving away clears both affordances.
-- [ ] The owner clicks the armed slice again with and without `Cmd` (or `Ctrl` on Windows/Linux) and confirms one current-leaf open versus one explicit new tab; a file-row click has the same normal/modifier opening behavior without the first-click arm.
+- [ ] In real Obsidian desktop file grouping, the owner clicks a present file slice once without a modifier and confirms its row scrolls into view, the jump cursor and muted instruction appear, and no file opens; moving away clears both affordances.
+- [ ] The owner confirms a first `Cmd/Ctrl` slice click immediately opens one new tab, while a second unmodified click opens in the current leaf; each file open pins the Popover without moving it to the top-left. A file-row click has the same normal/modifier opening behavior without the first-click arm.
 - [ ] In real Obsidian path grouping, the owner verifies directory drill-down, `Local files`, `Other`, file opening, Page Preview, and keyboard/touch interactions retain their existing behavior.
 
 ## Evaluation Record
@@ -256,6 +260,15 @@ Record the approved interaction accurately without promoting fixture-only checks
 - The initial strict validation exposed the historical Spec 06 record mismatch. After the owner authorized its final Round 3 pass, Spec 06 was archived and the workspace validation passed with no errors or warnings.
 
 All implementation phases and technical gates are complete. The Spec is in `review`; the three real-Obsidian checks remain intentionally open in Post-Critic Acceptance and belong to the owner.
+
+### Owner-Directed UAT Corrections — 2026-07-24
+
+- Real-Obsidian Cmd-click exposed a stale Popover that could be re-positioned to the window's top-left after the new tab replaced its header anchor.
+- The initial close-before-open containment was superseded by the owner's follow-up: a first `Cmd/Ctrl` slice activation bypasses arming and opens a new tab, while every file opening enters pinned mode for continued exploration.
+- A detached pinned Popover now retains its last resolved viewport position; only an unpinned detached Popover closes. `HeaderActionManager` retains detached pinned Popovers for normal dismissal and plugin teardown.
+- `npm test -- --run tests/ui/locate-current-file.behavior.test.ts` passed: 319 tests, 0 failures (the repository runner executes the complete suite).
+- `npm run check`, `npm run lint`, `npm run build`, strict Specs validation (0 errors, 0 warnings), and `git diff --check` passed.
+- The correction is uncommitted pending owner re-test. It does not satisfy or alter the open Post-Critic real-Obsidian acceptance checks.
 
 ### Round 1
 

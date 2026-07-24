@@ -291,6 +291,41 @@ describe('header action manager', () => {
 		expect(second.removed).toBeTrue();
 	});
 
+	it('retains a pinned Popover after its header action is replaced and closes it on teardown', () => {
+		const trigger = action();
+		let closeCount = 0;
+		const manager = new HeaderActionManager({
+			workspace: {} as never,
+			controller: {} as never,
+			openFile: async () => {},
+			isFileView: (candidate): candidate is FileView => Boolean(candidate),
+			reportWarning: () => {},
+		});
+		type PinnedEntry = {
+			action: FakeAction;
+			popover: {
+				isPinned(): boolean;
+				close(restoreFocus: boolean): void;
+			};
+		};
+		const entry: PinnedEntry = {
+			action: trigger,
+			popover: {
+				isPinned: () => true,
+				close: () => {
+					closeCount += 1;
+				},
+			},
+		};
+
+		(manager as unknown as { remove(entry: PinnedEntry): void }).remove(entry);
+
+		expect(trigger.removed).toBeTrue();
+		expect(closeCount).toBe(0);
+		manager.stop();
+		expect(closeCount).toBe(1);
+	});
+
 	it('records header integration failure without throwing', () => {
 		const warnings: string[] = [];
 		const manager = new HeaderActionManager({
