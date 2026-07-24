@@ -19,6 +19,7 @@ import {
 	isFileVisibleUnderScope,
 	parentDirectory,
 } from './locate-file';
+import { scrollIntoViewAnimated } from './scroll-into-view-animated';
 
 export function createDistributionGroupingAction(args: {
 	groupBy: DistributionGrouping;
@@ -96,6 +97,9 @@ export class SummaryPopover {
 	// pending locate must complete only on a newer-generation ready model that
 	// the locate's own set-path produced, not on an unrelated interleaving refresh.
 	private pendingLocateGeneration = -1;
+	// In-flight centering scroll animation. Cancelled on re-activation, re-render,
+	// and close so a stale animation cannot move a rebuilt (or removed) list.
+	private cancelLocateScroll: (() => void) | null = null;
 
 	constructor(
 		private readonly trigger: HTMLElement,
@@ -244,6 +248,8 @@ export class SummaryPopover {
 		this.legendHandle = null;
 		this.pendingLocatePath = null;
 		this.pendingLocateGeneration = -1;
+		this.cancelLocateScroll?.();
+		this.cancelLocateScroll = null;
 		this.trigger.removeClass('is-pinned');
 		this.trigger.setAttr('aria-expanded', 'false');
 		this.trigger.setAttr('aria-pressed', 'false');
@@ -336,6 +342,8 @@ export class SummaryPopover {
 		// locate-triggered scope change re-applies the highlight after the new
 		// result settles (see locateCurrentFile / renderIfChanged).
 		this.cancelLocate();
+		this.cancelLocateScroll?.();
+		this.cancelLocateScroll = null;
 		this.chartHandle = null;
 		this.legendHandle = null;
 		popover.empty();
@@ -512,11 +520,18 @@ export class SummaryPopover {
 			? `[data-activity-map-id="legend-${css.escape(itemId)}"]`
 			: `[data-activity-map-id="legend-${itemId}"]`;
 		const row = popover.querySelector<HTMLElement>(selector);
-		// scrollIntoView is absent in some DOM implementations (e.g. linkedom in
-		// tests). Capability-gate rather than throw.
-		if (row && typeof row.scrollIntoView === 'function') {
-			row.scrollIntoView({ block: 'nearest' });
-		}
+		if (!row) return;
+		// The scroll container is the legend column; fall back to the offsetParent
+		// when the expected class is absent (defensive against layout changes).
+		const container =
+			row.closest<HTMLElement>('.activity-map-popover-legend') ??
+			(row.offsetParent as HTMLElement | null);
+		if (!container) return;
+		// Fixed-duration ease-in-out centering; no-op when the row is already
+		// visible or the host lacks layout/raf capability. Captured so the next
+		// activation/re-render/close can stop a stale scroll.
+		this.cancelLocateScroll?.();
+		this.cancelLocateScroll = scrollIntoViewAnimated(row, container);
 	}
 
 	private clearLocateHighlight(): void {

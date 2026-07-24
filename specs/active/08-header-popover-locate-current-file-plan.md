@@ -185,6 +185,13 @@ Expose the locate behavior as one icon button immediately left of the metric but
 - `npm test -- --run` — passed, 302 tests and 0 failures, including locate button order, disabled state, and icon rendering.
 - `npm run build` — passed; the production bundle contains the locate action wired left of the metric dropdown. Real Obsidian interaction remains the explicit Post-Critic Acceptance gate.
 
+### Post-Critic Refinement: Animated Centering Scroll
+
+After the Critic loop closed, the locate scroll was upgraded from the native instant `scrollIntoView({block:'nearest'})` to a fixed-duration (`~400ms`) ease-in-out centering animation in `src/ui/scroll-into-view-animated.ts`. Rationale: the native smooth-scroll duration and easing are engine-defined and inconsistent across desktop/mobile, so the plugin owns the motion for a predictable feel. The animation centers the target row, clamps at the top/bottom boundary (no empty scroll space), and is a no-op when the row is already visible or the host lacks layout/raf capability. The in-flight animation is cancelled on re-activation, re-render, and close, alongside the highlight timer.
+
+- Added: `src/ui/scroll-into-view-animated.ts`, `tests/ui/scroll-into-view-animated.test.ts` (easing, centering, boundary clamp, already-visible no-op, cancel, headless no-op).
+- `npm run check`, `npm run lint`, `npm test -- --run` (312 passed, 0 failed), `npm run build` all pass. This refinement is a non-blocking UI polish and does not reopen the Critic loop.
+
 ## Phase 2: Synchronize Documentation and Collect Integration Evidence
 
 ### Goal
