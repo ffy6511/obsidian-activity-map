@@ -1,7 +1,7 @@
 {
 	"id": "activity-map",
 	"name": "Activity Map",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"minAppVersion": "1.7.2",
 	"description": "Track trustworthy file activity and explore it by folder.",
 	"author": "ffy6511",
