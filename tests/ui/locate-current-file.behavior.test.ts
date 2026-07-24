@@ -162,7 +162,7 @@ describe('locate-file pure helpers', () => {
 });
 
 describe('locate current file behavior', () => {
-	it('arms ordinary file-mode clicks while a first Cmd-click opens and pins immediately', async () => {
+	it('arms ordinary chart-file clicks while a first Cmd-click opens and pins immediately', async () => {
 		const { document } = installDomEnvironment();
 		const item = chartFileItem('a', 'notes/a.md', 10);
 		const { controller } = makeController({ rootItems: [item], groupBy: 'file' });
@@ -200,16 +200,14 @@ describe('locate current file behavior', () => {
 				item: ChartItem,
 				event: MouseEvent | KeyboardEvent,
 				source: 'mouse' | 'touch' | 'keyboard',
-				groupBy: 'file' | 'path',
 			): void;
 			activateItem(item: DistributionItem, event: MouseEvent): void;
+			renderIfChanged(
+				model: ReturnType<typeof controller.getViewModel>,
+				force: boolean,
+			): void;
 		};
-		actions.activateChartItem(
-			item,
-			{ metaKey: false, ctrlKey: false } as MouseEvent,
-			'mouse',
-			'file',
-		);
+		actions.activateChartItem(item, { metaKey: false, ctrlKey: false } as MouseEvent, 'mouse');
 
 		const slice = document.querySelector<SVGPathElement>('[data-activity-map-id="a"]');
 		const row = document.querySelector<HTMLButtonElement>('[data-activity-map-id="legend-a"]');
@@ -224,41 +222,33 @@ describe('locate current file behavior', () => {
 		slice?.dispatchEvent(new Event('pointerleave'));
 		expect(slice?.classList.contains('is-file-activation-armed')).toBeFalse();
 		expect(hint?.textContent).toBe('');
+		slice?.dispatchEvent(new Event('pointerenter'));
+		expect(slice?.classList.contains('is-highlighted')).toBeTrue();
 
-		actions.activateChartItem(
-			item,
-			{ metaKey: true, ctrlKey: false } as MouseEvent,
-			'mouse',
-			'file',
-		);
+		actions.activateChartItem(item, { metaKey: true, ctrlKey: false } as MouseEvent, 'mouse');
 		expect(opens).toEqual([{ filePath: 'notes/a.md', openInNewTab: true }]);
 		expect(slice?.classList.contains('is-file-activation-armed')).toBeFalse();
 		expect(
 			document.querySelector('.activity-map-chart-popover')?.classList.contains('is-pinned'),
 		).toBe(true);
-
-		actions.activateChartItem(
-			item,
-			{ metaKey: false, ctrlKey: false } as MouseEvent,
-			'mouse',
-			'file',
+		slice?.dispatchEvent(new Event('pointerleave'));
+		expect(slice?.classList.contains('is-highlighted')).toBeTrue();
+		expect(row?.classList.contains('is-highlighted')).toBeTrue();
+		actions.renderIfChanged(controller.getViewModel(), true);
+		const refreshedSlice = document.querySelector<SVGPathElement>('[data-activity-map-id="a"]');
+		const refreshedRow = document.querySelector<HTMLButtonElement>(
+			'[data-activity-map-id="legend-a"]',
 		);
+		expect(refreshedSlice?.classList.contains('is-highlighted')).toBeTrue();
+		expect(refreshedRow?.classList.contains('is-highlighted')).toBeTrue();
+
+		actions.activateChartItem(item, { metaKey: false, ctrlKey: false } as MouseEvent, 'mouse');
 		slice?.dispatchEvent(new Event('blur'));
 		expect(slice?.classList.contains('is-file-activation-armed')).toBeFalse();
 		expect(hint?.textContent).toBe('');
 
-		actions.activateChartItem(
-			item,
-			{ metaKey: false, ctrlKey: false } as MouseEvent,
-			'mouse',
-			'file',
-		);
-		actions.activateChartItem(
-			item,
-			{ metaKey: true, ctrlKey: false } as MouseEvent,
-			'mouse',
-			'file',
-		);
+		actions.activateChartItem(item, { metaKey: false, ctrlKey: false } as MouseEvent, 'mouse');
+		actions.activateChartItem(item, { metaKey: true, ctrlKey: false } as MouseEvent, 'mouse');
 		// Legend rows are direct file links; they never inherit a chart arm.
 		actions.activateItem(item, { metaKey: false, ctrlKey: false } as MouseEvent);
 		actions.activateItem(item, { metaKey: false, ctrlKey: true } as MouseEvent);
@@ -273,7 +263,7 @@ describe('locate current file behavior', () => {
 		popover.close(false);
 	});
 
-	it('retains direct file activation for path grouping and touch', async () => {
+	it('arms path-mode file slices while keeping direct legend and touch activation', async () => {
 		const { document } = installDomEnvironment();
 		const item = chartFileItem('a', 'notes/a.md', 10);
 		const { controller } = makeController({ rootItems: [item] });
@@ -310,23 +300,36 @@ describe('locate current file behavior', () => {
 				item: ChartItem,
 				event: MouseEvent,
 				source: 'mouse' | 'touch' | 'keyboard',
-				groupBy: 'file' | 'path',
 			): void;
+			activateItem(item: DistributionItem, event: MouseEvent): void;
 		};
 
-		actions.activateChartItem(
-			item,
-			{ metaKey: false, ctrlKey: false } as MouseEvent,
-			'mouse',
-			'path',
+		actions.activateChartItem(item, { metaKey: false, ctrlKey: false } as MouseEvent, 'mouse');
+		const slice = document.querySelector<SVGPathElement>('[data-activity-map-id="a"]');
+		const row = document.querySelector<HTMLButtonElement>('[data-activity-map-id="legend-a"]');
+		const hint = document.querySelector<HTMLElement>('.activity-map-file-activation-hint');
+		expect(opens).toHaveLength(0);
+		expect(slice?.classList.contains('is-file-activation-armed')).toBeTrue();
+		expect(row?.classList.contains('is-file-activation-link')).toBeTrue();
+		expect(hint?.textContent).toBe(
+			'Click the slice again to open the file · cmd/ctrl-click opens a new tab.',
 		);
-		actions.activateChartItem(
-			item,
-			{ metaKey: false, ctrlKey: false } as MouseEvent,
-			'touch',
-			'file',
-		);
+
+		actions.activateChartItem(item, { metaKey: false, ctrlKey: false } as MouseEvent, 'mouse');
+		expect(opens).toEqual([{ filePath: 'notes/a.md', openInNewTab: false }]);
+
+		actions.activateChartItem(item, { metaKey: true, ctrlKey: false } as MouseEvent, 'mouse');
 		expect(opens).toEqual([
+			{ filePath: 'notes/a.md', openInNewTab: false },
+			{ filePath: 'notes/a.md', openInNewTab: true },
+		]);
+
+		// Legend file rows remain direct links in either grouping.
+		actions.activateItem(item, { metaKey: false, ctrlKey: false } as MouseEvent);
+		actions.activateChartItem(item, { metaKey: false, ctrlKey: false } as MouseEvent, 'touch');
+		expect(opens).toEqual([
+			{ filePath: 'notes/a.md', openInNewTab: false },
+			{ filePath: 'notes/a.md', openInNewTab: true },
 			{ filePath: 'notes/a.md', openInNewTab: false },
 			{ filePath: 'notes/a.md', openInNewTab: false },
 		]);
@@ -334,12 +337,30 @@ describe('locate current file behavior', () => {
 		popover.close(false);
 	});
 
-	it('pins before opening a file and retains its last position after the header action detaches', async () => {
+	it('pins before opening a file and ignores a hidden or detached header action', async () => {
 		const { document } = installDomEnvironment();
 		const item = chartFileItem('a', 'notes/a.md', 10);
 		const { controller } = makeController({ rootItems: [item] });
 		const trigger = document.createElement('button');
 		document.body.appendChild(trigger);
+		let headerVisible = true;
+		trigger.getBoundingClientRect = () => {
+			const left = headerVisible ? 400 : 0;
+			const top = headerVisible ? 20 : 0;
+			const width = headerVisible ? 50 : 0;
+			const height = headerVisible ? 30 : 0;
+			return {
+				x: left,
+				y: top,
+				width,
+				height,
+				top,
+				right: left + width,
+				bottom: top + height,
+				left,
+				toJSON: () => ({}),
+			};
+		};
 		const window = document.defaultView as unknown as {
 			setTimeout: () => number;
 			clearTimeout: () => void;
@@ -379,6 +400,12 @@ describe('locate current file behavior', () => {
 		if (!fixedPopover) throw new Error('pinned Popover missing');
 		const previousLeft = fixedPopover.style.left;
 		const previousTop = fixedPopover.style.top;
+		headerVisible = false;
+
+		(popover as unknown as { position(): void }).position();
+
+		expect(fixedPopover.style.left).toBe(previousLeft);
+		expect(fixedPopover.style.top).toBe(previousTop);
 		trigger.remove();
 
 		(popover as unknown as { position(): void }).position();

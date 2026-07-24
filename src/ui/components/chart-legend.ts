@@ -2,6 +2,7 @@ import type { DistributionItem, DistributionResult } from '../../query/distribut
 import { formatMetric, formatMetricFull, formatPercent } from '../format';
 import { stableColor } from './donut-chart';
 import { isTrustedPrimaryClick, type FileActivationEvent } from '../file-hover-preview';
+import { isFileActivationItem } from '../file-activation-controller';
 
 export interface ChartLegendHandle {
 	highlight(itemId: string | null): void;
@@ -44,10 +45,7 @@ export function renderChartLegend(args: {
 				'aria-label': legendRowLabel(item, distribution),
 			},
 		});
-		row.classList.toggle(
-			'is-file-activation-link',
-			distribution.query.groupBy === 'file' && item.kind === 'file',
-		);
+		row.classList.toggle('is-file-activation-link', isFileActivationItem(item));
 		const swatch = row.createSpan({ cls: 'activity-map-detail-swatch' });
 		swatch.style.setProperty('--activity-map-item-color', stableColor(item.id));
 		const label = row.createSpan({ text: item.label, cls: 'activity-map-chart-legend-label' });
@@ -105,10 +103,7 @@ export function renderChartLegend(args: {
 					distribution.denominatorDays,
 				);
 				entry.row.setAttribute('aria-label', legendRowLabel(item, distribution));
-				entry.row.classList.toggle(
-					'is-file-activation-link',
-					distribution.query.groupBy === 'file' && item.kind === 'file',
-				);
+				entry.row.classList.toggle('is-file-activation-link', isFileActivationItem(item));
 			}
 			return true;
 		},

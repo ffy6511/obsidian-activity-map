@@ -39,7 +39,7 @@ Deliver a local-first Obsidian plugin that measures trustworthy file activity an
 - [x] Correct selected-day, rolling daily-average, all-history, path aggregation, detail, and deleted-file queries.
 - [x] Stable multi-slice header mini donut as the only entry, idle-bounded real-time centered `2:3` chart/list Popover with ellipsized basename-only file leaves, and complete synchronized scrollable detail list.
 - [x] Header Popover grouping toggle switches the current path scope between hierarchical path slices and recursive file slices, persists the last successful choice, and does not change totals or activation identity.
-- [x] File-mode chart slices locate their matching list row before opening, while file rows remain direct links and Cmd/Ctrl file activation explicitly opens a new tab.
+- [x] Present-file chart slices in either grouping locate their matching list row before opening, while file rows remain direct links and Cmd/Ctrl file activation explicitly opens a new tab.
 - [x] Tested local services generate standalone full-infographic and chart-only SVG artifacts; their header-modal controls are deferred.
 - [ ] Full desktop behavior and a mobile interaction path that does not depend on hover.
 

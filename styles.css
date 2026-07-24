@@ -377,6 +377,15 @@
 	animation: activity-map-query-result-in 160ms ease-out;
 }
 
+/* Fixed Popovers can survive a file-open leaf replacement. Suppress the
+   entrance animation on their replacement nodes so retained hover state does
+   not flash before the pointer gets another movement event. */
+.activity-map-chart-popover.is-pinned .activity-map-popover-chart,
+.activity-map-chart-popover.is-pinned .activity-map-popover-path,
+.activity-map-chart-popover.is-pinned .activity-map-popover-legend {
+	animation: none;
+}
+
 .activity-map-chart-popover.is-query-pending .activity-map-popover-chart,
 .activity-map-chart-popover.is-query-pending .activity-map-popover-path,
 .activity-map-chart-popover.is-query-pending .activity-map-popover-legend {
