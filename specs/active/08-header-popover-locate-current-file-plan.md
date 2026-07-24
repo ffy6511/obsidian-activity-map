@@ -251,3 +251,15 @@ Align public behavior and architecture with the implemented locate contract and 
 - Deferred findings: finding 4 (`withLiveActivity` recomputation) is deliberately deferred — the boundary divergence is sub-frame and has no behavioral impact; revisiting would require exposing the mounted live distribution, tracked as a future polish follow-up rather than a correctness gate.
 - Validation rerun: `npm run check`, `npm run lint`, `npm test -- --run` (304 passed, 0 failed), `npm run build`, `git diff --check` all passed. Strict specs validation reports 0 errors and 0 warnings for spec 08 (pre-existing spec-06 errors unchanged).
 - Verdict: pass-with-follow-ups.
+
+### Round 2
+
+- Critic: same independent read-only evaluator (fresh subagent, no prior implementation involvement).
+- Review scope: full re-review of the corrected branch and Round 1 fixes, regressions, documentation, lifecycle, and Post-Critic Acceptance readiness.
+- Evidence reviewed: commit `390b1e9`, `git diff main...HEAD`, the generation guard and reset paths in `summary-popover.ts`, the two new regression tests, the removed `entryRef`, and the recorded 304-test gate evidence.
+- Findings: none. The Round 1 generation guard was verified sound (`set-path` always bumps the generation via `refresh`, so the locate's own result strictly satisfies the `>` guard); the two new tests are deterministic and assert the claimed behavior; the dead `entryRef` is fully removed; no regressions in focus contract, data safety, control placement, or Other-fold handling.
+- Deferred findings: finding 4 (`withLiveActivity` recomputation) remains the sole deferred follow-up — sub-frame boundary divergence with no behavioral or data impact, acceptable as future polish.
+- Validation rerun: `npm run check`, `npm run lint`, `npm test -- --run` (304 passed, 0 failed), `npm run build`, `git diff --check`, and strict specs validation (0 errors, 0 warnings for spec 08) all passed.
+- Verdict: pass-with-follow-ups.
+
+The two-round Critic review ended with `pass-with-follow-ups`. The Spec remains in `review` only for the two unchecked real-Obsidian journeys in Post-Critic Acceptance; successful UAT is recorded without starting another Critic round.
