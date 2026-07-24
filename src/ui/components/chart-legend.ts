@@ -1,7 +1,7 @@
 import type { DistributionItem, DistributionResult } from '../../query/distribution-query';
 import { formatMetric, formatMetricFull, formatPercent } from '../format';
 import { stableColor } from './donut-chart';
-import { isTrustedPrimaryClick } from '../file-hover-preview';
+import { isTrustedPrimaryClick, type FileActivationEvent } from '../file-hover-preview';
 
 export interface ChartLegendHandle {
 	highlight(itemId: string | null): void;
@@ -14,7 +14,7 @@ export function renderChartLegend(args: {
 	container: HTMLElement;
 	distribution: DistributionResult;
 	items?: DistributionItem[];
-	onActivate: (item: DistributionItem) => void;
+	onActivate: (item: DistributionItem, event: FileActivationEvent) => void;
 	onHighlight?: (item: DistributionItem | null) => void;
 	onFileHover?: (event: MouseEvent, targetEl: HTMLElement, filePath: string) => void;
 }): ChartLegendHandle {
@@ -44,6 +44,10 @@ export function renderChartLegend(args: {
 				'aria-label': legendRowLabel(item, distribution),
 			},
 		});
+		row.classList.toggle(
+			'is-file-activation-link',
+			distribution.query.groupBy === 'file' && item.kind === 'file',
+		);
 		const swatch = row.createSpan({ cls: 'activity-map-detail-swatch' });
 		swatch.style.setProperty('--activity-map-item-color', stableColor(item.id));
 		const label = row.createSpan({ text: item.label, cls: 'activity-map-chart-legend-label' });
@@ -76,7 +80,7 @@ export function renderChartLegend(args: {
 		row.addEventListener('click', (event) => {
 			if (!isTrustedPrimaryClick(event)) return;
 			const current = itemsById.get(item.id);
-			if (current) args.onActivate(current);
+			if (current) args.onActivate(current, event);
 		});
 	}
 	return {
@@ -101,6 +105,10 @@ export function renderChartLegend(args: {
 					distribution.denominatorDays,
 				);
 				entry.row.setAttribute('aria-label', legendRowLabel(item, distribution));
+				entry.row.classList.toggle(
+					'is-file-activation-link',
+					distribution.query.groupBy === 'file' && item.kind === 'file',
+				);
 			}
 			return true;
 		},

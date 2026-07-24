@@ -15,6 +15,7 @@ import {
 	type TrackingControl,
 } from '../../src/ui/activity-map-controller';
 import { renderRangeControls } from '../../src/ui/components/range-controls';
+import type { ChartItem } from '../../src/ui/components/donut-chart';
 import { SummaryPopover } from '../../src/ui/summary-popover';
 import { installDomEnvironment } from '../helpers/dom-environment';
 import {
@@ -60,6 +61,15 @@ function fileItem(id: string, path: string, value: number): DistributionItem {
 	};
 }
 
+function chartFileItem(id: string, path: string, value: number): ChartItem {
+	return {
+		...fileItem(id, path, value),
+		color: 'var(--color-blue)',
+		startAngle: 0,
+		endAngle: Math.PI,
+	};
+}
+
 function distribution(query: DistributionQuery, items: DistributionItem[]): DistributionResult {
 	const detailItems = items;
 	return {
@@ -85,11 +95,15 @@ function makeController(args: {
 	rootItems: DistributionItem[];
 	/** Items to return for a given queried path; falls back to rootItems. */
 	itemsForPath?: (path: string) => DistributionItem[];
+	groupBy?: 'path' | 'file';
 }): {
 	controller: ActivityMapController;
 	queries: DistributionQuery[];
 } {
-	const settings = normalizeSettings({ deviceId: 'd1' });
+	const settings = normalizeSettings({
+		deviceId: 'd1',
+		headerPopoverGrouping: args.groupBy,
+	});
 	const queries: DistributionQuery[] = [];
 	const service: QueryService = {
 		run(query) {
@@ -148,6 +162,165 @@ describe('locate-file pure helpers', () => {
 });
 
 describe('locate current file behavior', () => {
+	it('arms a file-mode slice until leave, then opens only on its next activation', async () => {
+		const { document } = installDomEnvironment();
+		const item = chartFileItem('a', 'notes/a.md', 10);
+		const { controller } = makeController({ rootItems: [item], groupBy: 'file' });
+		const trigger = document.createElement('button');
+		document.body.appendChild(trigger);
+		const window = document.defaultView as unknown as {
+			setTimeout: () => number;
+			clearTimeout: () => void;
+			setInterval: () => number;
+			clearInterval: () => void;
+		};
+		window.setTimeout = () => 0;
+		window.clearTimeout = () => {};
+		window.setInterval = () => 0;
+		window.clearInterval = () => {};
+		const opens: Array<{ filePath: string; openInNewTab: boolean }> = [];
+		const popover = new SummaryPopover(
+			trigger,
+			controller,
+			async (request) => {
+				opens.push(request);
+			},
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			() => {},
+		);
+		popover.open();
+		await Promise.resolve();
+		await Promise.resolve();
+
+		const actions = popover as unknown as {
+			activateChartItem(
+				item: ChartItem,
+				event: MouseEvent,
+				source: 'mouse' | 'touch' | 'keyboard',
+				groupBy: 'file' | 'path',
+			): void;
+			activateItem(item: DistributionItem, event: MouseEvent): void;
+		};
+		actions.activateChartItem(
+			item,
+			{ metaKey: false, ctrlKey: false } as MouseEvent,
+			'mouse',
+			'file',
+		);
+
+		const slice = document.querySelector<SVGPathElement>('[data-activity-map-id="a"]');
+		const row = document.querySelector<HTMLButtonElement>('[data-activity-map-id="legend-a"]');
+		const hint = document.querySelector<HTMLElement>('.activity-map-file-activation-hint');
+		expect(opens).toHaveLength(0);
+		expect(slice?.classList.contains('is-file-activation-armed')).toBeTrue();
+		expect(row?.classList.contains('is-file-activation-link')).toBeTrue();
+		expect(hint?.textContent).toBe(
+			'Click the slice again to open the file · cmd/ctrl-click opens a new tab.',
+		);
+
+		slice?.dispatchEvent(new Event('pointerleave'));
+		expect(slice?.classList.contains('is-file-activation-armed')).toBeFalse();
+		expect(hint?.textContent).toBe('');
+
+		actions.activateChartItem(
+			item,
+			{ metaKey: false, ctrlKey: false } as MouseEvent,
+			'mouse',
+			'file',
+		);
+		slice?.dispatchEvent(new Event('blur'));
+		expect(slice?.classList.contains('is-file-activation-armed')).toBeFalse();
+		expect(hint?.textContent).toBe('');
+
+		actions.activateChartItem(
+			item,
+			{ metaKey: false, ctrlKey: false } as MouseEvent,
+			'mouse',
+			'file',
+		);
+		actions.activateChartItem(
+			item,
+			{ metaKey: true, ctrlKey: false } as MouseEvent,
+			'mouse',
+			'file',
+		);
+		// Legend rows are direct file links; they never inherit a chart arm.
+		actions.activateItem(item, { metaKey: false, ctrlKey: false } as MouseEvent);
+		actions.activateItem(item, { metaKey: false, ctrlKey: true } as MouseEvent);
+		expect(opens).toEqual([
+			{ filePath: 'notes/a.md', openInNewTab: true },
+			{ filePath: 'notes/a.md', openInNewTab: false },
+			{ filePath: 'notes/a.md', openInNewTab: true },
+		]);
+		expect(hint?.textContent).toBe('');
+
+		popover.close(false);
+	});
+
+	it('retains direct file activation for path grouping and touch', async () => {
+		const { document } = installDomEnvironment();
+		const item = chartFileItem('a', 'notes/a.md', 10);
+		const { controller } = makeController({ rootItems: [item] });
+		const trigger = document.createElement('button');
+		document.body.appendChild(trigger);
+		const window = document.defaultView as unknown as {
+			setTimeout: () => number;
+			clearTimeout: () => void;
+			setInterval: () => number;
+			clearInterval: () => void;
+		};
+		window.setTimeout = () => 0;
+		window.clearTimeout = () => {};
+		window.setInterval = () => 0;
+		window.clearInterval = () => {};
+		const opens: Array<{ filePath: string; openInNewTab: boolean }> = [];
+		const popover = new SummaryPopover(
+			trigger,
+			controller,
+			async (request) => {
+				opens.push(request);
+			},
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			() => {},
+		);
+		popover.open();
+		await Promise.resolve();
+		await Promise.resolve();
+		const actions = popover as unknown as {
+			activateChartItem(
+				item: ChartItem,
+				event: MouseEvent,
+				source: 'mouse' | 'touch' | 'keyboard',
+				groupBy: 'file' | 'path',
+			): void;
+		};
+
+		actions.activateChartItem(
+			item,
+			{ metaKey: false, ctrlKey: false } as MouseEvent,
+			'mouse',
+			'path',
+		);
+		actions.activateChartItem(
+			item,
+			{ metaKey: false, ctrlKey: false } as MouseEvent,
+			'touch',
+			'file',
+		);
+		expect(opens).toEqual([
+			{ filePath: 'notes/a.md', openInNewTab: false },
+			{ filePath: 'notes/a.md', openInNewTab: false },
+		]);
+
+		popover.close(false);
+	});
+
 	it('highlights the slice and legend row for the file in file grouping', async () => {
 		const { document } = installDomEnvironment();
 		const items = [fileItem('a', 'notes/a.md', 10), fileItem('b', 'notes/b.md', 30)];

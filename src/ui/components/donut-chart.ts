@@ -1,6 +1,6 @@
 import type { DistributionItem, DistributionResult } from '../../query/distribution-query';
 import { formatMetric, formatMetricFull, formatPercent } from '../format';
-import { isTrustedPrimaryClick } from '../file-hover-preview';
+import { isTrustedPrimaryClick, type FileActivationEvent } from '../file-hover-preview';
 
 export interface ChartItem extends DistributionItem {
 	color: string;
@@ -15,9 +15,13 @@ export interface ChartModel {
 
 export interface DonutChartHandle {
 	highlight(itemId: string | null): void;
+	/** Marks the file slice that will open on its next trusted activation. */
+	setArmedFileItem(itemId: string | null): void;
 	/** Updates values and geometry in place. Returns false when slice identity changed. */
 	update(distribution: DistributionResult): boolean;
 }
+
+export type ChartActivationSource = 'mouse' | 'touch' | 'keyboard';
 
 const SEMANTIC_COLORS: Record<string, string> = {
 	'group:other': 'var(--color-base-50)',
@@ -88,8 +92,13 @@ export function buildChartModel(distribution: DistributionResult): ChartModel {
 export function renderDonutChart(args: {
 	container: HTMLElement;
 	distribution: DistributionResult;
-	onActivate: (item: ChartItem) => void;
+	onActivate: (
+		item: ChartItem,
+		event: FileActivationEvent,
+		source: ChartActivationSource,
+	) => void;
 	onHighlight?: (item: ChartItem | null) => void;
+	onDeactivate?: (item: ChartItem) => void;
 	showTooltip?: boolean;
 	tightBounds?: boolean;
 }): DonutChartHandle {
@@ -102,6 +111,7 @@ export function renderDonutChart(args: {
 	svg.setAttribute('aria-label', 'Activity distribution');
 	const paths = new Map<string, { path: SVGPathElement; title: SVGTitleElement }>();
 	let highlightedId: string | null = null;
+	let armedFileItemId: string | null = null;
 	const tooltip =
 		args.showTooltip === false
 			? null
@@ -125,17 +135,25 @@ export function renderDonutChart(args: {
 	};
 	const currentItem = (id: string): ChartItem | null =>
 		model.items.find((item) => item.id === id) ?? null;
+	const labelFor = (item: ChartItem): string => {
+		const label = `${item.label}, ${formatPercent(item.percentOfScope)}, ${formatMetricFull(item.value, distribution.query.metric, distribution.denominatorDays)}`;
+		return item.id === armedFileItemId
+			? `${label}. Ready to open; activate again to open this file.`
+			: label;
+	};
 	const updatePath = (
 		item: ChartItem,
 		entry: { path: SVGPathElement; title: SVGTitleElement },
 	): void => {
 		entry.path.setAttribute('d', donutPath(120, 120, 92, 56, item.startAngle, item.endAngle));
 		entry.path.setAttribute('fill', item.color);
-		const label = `${item.label}, ${formatPercent(item.percentOfScope)}, ${formatMetricFull(item.value, distribution.query.metric, distribution.denominatorDays)}`;
+		entry.path.classList.toggle('is-file-activation-armed', item.id === armedFileItemId);
+		const label = labelFor(item);
 		entry.path.setAttribute('aria-label', label);
 		entry.title.textContent = label;
 	};
 	for (const item of model.items) {
+		let lastPointerSource: Exclude<ChartActivationSource, 'keyboard'> = 'mouse';
 		const path = svg.createSvg('path');
 		path.setAttribute('tabindex', '0');
 		path.setAttribute('role', 'listitem');
@@ -149,9 +167,13 @@ export function renderDonutChart(args: {
 			highlight(current);
 			args.onHighlight?.(current);
 		});
+		path.addEventListener('pointerdown', (event) => {
+			lastPointerSource = event.pointerType === 'touch' ? 'touch' : 'mouse';
+		});
 		path.addEventListener('pointerleave', () => {
 			highlight(null);
 			args.onHighlight?.(null);
+			args.onDeactivate?.(item);
 		});
 		path.addEventListener('focus', () => {
 			const current = currentItem(item.id);
@@ -161,6 +183,7 @@ export function renderDonutChart(args: {
 		path.addEventListener('blur', () => {
 			highlight(null);
 			args.onHighlight?.(null);
+			args.onDeactivate?.(item);
 		});
 		path.addEventListener('click', (event) => {
 			if (!isTrustedPrimaryClick(event)) return;
@@ -168,13 +191,14 @@ export function renderDonutChart(args: {
 			if (!current) return;
 			highlight(current);
 			args.onHighlight?.(current);
-			args.onActivate(current);
+			args.onActivate(current, event, lastPointerSource);
+			lastPointerSource = 'mouse';
 		});
 		path.addEventListener('keydown', (event) => {
 			if (event.isTrusted && (event.key === 'Enter' || event.key === ' ')) {
 				event.preventDefault();
 				const current = currentItem(item.id);
-				if (current) args.onActivate(current);
+				if (current) args.onActivate(current, event, 'keyboard');
 			}
 		});
 		svg.appendChild(path);
@@ -196,6 +220,13 @@ export function renderDonutChart(args: {
 	return {
 		highlight(itemId) {
 			highlight(model.items.find((item) => item.id === itemId) ?? null);
+		},
+		setArmedFileItem(itemId) {
+			armedFileItemId = itemId;
+			for (const item of model.items) {
+				const entry = paths.get(item.id);
+				if (entry) updatePath(item, entry);
+			}
 		},
 		update(nextDistribution) {
 			const nextModel = buildChartModel(nextDistribution);

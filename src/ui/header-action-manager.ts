@@ -5,7 +5,7 @@ import type { DistributionResult } from '../query/distribution-query';
 import { statusPresentation } from './status-presentation';
 import { SummaryPopover } from './summary-popover';
 import { HeaderMiniDonut, headerDonutSlices, type HeaderMiniDonutPort } from './header-mini-donut';
-import { previewFileOnHover } from './file-hover-preview';
+import { previewFileOnHover, type OpenFileRequest } from './file-hover-preview';
 
 interface HeaderEntry {
 	view: FileView;
@@ -19,7 +19,7 @@ export interface HeaderActionDependencies {
 	app?: App;
 	workspace: Workspace;
 	controller: ActivityMapController;
-	openFile: (filePath: string) => Promise<void>;
+	openFile: (request: OpenFileRequest) => Promise<void>;
 	isFileView(view: WorkspaceLeaf['view']): view is FileView;
 	createMiniDonut?: (element: HTMLElement) => HeaderMiniDonutPort;
 	reportWarning(message: string): void;

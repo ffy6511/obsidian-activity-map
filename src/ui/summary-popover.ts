@@ -6,7 +6,11 @@ import type { ActivityMapViewModel } from './view-model';
 import { distributionActivation } from './distribution-activation';
 import { renderBreadcrumbs } from './components/breadcrumbs';
 import { renderChartLegend, type ChartLegendHandle } from './components/chart-legend';
-import { renderDonutChart, type ChartItem } from './components/donut-chart';
+import {
+	renderDonutChart,
+	type ChartActivationSource,
+	type ChartItem,
+} from './components/donut-chart';
 import {
 	renderRangeControls,
 	type LeadingQueryAction,
@@ -21,6 +25,11 @@ import {
 	parentDirectory,
 } from './locate-file';
 import { scrollIntoViewAnimated } from './scroll-into-view-animated';
+import {
+	shouldOpenInNewTab,
+	type FileActivationEvent,
+	type OpenFileRequest,
+} from './file-hover-preview';
 
 export function createDistributionGroupingAction(args: {
 	groupBy: DistributionGrouping;
@@ -101,11 +110,15 @@ export class SummaryPopover {
 	// In-flight centering scroll animation. Cancelled on re-activation, re-render,
 	// and close so a stale animation cannot move a rebuilt (or removed) list.
 	private cancelLocateScroll: (() => void) | null = null;
+	// This is pointer/focus-bounded presentation state, never a selected file or
+	// persisted preference. Structural renders clear it with their retired DOM.
+	private armedFileItemId: string | null = null;
+	private fileActivationHint: HTMLElement | null = null;
 
 	constructor(
 		private readonly trigger: HTMLElement,
 		private readonly controller: ActivityMapController,
-		private readonly openFile: (filePath: string) => Promise<void>,
+		private readonly openFile: (request: OpenFileRequest) => Promise<void>,
 		private readonly previewFile?: (
 			event: MouseEvent,
 			targetEl: HTMLElement,
@@ -225,6 +238,7 @@ export class SummaryPopover {
 	close(restoreFocus: boolean): void {
 		this.cancelClose();
 		this.cancelLocate();
+		this.clearArmedFile();
 		if (this.outsideHandler)
 			this.trigger.ownerDocument.removeEventListener(
 				'pointerdown',
@@ -247,6 +261,7 @@ export class SummaryPopover {
 		this.controlsView = null;
 		this.chartHandle = null;
 		this.legendHandle = null;
+		this.fileActivationHint = null;
 		this.pendingLocatePath = null;
 		this.pendingLocateGeneration = -1;
 		this.cancelLocateScroll?.();
@@ -338,6 +353,7 @@ export class SummaryPopover {
 			.activityMapId;
 		this.controlsView?.destroy();
 		this.controlsView = null;
+		this.clearArmedFile();
 		// A rebuild replaces the chart/legend DOM. The old highlight handles are
 		// dead, so any pending locate clear cannot target them; cancel it. A
 		// locate-triggered scope change re-applies the highlight after the new
@@ -347,6 +363,7 @@ export class SummaryPopover {
 		this.cancelLocateScroll = null;
 		this.chartHandle = null;
 		this.legendHandle = null;
+		this.fileActivationHint = null;
 		popover.empty();
 		popover.removeClass('is-query-pending');
 		this.distributionView = null;
@@ -362,10 +379,12 @@ export class SummaryPopover {
 			metric: model.query.metric,
 			range: model.query.range,
 			onMetric: (metric) => {
+				this.clearArmedFile();
 				this.expandedOther = null;
 				void this.controller.dispatch({ kind: 'set-metric', metric });
 			},
 			onRange: (range) => {
+				this.clearArmedFile();
 				this.expandedOther = null;
 				void this.controller.dispatch({ kind: 'set-range', range });
 			},
@@ -413,6 +432,7 @@ export class SummaryPopover {
 			groupBy: model.query.groupBy,
 			getCurrentGrouping: () => this.controller.getViewModel().query.groupBy,
 			onBeforeActivate: () => {
+				this.clearArmedFile();
 				this.expandedOther = null;
 			},
 			onGrouping: (groupBy) => {
@@ -465,6 +485,7 @@ export class SummaryPopover {
 	 * Returns whether a highlight (immediate or pending) was started.
 	 */
 	locateCurrentFile(): boolean {
+		this.clearArmedFile();
 		const activeFilePath = this.getActiveFilePath?.() ?? null;
 		if (!activeFilePath) return false;
 		const model = this.controller.getViewModel();
@@ -617,8 +638,10 @@ export class SummaryPopover {
 		const chartHandle = renderDonutChart({
 			container: chart,
 			distribution,
-			onActivate: (item) => this.activateItem(item),
+			onActivate: (item, event, source) =>
+				this.activateChartItem(item, event, source, model.query.groupBy),
 			onHighlight: (item) => legendHandle?.highlight(item?.id ?? null),
+			onDeactivate: (item) => this.clearArmedFile(item.id),
 			showTooltip: false,
 			tightBounds: true,
 		});
@@ -635,6 +658,7 @@ export class SummaryPopover {
 			heading.createSpan({ text: 'Other items' });
 			const close = heading.createEl('button', { text: 'Show all' });
 			close.addEventListener('click', () => {
+				this.clearArmedFile();
 				this.expandedOther = null;
 				this.renderIfChanged(this.controller.getViewModel(), true);
 			});
@@ -643,12 +667,16 @@ export class SummaryPopover {
 			container: legend,
 			distribution,
 			items,
-			onActivate: (item) => this.activateItem(item),
+			onActivate: (item, event) => this.activateItem(item, event),
 			onHighlight: (item) => chartHandle.highlight(item?.id ?? null),
 			onFileHover: (event, targetEl, filePath) =>
 				this.previewFile?.(event, targetEl, filePath),
 		});
 		this.legendHandle = legendHandle;
+		this.fileActivationHint = popover.createEl('p', {
+			cls: 'activity-map-file-activation-hint',
+			attr: { role: 'status', 'aria-live': 'polite' },
+		});
 		this.distributionView = {
 			update: (nextDistribution) => {
 				const nextItems = this.expandedOther
@@ -680,6 +708,7 @@ export class SummaryPopover {
 			model.query.path,
 			model.query.view,
 			(nextPath) => {
+				this.clearArmedFile();
 				this.expandedOther = null;
 				void this.controller.dispatch({ kind: 'set-path', path: nextPath });
 			},
@@ -687,7 +716,46 @@ export class SummaryPopover {
 		);
 	}
 
-	private activateItem(item: DistributionItem | ChartItem): void {
+	private activateChartItem(
+		item: ChartItem,
+		event: FileActivationEvent,
+		source: ChartActivationSource,
+		groupBy: DistributionGrouping,
+	): void {
+		if (groupBy === 'file' && item.kind === 'file' && source !== 'touch') {
+			if (this.armedFileItemId === item.id) {
+				this.clearArmedFile();
+				this.activateItem(item, event);
+			} else {
+				this.armFileItem(item.id);
+			}
+			return;
+		}
+		this.activateItem(item, event);
+	}
+
+	private armFileItem(itemId: string): void {
+		this.clearArmedFile();
+		this.armedFileItemId = itemId;
+		this.chartHandle?.setArmedFileItem(itemId);
+		this.chartHandle?.highlight(itemId);
+		this.legendHandle?.highlight(itemId);
+		this.scrollLegendRowIntoView(itemId);
+		if (this.fileActivationHint)
+			this.fileActivationHint.textContent =
+				'Click the slice again to open the file · cmd/ctrl-click opens a new tab.';
+	}
+
+	private clearArmedFile(expectedItemId?: string): void {
+		if (expectedItemId && this.armedFileItemId !== expectedItemId) return;
+		if (this.armedFileItemId === null) return;
+		this.armedFileItemId = null;
+		this.chartHandle?.setArmedFileItem(null);
+		if (this.fileActivationHint) this.fileActivationHint.textContent = '';
+	}
+
+	private activateItem(item: DistributionItem | ChartItem, event: FileActivationEvent): void {
+		this.clearArmedFile();
 		const activation = distributionActivation(item);
 		if (activation.kind === 'navigate') {
 			this.expandedOther = null;
@@ -700,7 +768,10 @@ export class SummaryPopover {
 			this.expandedOther = activation.memberIds;
 			this.renderIfChanged(this.controller.getViewModel(), true);
 		} else if (activation.kind === 'open-file') {
-			void this.openFile(activation.path);
+			void this.openFile({
+				filePath: activation.path,
+				openInNewTab: shouldOpenInNewTab(event),
+			});
 		}
 	}
 

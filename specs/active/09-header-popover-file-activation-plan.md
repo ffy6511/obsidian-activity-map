@@ -15,8 +15,8 @@
 
 ## Phases
 
-- [ ] Phase 0: Carry trusted activation events to the public workspace-opening boundary
-- [ ] Phase 1: Add file-mode chart arming, list affordances, and the Popover hint
+- [x] Phase 0: Carry trusted activation events to the public workspace-opening boundary
+- [x] Phase 1: Add file-mode chart arming, list affordances, and the Popover hint
 - [ ] Phase 2: Synchronize documentation and collect technical and real-Obsidian evidence
 
 ## Background
@@ -34,7 +34,7 @@ In file grouping, a chart slice currently opens its file on the first activation
 Goals:
 
 - In desktop file grouping, the first trusted primary click on a real file slice scrolls its matching legend row into view and arms only that slice; it does not open the file.
-- While that armed slice remains under the pointer, give it a jump affordance and show one muted Popover-bottom instruction: `Click the slice again to open the file · Cmd/Ctrl-click opens a new tab.`
+- While that armed slice remains under the pointer, give it a jump affordance and show one muted Popover-bottom instruction: `Click the slice again to open the file · cmd/ctrl-click opens a new tab.`
 - Clear the armed state on that slice's `pointerleave`, keyboard `blur`, an activation of another item, a structural re-render, or Popover close. Do not use a timer.
 - The second trusted primary click on the armed slice opens the file in the current leaf; with `Cmd` on macOS or `Ctrl` on Windows/Linux it opens an explicit new tab.
 - File-grouping legend file rows remain one-click activation targets and always use the jump cursor; their `Cmd/Ctrl` activation opens an explicit new tab.
@@ -123,7 +123,7 @@ interface ArmedFileSlice {
 ### Failure and State Semantics
 
 - Synthetic clicks, secondary/middle buttons, and untrusted keyboard events cannot arm or open a file.
-- An arm is cleared before any file-opening request, so a rejected `openLinkText()` promise cannot leave a stale jump cursor or instruction behind. The owning boundary reports the existing actionable warning.
+- An arm is cleared before any file-opening request, so a rejected `openLinkText()` promise cannot leave a stale jump cursor or instruction behind.
 - A live in-place distribution update may retain the arm only if the same chart item DOM identity survives. Any structural update, grouping/path/range/metric change, `Other` expansion, or Popover close clears it.
 - The existing locate timer and locate icon remain unchanged. This feature never calls the timer-based locate method; it reuses only the safe legend-row scroll/highlight primitives needed to reveal the clicked file.
 - The native Page Preview `defaultMod` hover source remains preview-only. A modifier click reaches the trusted activation path once and must not open a preview leaf or duplicate the open request.
@@ -136,11 +136,11 @@ Preserve the current shared activation semantics while allowing an eligible file
 
 ### Tasks
 
-- [ ] Extend donut and legend activation callbacks to carry the original trusted mouse or keyboard event without weakening their existing trust checks.
-- [ ] Add one narrow helper for `metaKey || ctrlKey` file-opening intent and one typed `openFile` request/callback contract through `SummaryPopover`, `HeaderActionManager`, and `main.ts`.
-- [ ] Map same-leaf opening to `Workspace.openLinkText(filePath, '', false)` and a modifier file open to `Workspace.openLinkText(filePath, '', 'tab')`.
-- [ ] Keep `distributionActivation()` authoritative for directory navigation, `Local files`, `Other`, deleted items, and present files; only its `open-file` consumer gains the new request option.
-- [ ] Add focused tests for trusted/untrusted and primary/non-primary events, normal file open, explicit new-tab open, keyboard modifiers, and unchanged non-file activation intents.
+- [x] Extend donut and legend activation callbacks to carry the original trusted mouse or keyboard event without weakening their existing trust checks.
+- [x] Add one narrow helper for `metaKey || ctrlKey` file-opening intent and one typed `openFile` request/callback contract through `SummaryPopover`, `HeaderActionManager`, and `main.ts`.
+- [x] Map same-leaf opening to `Workspace.openLinkText(filePath, '', false)` and a modifier file open to `Workspace.openLinkText(filePath, '', 'tab')`.
+- [x] Keep `distributionActivation()` authoritative for directory navigation, `Local files`, `Other`, deleted items, and present files; only its `open-file` consumer gains the new request option.
+- [x] Add focused tests for trusted/untrusted and primary/non-primary events, normal file open, explicit new-tab open, keyboard modifiers, and unchanged non-file activation intents.
 
 ### Files
 
@@ -155,10 +155,10 @@ Preserve the current shared activation semantics while allowing an eligible file
 
 ### Acceptance Criteria
 
-- [ ] A trusted normal present-file activation still opens one reusable leaf, while a trusted `Cmd/Ctrl` activation makes exactly one `openLinkText(..., 'tab')` call.
-- [ ] Synthetic, secondary, and middle-button activations cannot open or arm a file.
-- [ ] Directory, `Local files`, `Other`, and deleted activation outcomes are byte-for-behavior compatible with the current contract, including when a modifier is held.
-- [ ] Focused TypeScript and DOM tests cover mouse and keyboard contracts without relying only on source-string assertions.
+- [x] A trusted normal present-file activation still opens one reusable leaf, while a trusted `Cmd/Ctrl` activation makes exactly one `openLinkText(..., 'tab')` call.
+- [x] Synthetic, secondary, and middle-button activations cannot open or arm a file.
+- [x] Directory, `Local files`, `Other`, and deleted activation outcomes are byte-for-behavior compatible with the current contract, including when a modifier is held.
+- [x] Focused TypeScript and DOM tests cover mouse and keyboard contracts without relying only on source-string assertions.
 
 ## Phase 1: Add File-Mode Arming and the Popover Instruction
 
@@ -168,14 +168,14 @@ Make the file-mode chart's first click a clear locate action and reserve direct 
 
 ### Tasks
 
-- [ ] Add the single `armedFileItemId` owner to `SummaryPopover`, plus explicit arm/clear methods that coordinate the chart slice, legend highlight, animated row scroll, footer status, and Popover positioning.
-- [ ] In file grouping only, turn the first trusted desktop-mouse activation of a real `file` chart slice into arm-and-locate; a second activation of the same armed slice opens it. Keep touch activation single-step.
-- [ ] Clear the arm on the same slice's `pointerleave` or keyboard `blur`, on another activation, structural replacement, query/navigation changes, `Other` expansion, and Popover close. Do not add a timeout.
-- [ ] Mark armed chart slices and file-grouping legend file rows with scoped Activity Map classes; use the `alias` cursor as the portable jump affordance while preserving the existing pointer cursor everywhere else.
-- [ ] Add the stable bottom status slot with muted styling and the exact instruction `Click the slice again to open the file · Cmd/Ctrl-click opens a new tab.` only while armed.
-- [ ] Update the armed slice's accessible label/instructions and retain keyboard first-activate/second-activate behavior. The footer must announce the armed state without a second visible control row.
-- [ ] Preserve chart/list hover synchronization, Page Preview, reduced-motion behavior, current-file locate's independent two-second highlight, focus restoration, and in-place live updates.
-- [ ] Add DOM behavior tests for arm, scroll, cursor/status state, leave/blur cleanup, re-render/close cleanup, second-click normal/new-tab opening, direct legend opening, touch fallback, and all path-grouping regressions.
+- [x] Add the single `armedFileItemId` owner to `SummaryPopover`, plus explicit arm/clear methods that coordinate the chart slice, legend highlight, animated row scroll, footer status, and Popover positioning.
+- [x] In file grouping only, turn the first trusted desktop-mouse activation of a real `file` chart slice into arm-and-locate; a second activation of the same armed slice opens it. Keep touch activation single-step.
+- [x] Clear the arm on the same slice's `pointerleave` or keyboard `blur`, on another activation, structural replacement, query/navigation changes, `Other` expansion, and Popover close. Do not add a timeout.
+- [x] Mark armed chart slices and file-grouping legend file rows with scoped Activity Map classes; use the `alias` cursor as the portable jump affordance while preserving the existing pointer cursor everywhere else.
+- [x] Add the stable bottom status slot with muted styling and the exact instruction `Click the slice again to open the file · cmd/ctrl-click opens a new tab.` only while armed.
+- [x] Update the armed slice's accessible label/instructions and retain keyboard first-activate/second-activate behavior. The footer must announce the armed state without a second visible control row.
+- [x] Preserve chart/list hover synchronization, Page Preview, reduced-motion behavior, current-file locate's independent two-second highlight, focus restoration, and in-place live updates.
+- [x] Add DOM behavior tests for arm, scroll, cursor/status state, leave/blur cleanup, re-render/close cleanup, second-click normal/new-tab opening, direct legend opening, touch fallback, and all path-grouping regressions.
 
 ### Files
 
@@ -190,13 +190,13 @@ Make the file-mode chart's first click a clear locate action and reserve direct 
 
 ### Acceptance Criteria
 
-- [ ] In file grouping, the first desktop primary click on a present file slice scrolls its existing legend row into view and displays the armed cursor and bottom instruction without opening a leaf.
-- [ ] The armed state ends immediately when the pointer leaves that slice or its keyboard focus blurs; it has no timer and cannot survive a structural Popover change or close.
-- [ ] The same armed slice opens once on its second trusted primary click; `Cmd/Ctrl` on that second click opens an explicit new tab.
-- [ ] File-grouping legend file rows show the jump cursor and open directly on one click, including the explicit new-tab modifier path.
-- [ ] Path grouping and all non-file item interactions retain their current one-activation behavior.
-- [ ] The temporary footer is muted, layout-stable, accessible, and absent from the visible Popover outside the armed state.
-- [ ] Keyboard and touch paths remain usable without depending on a cursor.
+- [x] In file grouping, the first desktop primary click on a present file slice scrolls its existing legend row into view and displays the armed cursor and bottom instruction without opening a leaf.
+- [x] The armed state ends immediately when the pointer leaves that slice or its keyboard focus blurs; it has no timer and cannot survive a structural Popover change or close.
+- [x] The same armed slice opens once on its second trusted primary click; `Cmd/Ctrl` on that second click opens an explicit new tab.
+- [x] File-grouping legend file rows show the jump cursor and open directly on one click, including the explicit new-tab modifier path.
+- [x] Path grouping and all non-file item interactions retain their current one-activation behavior.
+- [x] The temporary footer is muted, layout-stable, accessible, and absent from the visible Popover outside the armed state.
+- [x] Keyboard and touch paths remain usable without depending on a cursor.
 
 ## Phase 2: Synchronize Documentation and Collect Technical Evidence
 
@@ -206,9 +206,9 @@ Record the approved interaction accurately without promoting fixture-only checks
 
 ### Tasks
 
-- [ ] Update the PRD's Header Popover interaction contract, the README feature description, this Spec, and the Roadmap only after the implementation exists.
-- [ ] Update `ARCHITECTURE.md` only if the implemented activation callback or workspace-opening boundary changes module ownership or dependency direction beyond this Spec's local delta.
-- [ ] Run type-check, lint, focused and complete tests, production build, strict specs validation, Markdown-link verification, and whitespace validation; record exact commands and results.
+- [x] Update the PRD's Header Popover interaction contract, the README feature description, this Spec, and the Roadmap only after the implementation exists.
+- [x] Update `ARCHITECTURE.md` because the typed open request adds a composition-boundary contract.
+- [x] Run type-check, lint, focused and complete tests, production build, strict specs validation, Markdown-link verification, and whitespace validation; record exact commands and results.
 - [ ] Keep all Phase boxes open until the code and documentation evidence exists. Do not start the Critic loop as part of drafting this Spec.
 
 ### Files
@@ -221,10 +221,10 @@ Record the approved interaction accurately without promoting fixture-only checks
 
 ### Acceptance Criteria
 
-- [ ] Product documentation distinguishes file-mode first-click locate, second-click opening, direct list activation, and `Cmd/Ctrl` new-tab behavior from unchanged path-mode navigation.
-- [ ] `npm run check`, `npm run lint`, `npm test -- --run`, and `npm run build` pass.
+- [x] Product documentation distinguishes file-mode first-click locate, second-click opening, direct list activation, and `Cmd/Ctrl` new-tab behavior from unchanged path-mode navigation.
+- [x] `npm run check`, `npm run lint`, `npm test -- --run`, and `npm run build` pass.
 - [ ] Strict specs validation, repository-relative Markdown-link and heading-fragment checks, and `git diff --check` pass.
-- [ ] The Spec records fixture evidence separately from the required real-Obsidian journey.
+- [x] The Spec records fixture evidence separately from the required real-Obsidian journey.
 
 ## Risks and Mitigations
 
@@ -246,4 +246,13 @@ Record the approved interaction accurately without promoting fixture-only checks
 
 ## Evaluation Record
 
-No implementation or Critic review has started. This Spec remains `in-progress` until an implementation request selects it.
+### Executor Evidence — 2026-07-24
+
+- `npm run check` passed.
+- `npm run lint` passed.
+- `npm test -- --run` passed: 317 tests, 0 failures. This suite includes the repository-relative Markdown-link and heading-fragment validation plus focused file-activation, modifier, and Popover DOM behavior coverage.
+- `npm run build` passed.
+- `git diff --check` passed.
+- `python3 "$SPEC_DRIVEN_DELIVERY_DIR/scripts/validate_specs_workspace.py" . --strict` ran but failed with seven pre-existing errors and one warning in `specs/active/06-typed-character-metric-plan.md`; it does not report an error in this Spec.
+
+The strict workspace blocker leaves Phase 2 and the Spec status `in-progress`. Per the delivery workflow, no Critic round has started; an independent Critic may start after the strict validator passes. The three real-Obsidian checks remain intentionally open in Post-Critic Acceptance and belong to the owner.

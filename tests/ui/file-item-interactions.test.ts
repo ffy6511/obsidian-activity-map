@@ -1,6 +1,11 @@
 import { describe, expect, it } from '../helpers/test-harness';
 
-import { isTrustedPrimaryClick, previewFileOnHover } from '../../src/ui/file-hover-preview';
+import {
+	fileOpenPane,
+	isTrustedPrimaryClick,
+	previewFileOnHover,
+	shouldOpenInNewTab,
+} from '../../src/ui/file-hover-preview';
 
 describe('file item interactions', () => {
 	it('emits the public Page Preview payload without opening a file', () => {
@@ -32,5 +37,13 @@ describe('file item interactions', () => {
 		expect(isTrustedPrimaryClick({ isTrusted: false, button: 0 } as MouseEvent)).toBeFalse();
 		expect(isTrustedPrimaryClick({ isTrusted: true, button: 1 } as MouseEvent)).toBeFalse();
 		expect(isTrustedPrimaryClick({ isTrusted: true, button: 0 } as MouseEvent)).toBeTrue();
+	});
+
+	it('maps either desktop link modifier to an explicit new tab pane', () => {
+		expect(shouldOpenInNewTab({ metaKey: true, ctrlKey: false } as MouseEvent)).toBeTrue();
+		expect(shouldOpenInNewTab({ metaKey: false, ctrlKey: true } as KeyboardEvent)).toBeTrue();
+		expect(shouldOpenInNewTab({ metaKey: false, ctrlKey: false } as MouseEvent)).toBeFalse();
+		expect(fileOpenPane(true)).toBe('tab');
+		expect(fileOpenPane(false)).toBeFalse();
 	});
 });

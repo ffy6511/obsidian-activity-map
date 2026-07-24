@@ -30,7 +30,7 @@ import { LocalQueryService } from './query/query-service';
 import { ActivityMapController } from './ui/activity-map-controller';
 import { ActivityMapSettingsTab } from './ui/settings-tab';
 import { HeaderActionManager } from './ui/header-action-manager';
-import { ACTIVITY_MAP_HOVER_SOURCE } from './ui/file-hover-preview';
+import { ACTIVITY_MAP_HOVER_SOURCE, fileOpenPane } from './ui/file-hover-preview';
 import {
 	belongsToMarkdownEditor,
 	createCodeMirrorTypedInputExtension,
@@ -151,7 +151,12 @@ export default class ActivityMapPlugin extends Plugin {
 			app: this.app,
 			workspace: this.app.workspace,
 			controller,
-			openFile: (filePath) => this.app.workspace.openLinkText(filePath, '', false),
+			openFile: (request) =>
+				this.app.workspace.openLinkText(
+					request.filePath,
+					'',
+					fileOpenPane(request.openInNewTab),
+				),
 			isFileView: (view): view is FileView => view instanceof FileView,
 			reportWarning: (message) => controller.reportWarning(message),
 		});
