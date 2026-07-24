@@ -55,6 +55,8 @@ export function renderRangeControls(args: {
 	onMetric: (metric: MetricKey) => void;
 	onRange: (range: RangeMode) => void;
 	leadingActions?: readonly RangeControlAction[];
+	/** Action rendered immediately left of the metric dropdown, inside the query area. */
+	leadingQueryAction?: RangeControlAction;
 	renderIcon?: (container: HTMLElement, icon: string) => void;
 }): RangeControlsHandle {
 	const controls = args.container.createDiv({ cls: 'activity-map-controls' });
@@ -149,6 +151,20 @@ export function renderRangeControls(args: {
 	}
 
 	const queryControls = controls.createDiv({ cls: 'activity-map-query-controls' });
+	if (args.leadingQueryAction) {
+		const button = iconButton(
+			queryControls,
+			args.leadingQueryAction.icon,
+			args.leadingQueryAction.label,
+			args.leadingQueryAction.id,
+			() => args.leadingQueryAction?.onActivate(),
+			'',
+			args.leadingQueryAction.pressed,
+			renderIcon,
+		);
+		button.disabled = args.leadingQueryAction.disabled === true;
+		actionButtons.set(args.leadingQueryAction.id, button);
+	}
 	const metricControl = queryControls.createDiv({ cls: 'activity-map-metric-control' });
 	dropdowns.push(
 		renderDropdownControl({

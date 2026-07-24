@@ -415,7 +415,7 @@
 .activity-map-popover .activity-map-query-controls {
 	grid-area: query;
 	width: auto;
-	grid-template-columns: max-content max-content;
+	grid-template-columns: max-content max-content max-content;
 	justify-content: end;
 	justify-self: end;
 }

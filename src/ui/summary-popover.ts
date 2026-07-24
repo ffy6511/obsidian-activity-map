@@ -1,4 +1,4 @@
-import type { App } from 'obsidian';
+import { setIcon, type App } from 'obsidian';
 
 import type { DistributionGrouping, DistributionItem } from '../query/distribution-query';
 import type { ActivityMapController } from './activity-map-controller';
@@ -13,6 +13,12 @@ import {
 	type RangeControlsHandle,
 } from './components/range-controls';
 import { withLiveActivity } from './live-distribution';
+import {
+	LOCATE_HIGHLIGHT_MS,
+	findLocateItem,
+	isFileVisibleUnderScope,
+	parentDirectory,
+} from './locate-file';
 
 export function createDistributionGroupingAction(args: {
 	groupBy: DistributionGrouping;
@@ -76,6 +82,16 @@ export class SummaryPopover {
 	private controlsView: RangeControlsHandle | null = null;
 	private posterModal: { close(): void } | null = null;
 	private openingPoster = false;
+	// Live highlight handles for the mounted chart/legend, so locate can drive
+	// the same bidirectional highlight path as pointer hover. Cleared on re-render.
+	private chartHandle: import('./components/donut-chart').DonutChartHandle | null = null;
+	private legendHandle: ChartLegendHandle | null = null;
+	// Pending locate highlight clear timer. A single owner: each activation
+	// restarts the window; re-render and close cancel it.
+	private locateTimer: number | null = null;
+	// When locate narrows the path scope, this records the pending target so the
+	// next ready model of a newer generation can complete the highlight.
+	private pendingLocatePath: string | null = null;
 
 	constructor(
 		private readonly trigger: HTMLElement,
@@ -88,6 +104,16 @@ export class SummaryPopover {
 		) => void,
 		private readonly getNativePreview?: () => HTMLElement | null,
 		private readonly app?: App,
+		/**
+		 * Vault-relative path of the file whose header owns this Popover, read
+		 * fresh on each locate. `null`/omitted disables the locate button.
+		 */
+		private readonly getActiveFilePath?: () => string | null,
+		/**
+		 * Icon renderer for the control row. Defaults to Obsidian's `setIcon`;
+		 * tests inject a no-op so the Popover renders without Obsidian at runtime.
+		 */
+		private readonly renderIcon: (container: HTMLElement, icon: string) => void = setIcon,
 	) {}
 
 	open(): void {
@@ -189,6 +215,7 @@ export class SummaryPopover {
 
 	close(restoreFocus: boolean): void {
 		this.cancelClose();
+		this.cancelLocate();
 		if (this.outsideHandler)
 			this.trigger.ownerDocument.removeEventListener(
 				'pointerdown',
@@ -209,6 +236,9 @@ export class SummaryPopover {
 		this.lastRenderKey = '';
 		this.distributionView = null;
 		this.controlsView = null;
+		this.chartHandle = null;
+		this.legendHandle = null;
+		this.pendingLocatePath = null;
 		this.trigger.removeClass('is-pinned');
 		this.trigger.setAttr('aria-expanded', 'false');
 		this.trigger.setAttr('aria-pressed', 'false');
@@ -256,9 +286,30 @@ export class SummaryPopover {
 			this.controlsView?.updateAction(this.groupingAction(model));
 			this.controlsView?.updateAction(this.trackingAction(model));
 			this.controlsView?.updateAction(this.posterExportAction(model));
+			this.controlsView?.updateAction(this.locateAction(model));
 			return;
 		}
 		this.render(model);
+		this.completePendingLocate(model);
+	}
+
+	/**
+	 * When locate narrowed the scope, complete the highlight on the first ready
+	 * model after the navigation. The fresh chart/legend handles are mounted by
+	 * render() just above. Clears the pending intent regardless of outcome so a
+	 * later unrelated navigation cannot resurrect it.
+	 */
+	private completePendingLocate(model: ActivityMapViewModel): void {
+		const pendingPath = this.pendingLocatePath;
+		if (pendingPath === null) return;
+		this.pendingLocatePath = null;
+		if (model.loadState !== 'ready' || !model.distribution) return;
+		const distribution = withLiveActivity(model.distribution, model.tracking, {
+			nowMs: Date.now(),
+			idleThresholdMs: model.settings.idleThresholdMs,
+		});
+		const item = findLocateItem(distribution, pendingPath);
+		if (item) this.applyLocateHighlight(item.id);
 	}
 
 	private render(model: ActivityMapViewModel): void {
@@ -268,6 +319,13 @@ export class SummaryPopover {
 			.activityMapId;
 		this.controlsView?.destroy();
 		this.controlsView = null;
+		// A rebuild replaces the chart/legend DOM. The old highlight handles are
+		// dead, so any pending locate clear cannot target them; cancel it. A
+		// locate-triggered scope change re-applies the highlight after the new
+		// result settles (see locateCurrentFile / renderIfChanged).
+		this.cancelLocate();
+		this.chartHandle = null;
+		this.legendHandle = null;
 		popover.empty();
 		popover.removeClass('is-query-pending');
 		this.distributionView = null;
@@ -295,6 +353,8 @@ export class SummaryPopover {
 				this.groupingAction(model),
 				this.posterExportAction(model),
 			],
+			leadingQueryAction: this.locateAction(model),
+			renderIcon: this.renderIcon,
 		});
 
 		if (model.loadState === 'loading') {
@@ -360,6 +420,108 @@ export class SummaryPopover {
 		});
 	}
 
+	private locateAction(model: ActivityMapViewModel): RangeControlAction {
+		const hasFile = this.getActiveFilePath?.() != null;
+		return {
+			icon: 'locate-fixed',
+			label: 'Locate current file',
+			id: 'locate-current-file',
+			disabled: !hasFile || model.loadState !== 'ready',
+			onActivate: () => {
+				this.locateCurrentFile();
+			},
+		};
+	}
+
+	/**
+	 * Locate the owning header's file in the current distribution and highlight
+	 * its slice and legend row for {@link LOCATE_HIGHLIGHT_MS}. In path grouping,
+	 * first narrows the scope to the file's parent directory if the file is not
+	 * already a visible child; the highlight completes on the next ready model.
+	 * Returns whether a highlight (immediate or pending) was started.
+	 */
+	locateCurrentFile(): boolean {
+		const activeFilePath = this.getActiveFilePath?.() ?? null;
+		if (!activeFilePath) return false;
+		const model = this.controller.getViewModel();
+		if (model.loadState !== 'ready' || !model.distribution) return false;
+		const distribution = withLiveActivity(model.distribution, model.tracking, {
+			nowMs: Date.now(),
+			idleThresholdMs: model.settings.idleThresholdMs,
+		});
+		// Path grouping only exposes a file as a direct child of the current
+		// scope. Narrow to the parent directory first so the row appears, and
+		// complete the highlight once the newer-generation result settles.
+		if (
+			model.query.groupBy === 'path' &&
+			!isFileVisibleUnderScope(distribution, activeFilePath)
+		) {
+			const target = parentDirectory(activeFilePath);
+			if (target === model.query.path) return false;
+			this.pendingLocatePath = activeFilePath;
+			this.cancelLocate();
+			void this.controller.dispatch({ kind: 'set-path', path: target });
+			return true;
+		}
+		const item = findLocateItem(distribution, activeFilePath);
+		if (!item) return false;
+		this.applyLocateHighlight(item.id);
+		return true;
+	}
+
+	/** Drives both highlight handles and schedules the clear. */
+	private applyLocateHighlight(itemId: string): void {
+		this.cancelLocate();
+		const chart = this.chartHandle;
+		const legend = this.legendHandle;
+		if (!chart || !legend) return;
+		chart.highlight(itemId);
+		legend.highlight(itemId);
+		// Scroll the legend row into view inside its scroll container. The
+		// detail list is the source of truth, so the row exists even when the
+		// chart slice is folded into "Other".
+		this.scrollLegendRowIntoView(itemId);
+		const doc = this.trigger.ownerDocument;
+		this.locateTimer =
+			doc.defaultView?.setTimeout(() => {
+				this.locateTimer = null;
+				this.clearLocateHighlight();
+			}, LOCATE_HIGHLIGHT_MS) ?? null;
+	}
+
+	private scrollLegendRowIntoView(itemId: string): void {
+		const popover = this.element;
+		if (!popover) return;
+		const css = popover.ownerDocument.defaultView?.CSS;
+		const selector = css
+			? `[data-activity-map-id="legend-${css.escape(itemId)}"]`
+			: `[data-activity-map-id="legend-${itemId}"]`;
+		const row = popover.querySelector<HTMLElement>(selector);
+		// scrollIntoView is absent in some DOM implementations (e.g. linkedom in
+		// tests). Capability-gate rather than throw.
+		if (row && typeof row.scrollIntoView === 'function') {
+			row.scrollIntoView({ block: 'nearest' });
+		}
+	}
+
+	private clearLocateHighlight(): void {
+		this.chartHandle?.highlight(null);
+		this.legendHandle?.highlight(null);
+	}
+
+	/**
+	 * Cancels only the pending highlight-clear timer. Does not clear
+	 * {@link pendingLocatePath}: a scope-narrowing locate sets the pending path
+	 * and then cancels any prior timer, and the pending path must survive until
+	 * the next ready model is rendered and completed.
+	 */
+	private cancelLocate(): void {
+		if (this.locateTimer !== null) {
+			this.trigger.ownerDocument.defaultView?.clearTimeout(this.locateTimer);
+		}
+		this.locateTimer = null;
+	}
+
 	private openPosterExport(): void {
 		if (!this.app || this.posterModal || this.openingPoster) return;
 		const model = this.controller.getViewModel();
@@ -416,6 +578,7 @@ export class SummaryPopover {
 			showTooltip: false,
 			tightBounds: true,
 		});
+		this.chartHandle = chartHandle;
 		this.renderCurrentPath(chartColumn, model);
 		const items = this.expandedOther
 			? distribution.detailItems.filter((item) =>
@@ -441,6 +604,7 @@ export class SummaryPopover {
 			onFileHover: (event, targetEl, filePath) =>
 				this.previewFile?.(event, targetEl, filePath),
 		});
+		this.legendHandle = legendHandle;
 		this.distributionView = {
 			update: (nextDistribution) => {
 				const nextItems = this.expandedOther
