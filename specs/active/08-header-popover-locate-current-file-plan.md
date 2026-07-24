@@ -8,16 +8,16 @@
 | Scope | Header Popover controls, distribution view interaction |
 | Type | feat |
 | Priority | P2 |
-| Status | in-progress |
+| Status | review |
 | Completed | pending |
 | Dependencies | [Header Popover file grouping](05-header-popover-file-grouping-plan.md) |
 | Decisions | [Interface and export](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), [PRD chart popover](../../docs/PRD.md#环形图浮层), [Presentation architecture](../../ARCHITECTURE.md#presentation-and-export) |
 
 ## Phases
 
-- [ ] Phase 0: Add a locate-current-file action to the distribution view
-- [ ] Phase 1: Wire the Header Popover control, scope navigation, and highlight lifecycle
-- [ ] Phase 2: Synchronize documentation and collect integration evidence
+- [x] Phase 0: Add a locate-current-file action to the distribution view
+- [x] Phase 1: Wire the Header Popover control, scope navigation, and highlight lifecycle
+- [x] Phase 2: Synchronize documentation and collect integration evidence
 
 ## Background
 
@@ -120,26 +120,32 @@ Make the locate behavior a deterministic, testable operation over an existing di
 
 ### Tasks
 
-- [ ] Add a pure helper that, given `activeFilePath` and `detailItems`, returns the matching file `DistributionItem` or `null` (match by `kind === 'file' && item.path === activeFilePath`).
-- [ ] Add a pure helper that computes the parent directory of a vault-relative path (`''` for root, no trailing slash normalization beyond what breadcrumbs already expect).
-- [ ] Expose `locateCurrentFile()` on `SummaryPopover`: find item; when in path grouping and the file is not under the current scope, dispatch `set-path` to the parent and re-run locate on the next ready model; otherwise scroll the legend row into view (`block: 'nearest'`) and drive both highlight handles.
-- [ ] Implement the single cancelable `2s` highlight timer owned by the Popover; cancel it on new activation, re-render, and `destroy()`.
-- [ ] Add focused tests: file-grouping locate scrolls and highlights; path-grouping locate navigates scope then highlights; no row -> no-op; re-activation cancels prior timer; re-render and destroy cancel the timer; parent-of-root edge case.
+- [x] Add a pure helper that, given `activeFilePath` and `detailItems`, returns the matching file `DistributionItem` or `null` (match by `kind === 'file' && item.path === activeFilePath`).
+- [x] Add a pure helper that computes the parent directory of a vault-relative path (`''` for root, no trailing slash normalization beyond what breadcrumbs already expect).
+- [x] Expose `locateCurrentFile()` on `SummaryPopover`: find item; when in path grouping and the file is not under the current scope, dispatch `set-path` to the parent and re-run locate on the next ready model; otherwise scroll the legend row into view (`block: 'nearest'`) and drive both highlight handles.
+- [x] Implement the single cancelable `2s` highlight timer owned by the Popover; cancel it on new activation, re-render, and `destroy()`.
+- [x] Add focused tests: file-grouping locate scrolls and highlights; path-grouping locate navigates scope then highlights; no row -> no-op; re-activation cancels prior timer; re-render and destroy cancel the timer; parent-of-root edge case.
 
 ### Files
 
 - `src/ui/summary-popover.ts`
-- `src/ui/components/chart-legend.ts` (only if the scroll target needs a new exported accessor)
-- `tests/ui/summary-popover.test.ts`
+- `src/ui/locate-file.ts`
+- `tests/ui/locate-current-file.behavior.test.ts`
 
 ### Acceptance Criteria
 
-- [ ] `locateCurrentFile()` highlights the matched file's slice and legend row for the configured duration and clears it afterwards, using fake timers.
-- [ ] In path grouping, locate narrows the scope to the parent directory when needed and highlights on the settled result of a newer generation.
-- [ ] A second activation during the highlight window restarts the window without overlapping clears.
-- [ ] Re-render (model generation change not caused by locate) and `destroy()` cancel any pending highlight.
-- [ ] Files folded into the chart "Other" slice still get their legend row highlighted; no slice is falsely dimmed.
-- [ ] Focused unit tests with fake clocks and fake adapters pass.
+- [x] `locateCurrentFile()` highlights the matched file's slice and legend row for the configured duration and clears it afterwards, using fake timers.
+- [x] In path grouping, locate narrows the scope to the parent directory when needed and highlights on the settled result of a newer generation.
+- [x] A second activation during the highlight window restarts the window without overlapping clears.
+- [x] Re-render (model generation change not caused by locate) and `destroy()` cancel any pending highlight.
+- [x] Files folded into the chart "Other" slice still get their legend row highlighted; no slice is falsely dimmed.
+- [x] Focused unit tests with fake clocks and fake adapters pass.
+
+### Evidence
+
+- `npm run check` — passed.
+- `npm run lint` — passed.
+- `npm test -- --run` — passed, 302 tests and 0 failures, including the new locate helpers, highlight lifecycle, path-scope narrowing, and control-order cases.
 
 ## Phase 1: Wire the Header Popover Control, Scope Navigation, and Highlight Lifecycle
 
@@ -149,30 +155,35 @@ Expose the locate behavior as one icon button immediately left of the metric but
 
 ### Tasks
 
-- [ ] Pass `activeFilePath` from `HeaderActionManager` (entry `filePath`) into each `SummaryPopover` at construction.
-- [ ] Render the locate button immediately before the metric dropdown inside the existing query controls area, with a stable `data-activity-map-id`, accessible label, and Lucide icon.
-- [ ] Disable the button when `activeFilePath` is null or the model is not in the ready state.
-- [ ] On activation, call `locateCurrentFile()` and keep focus on the locate button (do not move focus into the legend).
-- [ ] Preserve loading retention, focus restoration across re-render, metric/range/date/grouping/breadcrumb behavior, live updates, pinning, Other expansion, and file activation.
-- [ ] Add focused control-order, accessibility, disabled-state, and controller/Popover regression tests.
+- [x] Pass `activeFilePath` from `HeaderActionManager` (entry `filePath`) into each `SummaryPopover` at construction.
+- [x] Render the locate button immediately before the metric dropdown inside the existing query controls area, with a stable `data-activity-map-id`, accessible label, and Lucide icon.
+- [x] Disable the button when `activeFilePath` is null or the model is not in the ready state.
+- [x] On activation, call `locateCurrentFile()` and keep focus on the locate button (do not move focus into the legend).
+- [x] Preserve loading retention, focus restoration across re-render, metric/range/date/grouping/breadcrumb behavior, live updates, pinning, Other expansion, and file activation.
+- [x] Add focused control-order, accessibility, disabled-state, and controller/Popover regression tests.
 
 ### Files
 
 - `src/ui/components/range-controls.ts`
 - `src/ui/summary-popover.ts`
 - `src/ui/header-action-manager.ts`
-- `styles.css` (grid column for the new leading query control, if needed)
-- `tests/ui/summary-popover.test.ts`
-- `tests/ui/header-action-manager.test.ts`
-- `tests/ui/accessibility.test.ts`
+- `styles.css`
+- `tests/ui/locate-current-file.behavior.test.ts`
 
 ### Acceptance Criteria
 
-- [ ] The locate button is immediately left of the metric button in the existing control row on both file and path grouping.
-- [ ] The button carries a stable `data-activity-map-id`, accessible label, and icon; it is disabled when the owning header has no file or the model is not ready.
-- [ ] Activation does not change metric, range, date, grouping (other than the documented path-scope narrowing in path mode), pin state, or focus contract.
-- [ ] Existing controls and Popover interactions remain green under pointer and keyboard tests.
-- [ ] Focused UI, accessibility, type-check, lint, test, and build gates pass.
+- [x] The locate button is immediately left of the metric button in the existing control row on both file and path grouping.
+- [x] The button carries a stable `data-activity-map-id`, accessible label, and icon; it is disabled when the owning header has no file or the model is not ready.
+- [x] Activation does not change metric, range, date, grouping (other than the documented path-scope narrowing in path mode), pin state, or focus contract.
+- [x] Existing controls and Popover interactions remain green under pointer and keyboard tests.
+- [x] Focused UI, accessibility, type-check, lint, test, and build gates pass.
+
+### Evidence
+
+- `npm run check` — passed.
+- `npm run lint` — passed.
+- `npm test -- --run` — passed, 302 tests and 0 failures, including locate button order, disabled state, and icon rendering.
+- `npm run build` — passed; the production bundle contains the locate action wired left of the metric dropdown. Real Obsidian interaction remains the explicit Post-Critic Acceptance gate.
 
 ## Phase 2: Synchronize Documentation and Collect Integration Evidence
 
@@ -182,9 +193,9 @@ Align public behavior and architecture with the implemented locate contract and 
 
 ### Tasks
 
-- [ ] Update Architecture and README after the implementation exists.
-- [ ] Synchronize this Spec and PRD without claiming unexecuted real-Obsidian journeys.
-- [ ] Run the full automated suite, production build, strict specs validation, Markdown link validation, and whitespace checks.
+- [x] Update Architecture and README after the implementation exists.
+- [x] Synchronize this Spec and PRD without claiming unexecuted real-Obsidian journeys.
+- [x] Run the full automated suite, production build, strict specs validation, Markdown link validation, and whitespace checks.
 
 ### Files
 
@@ -195,9 +206,18 @@ Align public behavior and architecture with the implemented locate contract and 
 
 ### Acceptance Criteria
 
-- [ ] Documentation describes the transient locate highlight, the path-mode scope narrowing, and the unchanged activation identity.
-- [ ] `npm run check`, `npm run lint`, `npm test -- --run`, and `npm run build` pass.
-- [ ] Strict specs validation, repository-relative Markdown links, and `git diff --check` pass.
+- [x] Documentation describes the transient locate highlight, the path-mode scope narrowing, and the unchanged activation identity.
+- [x] `npm run check`, `npm run lint`, `npm test -- --run`, and `npm run build` pass.
+- [x] Strict specs validation, repository-relative Markdown links, and `git diff --check` pass.
+
+### Evidence
+
+- `npm run check` — passed.
+- `npm run lint` — passed.
+- `npm test -- --run` — passed, 302 tests and 0 failures.
+- `npm run build` — passed.
+- `SPEC_DRIVEN_DELIVERY_DIR=/Users/zhuo/.agents/skills/spec-driven-delivery python3 /Users/zhuo/.agents/skills/spec-driven-delivery/scripts/validate_specs_workspace.py . --strict` — passed for spec 08 with 0 errors and 0 warnings (pre-existing spec-06 errors unchanged).
+- `git diff --check` — passed.
 
 ## Risks and Mitigations
 

@@ -35,7 +35,7 @@ Activity Map is an Obsidian plugin that shows how you spend focused time across 
 - **Per-file activity** — Tracks active time, editing time, typed characters, and file-open counts for the file currently in focus.
 - **Idle-aware tracking** — Excludes idle, sleep, and lock-screen gaps from focused activity.
 - **Explore by time and place** — Inspect daily and historical activity, then drill from folders into files.
-- **Header summary** — Open a compact, pinnable activity chart from eligible file headers.
+- **Header summary** — Open a compact, pinnable activity chart from eligible file headers, and locate the current file's slice and list row with a single click.
 - **Local poster export** — Download the current result as a theme-matched PNG poster with an optional caption.
 - **Local settings** — Configure excluded paths and timing thresholds.
 
