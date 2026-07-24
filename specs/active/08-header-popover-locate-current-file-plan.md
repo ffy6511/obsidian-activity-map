@@ -238,4 +238,16 @@ Align public behavior and architecture with the implemented locate contract and 
 
 ### Round 1
 
-- Critic: pending
+- Critic: independent read-only evaluator (Explore subagent, no prior implementation involvement).
+- Review scope: full implementation, tests, documentation, and Post-Critic Acceptance readiness.
+- Evidence reviewed: Spec 08, commits `b222a8d`–`b01a577`, implementation and test sources, `git diff main...HEAD`, and the recorded 302-test technical gate evidence.
+- Findings:
+  1. P3 non-blocking — `completePendingLocate` had no generation guard, so an unrelated interleaving refresh could silently drop a scope-narrowing locate's pending highlight.
+  2. P3 non-blocking — test gap: no coverage for unrelated-re-render cancellation or `close()`/`destroy()` timer cancellation (claimed by Phase 0 acceptance).
+  3. P3 non-blocking — the `entryRef` indirection in `HeaderActionManager` was dead (never mutated) and its comment claimed in-place path updates that do not occur.
+  4. P3 non-blocking — `withLiveActivity` recomputed independently in locate; negligible boundary divergence vs the mounted distribution (noted, not fixed).
+- Selected fixes: findings 1–3 (the three highest-priority findings in this round).
+- Executor fixes: added `pendingLocateGeneration` and a strict newer-generation guard in `completePendingLocate` so a scope-narrowing locate completes only on its own `set-path` result; reset the generation on close; added two regression tests (unrelated `set-metric` re-render cancels highlight+timer; `close()` cancels the pending timer with no late DOM mutation); replaced the dead `entryRef` with a direct `filePath` capture and an accurate rebuild-on-rename comment.
+- Deferred findings: finding 4 (`withLiveActivity` recomputation) is deliberately deferred — the boundary divergence is sub-frame and has no behavioral impact; revisiting would require exposing the mounted live distribution, tracked as a future polish follow-up rather than a correctness gate.
+- Validation rerun: `npm run check`, `npm run lint`, `npm test -- --run` (304 passed, 0 failed), `npm run build`, `git diff --check` all passed. Strict specs validation reports 0 errors and 0 warnings for spec 08 (pre-existing spec-06 errors unchanged).
+- Verdict: pass-with-follow-ups.

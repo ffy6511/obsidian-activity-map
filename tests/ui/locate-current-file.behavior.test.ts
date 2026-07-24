@@ -402,6 +402,119 @@ describe('locate current file behavior', () => {
 		expect(locate?.disabled).toBeFalse();
 		expect(rendered).toContain('locate-fixed');
 	});
+
+	it('cancels the highlight and timer when an unrelated intent re-renders', async () => {
+		const { document } = installDomEnvironment();
+		const items = [fileItem('a', 'a.md', 10), fileItem('b', 'b.md', 20)];
+		const { controller } = makeController({ rootItems: items });
+		const trigger = document.createElement('button');
+		document.body.appendChild(trigger);
+
+		const active = new Map<number, () => void>();
+		let nextTimer = 1;
+		const window = document.defaultView as unknown as {
+			setTimeout: (fn: () => void) => number;
+			clearTimeout: (id: number) => void;
+			matchMedia: (q: string) => { matches: boolean };
+			setInterval: () => number;
+			clearInterval: () => void;
+		};
+		window.setTimeout = (fn: () => void) => {
+			const id = nextTimer++;
+			active.set(id, fn);
+			return id;
+		};
+		window.clearTimeout = (id: number) => {
+			active.delete(id);
+		};
+		window.setInterval = () => 0;
+		window.clearInterval = () => {};
+
+		const popover = new SummaryPopover(
+			trigger,
+			controller,
+			async () => {},
+			undefined,
+			undefined,
+			undefined,
+			() => 'b.md',
+			() => {},
+		);
+		popover.open();
+		await Promise.resolve();
+		await Promise.resolve();
+
+		popover.locateCurrentFile();
+		const row = document.querySelector<HTMLButtonElement>('[data-activity-map-id="legend-b"]');
+		expect(row?.classList.contains('is-highlighted')).toBeTrue();
+		expect(active.size).toBe(1);
+
+		// An unrelated metric change bumps the generation and rebuilds the DOM;
+		// the pending highlight clear must be cancelled and the new render must
+		// not carry the locate highlight.
+		void controller.dispatch({ kind: 'set-metric', metric: 'editingMs' });
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(active.size).toBe(0);
+		const rowAfter = document.querySelector<HTMLButtonElement>(
+			'[data-activity-map-id="legend-b"]',
+		);
+		expect(rowAfter?.classList.contains('is-highlighted')).toBeFalse();
+
+		popover.close(false);
+	});
+
+	it('cancels the pending highlight timer on close so a late clear cannot mutate the DOM', async () => {
+		const { document } = installDomEnvironment();
+		const items = [fileItem('a', 'a.md', 10)];
+		const { controller } = makeController({ rootItems: items });
+		const trigger = document.createElement('button');
+		document.body.appendChild(trigger);
+
+		const active = new Map<number, () => void>();
+		let nextTimer = 1;
+		const window = document.defaultView as unknown as {
+			setTimeout: (fn: () => void) => number;
+			clearTimeout: (id: number) => void;
+			matchMedia: (q: string) => { matches: boolean };
+			setInterval: () => number;
+			clearInterval: () => void;
+		};
+		window.setTimeout = (fn: () => void) => {
+			const id = nextTimer++;
+			active.set(id, fn);
+			return id;
+		};
+		window.clearTimeout = (id: number) => {
+			active.delete(id);
+		};
+		window.setInterval = () => 0;
+		window.clearInterval = () => {};
+
+		const popover = new SummaryPopover(
+			trigger,
+			controller,
+			async () => {},
+			undefined,
+			undefined,
+			undefined,
+			() => 'a.md',
+			() => {},
+		);
+		popover.open();
+		await Promise.resolve();
+		await Promise.resolve();
+
+		popover.locateCurrentFile();
+		expect(active.size).toBe(1);
+		popover.close(false);
+		// Close cancelled the timer.
+		expect(active.size).toBe(0);
+		// Driving any captured callback after close is a no-op on the DOM.
+		const row = document.querySelector('[data-activity-map-id="legend-a"]');
+		expect(row).toBeNull();
+	});
 });
 
 /** Minimal range-controls fixture exercising the leadingQueryAction path. */

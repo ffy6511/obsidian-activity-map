@@ -92,6 +92,10 @@ export class SummaryPopover {
 	// When locate narrows the path scope, this records the pending target so the
 	// next ready model of a newer generation can complete the highlight.
 	private pendingLocatePath: string | null = null;
+	// Generation observed when a scope-narrowing locate was dispatched. The
+	// pending locate must complete only on a newer-generation ready model that
+	// the locate's own set-path produced, not on an unrelated interleaving refresh.
+	private pendingLocateGeneration = -1;
 
 	constructor(
 		private readonly trigger: HTMLElement,
@@ -239,6 +243,7 @@ export class SummaryPopover {
 		this.chartHandle = null;
 		this.legendHandle = null;
 		this.pendingLocatePath = null;
+		this.pendingLocateGeneration = -1;
 		this.trigger.removeClass('is-pinned');
 		this.trigger.setAttr('aria-expanded', 'false');
 		this.trigger.setAttr('aria-pressed', 'false');
@@ -302,8 +307,15 @@ export class SummaryPopover {
 	private completePendingLocate(model: ActivityMapViewModel): void {
 		const pendingPath = this.pendingLocatePath;
 		if (pendingPath === null) return;
-		this.pendingLocatePath = null;
+		// Only complete on the ready model of a strictly newer generation than
+		// the one observed at dispatch — the model the locate's own set-path
+		// produced. An unrelated interleaving refresh (same/newer generation but
+		// wrong scope) leaves the pending intent in place so the locate's own
+		// resolution can still complete it; it is dropped only on close/rebuild.
+		if (model.queryGeneration <= this.pendingLocateGeneration) return;
 		if (model.loadState !== 'ready' || !model.distribution) return;
+		this.pendingLocatePath = null;
+		this.pendingLocateGeneration = -1;
 		const distribution = withLiveActivity(model.distribution, model.tracking, {
 			nowMs: Date.now(),
 			idleThresholdMs: model.settings.idleThresholdMs,
@@ -459,6 +471,9 @@ export class SummaryPopover {
 			const target = parentDirectory(activeFilePath);
 			if (target === model.query.path) return false;
 			this.pendingLocatePath = activeFilePath;
+			// Record the generation before dispatching; set-path's refresh bumps
+			// it, so the locate completes only on that newer-generation ready model.
+			this.pendingLocateGeneration = model.queryGeneration;
 			this.cancelLocate();
 			void this.controller.dispatch({ kind: 'set-path', path: target });
 			return true;

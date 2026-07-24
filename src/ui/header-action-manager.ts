@@ -98,7 +98,6 @@ export class HeaderActionManager {
 
 	private create(view: FileView, filePath: string): HeaderEntry {
 		let popover: SummaryPopover | null = null;
-		const entryRef: { filePath: string } = { filePath };
 		const action = view.addAction('chart-pie', 'Activity Map: starting', () =>
 			popover?.togglePinned(),
 		);
@@ -121,10 +120,11 @@ export class HeaderActionManager {
 				}),
 			() => view.leaf.hoverPopover?.hoverEl ?? null,
 			this.dependencies.app,
-			// The Popover locates the file of the header view it belongs to. The
-			// entry is rebuilt on rename (see synchronize), so reading the live
-			// ref keeps the path correct across in-place updates.
-			() => entryRef.filePath,
+			// The Popover locates the file of the header view it belongs to. A
+			// rename rebuilds this entry (see synchronize), closing the old
+			// Popover and creating a fresh one with the new path, so the captured
+			// path stays correct for this Popover's lifetime.
+			() => filePath,
 		);
 		const ownerWindow = action.ownerDocument.defaultView;
 		const supportsHover =
