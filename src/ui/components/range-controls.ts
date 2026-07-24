@@ -12,6 +12,16 @@ export interface RangeControlAction {
 	onActivate(): void;
 }
 
+/**
+ * An icon button with a resting `icon` and an `activeIcon` that its owner can
+ * cross-fade between. Used by locate so `locate-fixed` stays visible for the
+ * same transient interval as the chart and legend highlight.
+ */
+export interface LeadingQueryAction extends RangeControlAction {
+	/** Icon shown while the action's owner applies its active presentation state. */
+	activeIcon?: string;
+}
+
 export interface RangeControlsHandle {
 	/** Updates an existing action without replacing its focused DOM node. */
 	updateAction(action: RangeControlAction): boolean;
@@ -38,7 +48,7 @@ const METRIC_OPTIONS: readonly DropdownOption<MetricKey>[] = [
 ];
 
 const RANGE_OPTIONS: readonly DropdownOption<RangeChoice>[] = [
-	{ value: 'day', label: '1day' },
+	{ value: 'day', label: '1 day' },
 	{ value: 'average-7', label: '7d Avg' },
 	{ value: 'average-30', label: '30d Avg' },
 	{ value: 'average-90', label: '90d Avg' },
@@ -56,7 +66,7 @@ export function renderRangeControls(args: {
 	onRange: (range: RangeMode) => void;
 	leadingActions?: readonly RangeControlAction[];
 	/** Action rendered immediately left of the metric dropdown, inside the query area. */
-	leadingQueryAction?: RangeControlAction;
+	leadingQueryAction?: LeadingQueryAction;
 	renderIcon?: (container: HTMLElement, icon: string) => void;
 }): RangeControlsHandle {
 	const controls = args.container.createDiv({ cls: 'activity-map-controls' });
@@ -152,18 +162,35 @@ export function renderRangeControls(args: {
 
 	const queryControls = controls.createDiv({ cls: 'activity-map-query-controls' });
 	if (args.leadingQueryAction) {
+		const action = args.leadingQueryAction;
+		// When an activeIcon is set, render the button empty and stack the two
+		// glyphs ourselves so its owner can cross-fade them with a state class.
+		// Otherwise fall back to the shared single-icon button.
 		const button = iconButton(
 			queryControls,
-			args.leadingQueryAction.icon,
-			args.leadingQueryAction.label,
-			args.leadingQueryAction.id,
-			() => args.leadingQueryAction?.onActivate(),
 			'',
-			args.leadingQueryAction.pressed,
-			renderIcon,
+			action.label,
+			action.id,
+			() => action.onActivate(),
+			'',
+			action.pressed,
+			// Empty container; icons are stacked below.
+			() => {},
 		);
-		button.disabled = args.leadingQueryAction.disabled === true;
-		actionButtons.set(args.leadingQueryAction.id, button);
+		if (action.activeIcon) {
+			const stack = button.createDiv({
+				cls: 'activity-map-control-icon',
+				attr: { 'aria-hidden': 'true', 'data-activity-map-icon-stack': '' },
+			});
+			const rest = stack.createSpan({ cls: 'activity-map-locate-icon' });
+			const pressed = stack.createSpan({ cls: 'activity-map-locate-icon-fixed' });
+			renderIcon(rest, action.icon);
+			renderIcon(pressed, action.activeIcon);
+		} else {
+			renderIcon(button, action.icon);
+		}
+		button.disabled = action.disabled === true;
+		actionButtons.set(action.id, button);
 	}
 	const metricControl = queryControls.createDiv({ cls: 'activity-map-metric-control' });
 	dropdowns.push(
@@ -196,7 +223,12 @@ export function renderRangeControls(args: {
 		updateAction(action) {
 			const button = actionButtons.get(action.id);
 			if (!button) return false;
-			renderIcon(button, action.icon);
+			// An active-icon action owns a stable two-glyph stack. Loading retention
+			// updates only its accessible state; re-rendering through setIcon would
+			// empty the button and collapse the transition back to one glyph.
+			if (!button.querySelector('[data-activity-map-icon-stack]')) {
+				renderIcon(button, action.icon);
+			}
 			button.setAttribute('aria-label', action.label);
 			button.disabled = action.disabled === true;
 			if (action.pressed === undefined) button.removeAttribute('aria-pressed');

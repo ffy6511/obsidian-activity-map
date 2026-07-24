@@ -1,5 +1,7 @@
 import { describe, expect, it } from '../helpers/test-harness';
 
+import { readFile } from 'node:fs/promises';
+
 import type { TrackingSnapshot } from '../../src/domain/activity';
 import { normalizeSettings } from '../../src/domain/settings';
 import type {
@@ -190,6 +192,10 @@ describe('locate current file behavior', () => {
 
 		const started = popover.locateCurrentFile();
 		expect(started).toBeTrue();
+		const locate = document.querySelector<HTMLButtonElement>(
+			'[data-activity-map-id="locate-current-file"]',
+		);
+		expect(locate?.classList.contains('is-locating')).toBeTrue();
 
 		const row = document.querySelector<HTMLButtonElement>('[data-activity-map-id="legend-b"]');
 		expect(row?.classList.contains('is-highlighted')).toBeTrue();
@@ -202,6 +208,7 @@ describe('locate current file behavior', () => {
 		const clear = [...timers.values()][0];
 		expect(clear).toBeDefined();
 		clear?.();
+		expect(locate?.classList.contains('is-locating')).toBeFalse();
 		expect(row?.classList.contains('is-highlighted')).toBeFalse();
 		expect(other?.classList.contains('is-dimmed')).toBeFalse();
 
@@ -400,7 +407,57 @@ describe('locate current file behavior', () => {
 			'[data-activity-map-id="locate-current-file"]',
 		);
 		expect(locate?.disabled).toBeFalse();
+		expect(rendered).toContain('locate');
 		expect(rendered).toContain('locate-fixed');
+	});
+
+	it('retains the stacked locate icons when a loading update changes its state', () => {
+		const { document } = installDomEnvironment();
+		const container = document.createElement('div');
+		document.body.appendChild(container);
+		const rendered: string[] = [];
+		const handle = renderLocateControlsFixture(container, { hasFile: true }, rendered);
+		const locate = container.querySelector<HTMLButtonElement>(
+			'[data-activity-map-id="locate-current-file"]',
+		);
+		if (!locate) throw new Error('locate button missing');
+		const stack = locate.querySelector<HTMLElement>('[data-activity-map-icon-stack]');
+		const restingIcon = stack?.querySelector<HTMLElement>('.activity-map-locate-icon');
+		const pressedIcon = stack?.querySelector<HTMLElement>('.activity-map-locate-icon-fixed');
+		if (!stack || !restingIcon || !pressedIcon) throw new Error('locate icon stack missing');
+		expect(stack.getAttribute('aria-hidden')).toBe('true');
+		expect(restingIcon.getAttribute('data-icon')).toBe('locate');
+		expect(pressedIcon.getAttribute('data-icon')).toBe('locate-fixed');
+		const renderedLocateIcons = rendered.filter((icon) => icon.startsWith('locate'));
+
+		expect(
+			handle.updateAction({
+				icon: 'locate',
+				label: 'Locate current file',
+				id: 'locate-current-file',
+				disabled: true,
+				onActivate: () => {},
+			}),
+		).toBeTrue();
+
+		expect(locate.disabled).toBeTrue();
+		expect(locate.querySelector('[data-activity-map-icon-stack]')).toBe(stack);
+		expect(stack.querySelector('.activity-map-locate-icon')).toBe(restingIcon);
+		expect(stack.querySelector('.activity-map-locate-icon-fixed')).toBe(pressedIcon);
+		expect(rendered.filter((icon) => icon.startsWith('locate'))).toEqual(renderedLocateIcons);
+	});
+
+	it('defines a highlight-owned locate cross-fade and shared subtle button press scale', async () => {
+		const css = await readFile(new URL('../../styles.css', import.meta.url), 'utf8');
+		expect(css.includes('transform: scale(1.04)')).toBeTrue();
+		expect(css.includes("button[data-activity-map-id='locate-current-file']")).toBeTrue();
+		expect(css.includes('display: inline-grid')).toBeTrue();
+		expect(css.includes('place-items: center')).toBeTrue();
+		expect(css.includes('transition: opacity 120ms ease-out')).toBeTrue();
+		expect(/\.activity-map-locate-icon-fixed\s*\{\s*opacity: 0;/.test(css)).toBeTrue();
+		expect(
+			/\.is-locating[\s\S]*?\.activity-map-locate-icon-fixed\s*\{\s*opacity: 1;/.test(css),
+		).toBeTrue();
 	});
 
 	it('cancels the highlight and timer when an unrelated intent re-renders', async () => {
@@ -522,18 +579,20 @@ function renderLocateControlsFixture(
 	container: HTMLElement,
 	args: { hasFile: boolean },
 	rendered: string[],
-): void {
-	renderRangeControls({
+): ReturnType<typeof renderRangeControls> {
+	return renderRangeControls({
 		container,
 		metric: 'activeMs',
 		range: { mode: 'all' },
 		onMetric: () => {},
 		onRange: () => {},
-		renderIcon: (_el, icon) => {
+		renderIcon: (element, icon) => {
 			rendered.push(icon);
+			element.setAttribute('data-icon', icon);
 		},
 		leadingQueryAction: {
-			icon: 'locate-fixed',
+			icon: 'locate',
+			activeIcon: 'locate-fixed',
 			label: 'Locate current file',
 			id: 'locate-current-file',
 			disabled: !args.hasFile,

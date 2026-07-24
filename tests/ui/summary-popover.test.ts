@@ -133,6 +133,14 @@ describe('summary popover fixed layout', () => {
 		expect(css.includes('.activity-map-dropdown-option')).toBeTrue();
 		expect(css.includes('background: transparent !important')).toBeTrue();
 		expect(css.includes('box-shadow: var(--shadow-input-active) !important')).toBeTrue();
+		expect(
+			css.includes('.activity-map-popover button.activity-map-dropdown-option:hover'),
+		).toBeTrue();
+		expect(css.includes('display: flex !important')).toBeTrue();
+		expect(css.includes('justify-content: flex-start !important')).toBeTrue();
+		expect(css.includes('text-align: left !important')).toBeTrue();
+		expect(css.includes('transform: scale(1.04)')).toBeTrue();
+		expect(css.includes('transform: scale(0.96)')).toBeTrue();
 		expect(css.includes('.activity-map-query-button.activity-map-icon-button')).toBeTrue();
 		expect(css.includes('grid-template-columns: max-content max-content')).toBeTrue();
 		expect(dayNavigationButtons.includes('inline-size: 100%')).toBeTrue();
@@ -194,6 +202,6 @@ describe('summary popover fixed layout', () => {
 		expect(css.includes('border-bottom: 2px solid var(--text-muted)')).toBeTrue();
 		expect(css.includes('.activity-map-poster-caption-line-count')).toBeTrue();
 		expect(css.includes('color: var(--text-error)')).toBeTrue();
-		expect(controls.includes("value: 'day', label: '1day'")).toBeTrue();
+		expect(controls.includes("value: 'day', label: '1 day'")).toBeTrue();
 	});
 });

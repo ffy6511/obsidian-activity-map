@@ -192,6 +192,10 @@ After the Critic loop closed, the locate scroll was upgraded from the native ins
 - Added: `src/ui/scroll-into-view-animated.ts`, `tests/ui/scroll-into-view-animated.test.ts` (easing, centering, boundary clamp, already-visible no-op, cancel, headless no-op).
 - `npm run check`, `npm run lint`, `npm test -- --run` (312 passed, 0 failed), `npm run build` all pass. This refinement is a non-blocking UI polish and does not reopen the Critic loop.
 
+### Post-Critic Refinement: Locate Highlight Indicator
+
+The locate button keeps a two-icon DOM stack: resting `locate` cross-fades to `locate-fixed` for the same 2-second lifetime as a successful locate highlight and returns when that highlight clears. `RangeControls.updateAction()` recognizes that stable stack during loading retention and updates only the accessible label, disabled state, and toggle state; it never calls Obsidian's content-replacing icon renderer for that button. Every control-row button shares a subtle hover scale-up and `:active` scale-down. Both transitions remain disabled under reduced motion. Focused fixture coverage proves the stack survives a disabled/loading update, the fixed glyph begins and clears with the highlight timer, and source coverage verifies the stacking, cross-fade, and shared press rules.
+
 ## Phase 2: Synchronize Documentation and Collect Integration Evidence
 
 ### Goal
@@ -240,6 +244,7 @@ Align public behavior and architecture with the implemented locate contract and 
 
 - [ ] In real Obsidian, the owner opens a Header Popover on a file with activity, activates locate in file grouping, and confirms the slice and legend row highlight for about two seconds with the row scrolled into view.
 - [ ] The owner activates locate in path grouping from the vault root and confirms the Popover narrows to the file's parent directory, then highlights the file's row for about two seconds.
+- [ ] In real Obsidian, the owner confirms that successful locate cross-fades from `locate` to `locate-fixed` for the same 2-second interval as its highlight, then restores it, while every enabled control-row button has the same subtle press scale.
 
 ## Evaluation Record
 

@@ -9,6 +9,7 @@ import { renderChartLegend, type ChartLegendHandle } from './components/chart-le
 import { renderDonutChart, type ChartItem } from './components/donut-chart';
 import {
 	renderRangeControls,
+	type LeadingQueryAction,
 	type RangeControlAction,
 	type RangeControlsHandle,
 } from './components/range-controls';
@@ -440,10 +441,13 @@ export class SummaryPopover {
 		});
 	}
 
-	private locateAction(model: ActivityMapViewModel): RangeControlAction {
+	private locateAction(model: ActivityMapViewModel): LeadingQueryAction {
 		const hasFile = this.getActiveFilePath?.() != null;
 		return {
-			icon: 'locate-fixed',
+			// Resting glyph is the open `locate`; the fixed target remains visible
+			// for exactly the successful locate highlight lifetime below.
+			icon: 'locate',
+			activeIcon: 'locate-fixed',
 			label: 'Locate current file',
 			id: 'locate-current-file',
 			disabled: !hasFile || model.loadState !== 'ready',
@@ -498,6 +502,7 @@ export class SummaryPopover {
 		const chart = this.chartHandle;
 		const legend = this.legendHandle;
 		if (!chart || !legend) return;
+		this.setLocateIndicator(true);
 		chart.highlight(itemId);
 		legend.highlight(itemId);
 		// Scroll the legend row into view inside its scroll container. The
@@ -535,21 +540,30 @@ export class SummaryPopover {
 	}
 
 	private clearLocateHighlight(): void {
+		this.setLocateIndicator(false);
 		this.chartHandle?.highlight(null);
 		this.legendHandle?.highlight(null);
 	}
 
+	/** Keeps the locate glyph synchronized with the transient highlight lifetime. */
+	private setLocateIndicator(active: boolean): void {
+		this.element
+			?.querySelector<HTMLElement>('[data-activity-map-id="locate-current-file"]')
+			?.classList.toggle('is-locating', active);
+	}
+
 	/**
-	 * Cancels only the pending highlight-clear timer. Does not clear
-	 * {@link pendingLocatePath}: a scope-narrowing locate sets the pending path
-	 * and then cancels any prior timer, and the pending path must survive until
-	 * the next ready model is rendered and completed.
+	 * Cancels the pending highlight-clear timer and restores the resting glyph.
+	 * Does not clear {@link pendingLocatePath}: a scope-narrowing locate sets the
+	 * pending path and then cancels any prior timer, and the pending path must
+	 * survive until the next ready model is rendered and completed.
 	 */
 	private cancelLocate(): void {
 		if (this.locateTimer !== null) {
 			this.trigger.ownerDocument.defaultView?.clearTimeout(this.locateTimer);
 		}
 		this.locateTimer = null;
+		this.setLocateIndicator(false);
 	}
 
 	private openPosterExport(): void {

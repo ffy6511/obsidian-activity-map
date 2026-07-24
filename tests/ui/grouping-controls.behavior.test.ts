@@ -81,6 +81,15 @@ describe('grouping control behavior', () => {
 		expect(chars.textContent).toBe('Chars');
 		chars.click();
 		expect(selectedMetric).toBe('typedChars');
+		const range = container.querySelector<HTMLButtonElement>(
+			'[data-activity-map-id="date-range"]',
+		);
+		if (!range) throw new Error('range trigger missing');
+		range.click();
+		expect(
+			container.querySelector<HTMLButtonElement>('[data-activity-map-option="day"]')
+				?.textContent,
+		).toBe('1 day');
 	});
 
 	it('selects a custom range option with ArrowDown and Enter', () => {
