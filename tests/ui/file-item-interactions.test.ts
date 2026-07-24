@@ -2,6 +2,7 @@ import { describe, expect, it } from '../helpers/test-harness';
 
 import {
 	fileOpenPane,
+	isTrustedKeyboardActivation,
 	isTrustedPrimaryClick,
 	previewFileOnHover,
 	shouldOpenInNewTab,
@@ -37,6 +38,15 @@ describe('file item interactions', () => {
 		expect(isTrustedPrimaryClick({ isTrusted: false, button: 0 } as MouseEvent)).toBeFalse();
 		expect(isTrustedPrimaryClick({ isTrusted: true, button: 1 } as MouseEvent)).toBeFalse();
 		expect(isTrustedPrimaryClick({ isTrusted: true, button: 0 } as MouseEvent)).toBeTrue();
+		expect(
+			isTrustedKeyboardActivation({ isTrusted: false, key: 'Enter' } as KeyboardEvent),
+		).toBe(false);
+		expect(
+			isTrustedKeyboardActivation({ isTrusted: true, key: 'Escape' } as KeyboardEvent),
+		).toBe(false);
+		expect(
+			isTrustedKeyboardActivation({ isTrusted: true, key: ' ' } as KeyboardEvent),
+		).toBeTrue();
 	});
 
 	it('maps either desktop link modifier to an explicit new tab pane', () => {

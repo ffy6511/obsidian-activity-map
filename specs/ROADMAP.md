@@ -73,7 +73,7 @@ Extend trusted activity reporting with privacy-preserving input metrics, local p
 
 - [Reserved metric semantics](../docs/PRD.md#交互输入字符-typedchars)
 - [Cross-version product and data boundaries](constitution/2026-07-21-activity-map-product-and-data.md#final-decision)
-- [Spec 06 — typedChars](active/06-typed-character-metric-plan.md)
+- [Spec 06 — typedChars](archive/06-typed-character-metric-plan.md)
 - [Spec 07 — poster export](active/07-poster-export-plan.md)
 
 ### Key Deliverables

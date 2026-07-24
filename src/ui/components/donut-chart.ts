@@ -1,6 +1,10 @@
 import type { DistributionItem, DistributionResult } from '../../query/distribution-query';
 import { formatMetric, formatMetricFull, formatPercent } from '../format';
-import { isTrustedPrimaryClick, type FileActivationEvent } from '../file-hover-preview';
+import {
+	isTrustedKeyboardActivation,
+	isTrustedPrimaryClick,
+	type FileActivationEvent,
+} from '../file-hover-preview';
 
 export interface ChartItem extends DistributionItem {
 	color: string;
@@ -195,7 +199,10 @@ export function renderDonutChart(args: {
 			lastPointerSource = 'mouse';
 		});
 		path.addEventListener('keydown', (event) => {
-			if (event.isTrusted && (event.key === 'Enter' || event.key === ' ')) {
+			if (
+				isTrustedKeyboardActivation(event) &&
+				(event.key === 'Enter' || event.key === ' ')
+			) {
 				event.preventDefault();
 				const current = currentItem(item.id);
 				if (current) args.onActivate(current, event, 'keyboard');

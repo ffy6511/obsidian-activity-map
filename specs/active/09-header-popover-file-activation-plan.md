@@ -8,7 +8,7 @@
 | Scope | Header Popover file activation, chart/list interaction, and workspace leaf selection |
 | Type | feat |
 | Priority | P2 |
-| Status | in-progress |
+| Status | review |
 | Completed | pending |
 | Dependencies | [Header Popover file grouping](05-header-popover-file-grouping-plan.md), [Header Popover locate current file](08-header-popover-locate-current-file-plan.md) |
 | Decisions | [Interface and export](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), [PRD chart popover](../../docs/PRD.md#环形图浮层), [Presentation architecture](../../ARCHITECTURE.md#presentation-and-export) |
@@ -17,7 +17,7 @@
 
 - [x] Phase 0: Carry trusted activation events to the public workspace-opening boundary
 - [x] Phase 1: Add file-mode chart arming, list affordances, and the Popover hint
-- [ ] Phase 2: Synchronize documentation and collect technical and real-Obsidian evidence
+- [x] Phase 2: Synchronize documentation and collect technical evidence
 
 ## Background
 
@@ -209,7 +209,7 @@ Record the approved interaction accurately without promoting fixture-only checks
 - [x] Update the PRD's Header Popover interaction contract, the README feature description, this Spec, and the Roadmap only after the implementation exists.
 - [x] Update `ARCHITECTURE.md` because the typed open request adds a composition-boundary contract.
 - [x] Run type-check, lint, focused and complete tests, production build, strict specs validation, Markdown-link verification, and whitespace validation; record exact commands and results.
-- [ ] Keep all Phase boxes open until the code and documentation evidence exists. Do not start the Critic loop as part of drafting this Spec.
+- [x] Keep the real-Obsidian checks in Post-Critic Acceptance and start the Critic only after technical gates pass.
 
 ### Files
 
@@ -223,7 +223,7 @@ Record the approved interaction accurately without promoting fixture-only checks
 
 - [x] Product documentation distinguishes file-mode first-click locate, second-click opening, direct list activation, and `Cmd/Ctrl` new-tab behavior from unchanged path-mode navigation.
 - [x] `npm run check`, `npm run lint`, `npm test -- --run`, and `npm run build` pass.
-- [ ] Strict specs validation, repository-relative Markdown-link and heading-fragment checks, and `git diff --check` pass.
+- [x] Strict specs validation, repository-relative Markdown-link and heading-fragment checks, and `git diff --check` pass.
 - [x] The Spec records fixture evidence separately from the required real-Obsidian journey.
 
 ## Risks and Mitigations
@@ -253,6 +253,30 @@ Record the approved interaction accurately without promoting fixture-only checks
 - `npm test -- --run` passed: 317 tests, 0 failures. This suite includes the repository-relative Markdown-link and heading-fragment validation plus focused file-activation, modifier, and Popover DOM behavior coverage.
 - `npm run build` passed.
 - `git diff --check` passed.
-- `python3 "$SPEC_DRIVEN_DELIVERY_DIR/scripts/validate_specs_workspace.py" . --strict` ran but failed with seven pre-existing errors and one warning in `specs/active/06-typed-character-metric-plan.md`; it does not report an error in this Spec.
+- The initial strict validation exposed the historical Spec 06 record mismatch. After the owner authorized its final Round 3 pass, Spec 06 was archived and the workspace validation passed with no errors or warnings.
 
-The strict workspace blocker leaves Phase 2 and the Spec status `in-progress`. Per the delivery workflow, no Critic round has started; an independent Critic may start after the strict validator passes. The three real-Obsidian checks remain intentionally open in Post-Critic Acceptance and belong to the owner.
+All implementation phases and technical gates are complete. The Spec is in `review`; the three real-Obsidian checks remain intentionally open in Post-Critic Acceptance and belong to the owner.
+
+### Round 1
+
+- Critic: `spec09_critic` (fresh, read-only independent review)
+- Review scope: full
+- Evidence reviewed: the implementation and documentation diff; `npm run check`; `npm run lint`; `npm test -- --run` (317 passed); `npm run build`; strict Specs validation; and `git diff --check`.
+- Findings: P1 — the initial Spec 06 archival record retroactively described a Critic review of the later CodeMirror correction; P2 — Spec 09 exercised private Popover methods but did not cover the Donut keyboard trust boundary.
+- Selected fixes: P1 historical-record correction; P2 keyboard trust helper and focused keyboard behavior coverage.
+- Executor fixes: archived Spec 06 with its original Round 3 chronology intact and an explicit owner-authorized final verdict adjustment; added `isTrustedKeyboardActivation()` at the Donut boundary, plus synthetic/non-activation rejection and keyboard arm/second Cmd/Ctrl-open tests.
+- Deferred findings: none.
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (317 passed); `npm run build`; `python3 "$SPEC_DRIVEN_DELIVERY_DIR/scripts/validate_specs_workspace.py" . --strict` (0 errors, 0 warnings); `git diff --check`.
+- Verdict: changes-required
+
+### Round 2
+
+- Critic: `spec09_critic` (same independent read-only reviewer)
+- Review scope: full
+- Evidence reviewed: the corrected implementation, Spec 06 archive chronology, focused keyboard trust and arm/open tests, and the complete validation rerun.
+- Findings: none.
+- Selected fixes: none.
+- Executor fixes: none; the Round 1 correction batch was confirmed.
+- Deferred findings: none.
+- Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (317 passed); `npm run build`; `python3 "$SPEC_DRIVEN_DELIVERY_DIR/scripts/validate_specs_workspace.py" . --strict` (0 errors, 0 warnings); `git diff --check`.
+- Verdict: pass

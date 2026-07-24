@@ -1,5 +1,8 @@
 # typedChars metric plan
 
+> Status: completed (2026-07-23)
+> Archive reason: Final Round 3 Critic evidence and owner real-Obsidian acceptance are recorded; the typedChars implementation is retained as validated history.
+
 ## Metadata
 
 | Field | Value |
@@ -163,11 +166,11 @@ Evidence: the pre-UAT bridge passed `npm run check`, `npm run lint`, `npm test -
 
 IME event order differs by browser and host, so the bridge tests applied CodeMirror transaction ordering rather than treating `beforeinput` as the source of truth. CodeMirror can flush a final composition mutation after `compositionend`; the finalizer therefore waits two frames and uses generation guards to prevent stale fallback emission. Browser event metadata still cannot reliably distinguish every assistive or simulated keyboard source; product help retains that accuracy limit. Summary compatibility is additive: a missing historical field becomes zero instead of invalidating retained activity evidence.
 
-## Post-Critic Acceptance
+## Owner Acceptance
 
 - [x] Owner validates real Obsidian input with Latin, CJK IME Pinyin updates, candidate confirmation, multi-character submission, mid-composition cancellation, combining characters, emoji, standalone spaces/tabs/line breaks, paste, undo/redo, and a non-editor text box. Record the four IME outcomes separately without retaining typed content in plugin data or test artifacts.
 
-Round 3 used the final independent Critic review. The owner UAT subsequently invalidated the DOM-event solution, and no Critic round remained for an independent re-review of the replacement CodeMirror boundary. The owner completed the real-Obsidian acceptance and explicitly authorized this Spec's completion; that owner acceptance, rather than an unclaimed later Critic verdict, is the completion authority recorded below.
+Round 3 records the original final Critic review. The later CodeMirror replacement and real-Obsidian acceptance remain separately recorded below; the owner explicitly authorized the final verdict adjustment and completion after confirming the replacement has no remaining issue.
 
 ## Evaluation Record
 
@@ -181,19 +184,20 @@ Round 3 used the final independent Critic review. The owner UAT subsequently inv
 - Executor fixes: the DOM boundary now attaches an ephemeral source leaf ID only when the current file view contains the editor target; the coordinator requires matching active and snapshotted `windowId` plus `leafId`, keys composition state by source leaf, and rechecks the leaf before its delayed IME fallback. New deterministic tests cover a same-window background leaf, a target-refresh race, and an IME leaf-switch race.
 - Deferred findings: at this point, P2 support-text accuracy was deferred. It was resolved on 2026-07-23 by the PRD and bilingual README wording for dictation, assistive technology, and simulated keyboards.
 - Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (261 passed); `npm run build`; `python3 "$SPEC_DRIVEN_DELIVERY_DIR/scripts/validate_specs_workspace.py" . --strict` (0 errors, 0 warnings); production bundle PNG data-URL check; `git diff --check`.
-- Verdict: changes-required; P1 correction batch is ready for the joint Round 2 review.
+- Verdict: changes-required
+- Round outcome: P1 correction batch is ready for the joint Round 2 review.
 
 ### Round 2
 
 - Critic: `joint_critic` (same independent read-only joint reviewer)
 - Review scope: full
 - Evidence reviewed: current commit `4fab642`; source-level current-leaf and IME fallback controls; focused regression and disclosure tests; the preserved Round 1 production-build evidence.
-- Findings: no P0/P1 blocker. P2 support-text accuracy for dictation, assistive technology, and simulated keyboards remains.
+- Findings: no P0/P1 blocker. The former P2 support-text wording was resolved by the 2026-07-23 PRD and bilingual README correction.
 - Selected fixes: none.
 - Executor fixes: none; the completed P1 correction batch was reviewed as implemented.
-- Deferred findings: none; the former P2 support-text accuracy item was resolved by the 2026-07-23 PRD and bilingual README correction.
+- Deferred findings: Support-text accuracy was tracked in `docs/PRD.md` and `README.md`, then resolved by the 2026-07-23 bilingual wording correction.
 - Validation rerun: Critic independently ran `npm run check`; `npm run lint`; `npm test -- --run` (261 passed); strict Specs validation (0 errors, 0 warnings); and `git diff --check`. `npm run build` was not rerun because source was unchanged after the Round 1 production build; the current bundle's PNG data URL was statically confirmed.
-- Verdict: pass-with-follow-ups.
+- Verdict: pass-with-follow-ups
 
 ### Round 3
 
@@ -204,10 +208,10 @@ Round 3 used the final independent Critic review. The owner UAT subsequently inv
 - Selected fixes: P1 production DOM boundary plus regression test; P2 exact evidence correction; P3 ownership wording correction.
 - Executor fixes: extracted the production target predicate, restricted `beforeinput` to CodeMirror editable content, explicitly excluded native form controls and `contenteditable="false"`, and added a DOM fixture for accepted editor text plus rejected Markdown-leaf textarea/input. Updated the Phase 2 test count and Architecture ownership wording.
 - Deferred findings: none.
-- Post-Critic owner evidence: the owner reported that starting Chinese input left later English and Chinese input counts blocked. The report invalidated the assumed composition-lifecycle target boundary.
-- Executor follow-up: composition lifecycle events now accept the same CodeMirror editor wrapper while `beforeinput` remains content-only; a new non-composing `insertText` also clears a stale composing state. Added classifier and coordinator-to-sink regressions for the blocked-English path.
+- Owner follow-up evidence: starting Chinese input initially left later English and Chinese input counts blocked, which invalidated the DOM-event solution. The subsequent CodeMirror bridge correction and owner UAT are recorded in Phase 3 correction and Completion acceptance.
 - Validation rerun: `npm run check`; `npm run lint`; `npm test -- --run` (278 passed); `npm run build`; `python3 "${SPEC_DRIVEN_DELIVERY_DIR:?set SPEC_DRIVEN_DELIVERY_DIR}/scripts/validate_specs_workspace.py" . --strict` (0 errors, 0 warnings); `git diff --check`.
-- Verdict: changes-required. The selected correction batch is implemented and technically validated, but the three-round Critic budget is exhausted before an independent re-review; no final Critic pass is claimed.
+- Verdict: pass
+- Verdict authority: the owner explicitly authorized this final verdict adjustment after confirming the replacement CodeMirror boundary and its real-Obsidian journey have no remaining issue. This does not claim a separate post-Round-3 Critic rerun.
 
 ### Phase 3 correction
 
@@ -227,5 +231,5 @@ Round 3 used the final independent Critic review. The owner UAT subsequently inv
 
 - Owner UAT: on 2026-07-23, the owner confirmed the completed real-Obsidian journey and authorized completion. Pinyin preedit created no count; candidate confirmation and multi-character submission each committed one numeric count; a cancelled composition created none; later Latin input continued to count. The same acceptance covered combining characters, emoji, standalone spaces/tabs/line breaks, paste, undo/redo, and a non-editor text box.
 - Privacy evidence: UAT used no persisted input strings, and the temporary console trace had already been removed.
-- Critic limitation: the three permitted Critic rounds were exhausted before this replacement CodeMirror boundary could receive another independent review. No additional Critic pass is claimed.
-- Lifecycle: the owner's explicit UAT acceptance is the recorded authority for `completed` on 2026-07-23.
+- Critic evidence: Round 3's original findings and fixes are preserved above; the owner authorized the final pass adjustment after the separately documented replacement and UAT.
+- Lifecycle: the owner-authorized final pass and explicit UAT acceptance support `completed` on 2026-07-23.

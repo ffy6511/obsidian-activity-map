@@ -34,6 +34,11 @@ export function isTrustedPrimaryClick(event: MouseEvent): boolean {
 	return event.isTrusted && event.button === 0;
 }
 
+/** Keyboard file activation accepts only the native Enter and Space gestures. */
+export function isTrustedKeyboardActivation(event: KeyboardEvent): boolean {
+	return event.isTrusted && (event.key === 'Enter' || event.key === ' ');
+}
+
 /** Modifier semantics match Obsidian's desktop link convention across platforms. */
 export function shouldOpenInNewTab(event: FileActivationEvent): boolean {
 	return event.metaKey || event.ctrlKey;

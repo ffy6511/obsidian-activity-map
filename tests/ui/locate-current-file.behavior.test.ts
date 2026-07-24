@@ -198,7 +198,7 @@ describe('locate current file behavior', () => {
 		const actions = popover as unknown as {
 			activateChartItem(
 				item: ChartItem,
-				event: MouseEvent,
+				event: MouseEvent | KeyboardEvent,
 				source: 'mouse' | 'touch' | 'keyboard',
 				groupBy: 'file' | 'path',
 			): void;
@@ -227,6 +227,21 @@ describe('locate current file behavior', () => {
 
 		actions.activateChartItem(
 			item,
+			{ key: 'Enter', metaKey: false, ctrlKey: false } as KeyboardEvent,
+			'keyboard',
+			'file',
+		);
+		expect(slice?.classList.contains('is-file-activation-armed')).toBeTrue();
+		actions.activateChartItem(
+			item,
+			{ key: 'Enter', metaKey: false, ctrlKey: true } as KeyboardEvent,
+			'keyboard',
+			'file',
+		);
+		expect(opens).toEqual([{ filePath: 'notes/a.md', openInNewTab: true }]);
+
+		actions.activateChartItem(
+			item,
 			{ metaKey: false, ctrlKey: false } as MouseEvent,
 			'mouse',
 			'file',
@@ -251,6 +266,7 @@ describe('locate current file behavior', () => {
 		actions.activateItem(item, { metaKey: false, ctrlKey: false } as MouseEvent);
 		actions.activateItem(item, { metaKey: false, ctrlKey: true } as MouseEvent);
 		expect(opens).toEqual([
+			{ filePath: 'notes/a.md', openInNewTab: true },
 			{ filePath: 'notes/a.md', openInNewTab: true },
 			{ filePath: 'notes/a.md', openInNewTab: false },
 			{ filePath: 'notes/a.md', openInNewTab: true },
