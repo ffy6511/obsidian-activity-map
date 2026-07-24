@@ -11,25 +11,12 @@
 }
 
 .activity-map-metric-control {
-	position: relative;
-	display: flex;
-	align-items: center;
-	min-width: 7rem;
-}
-
-.activity-map-metric-control select {
-	width: 100%;
-	padding-inline-start: calc(var(--size-4-6) + var(--size-2-2));
+	display: inline-flex;
 }
 
 .activity-map-control-icon {
-	position: absolute;
-	inset-inline-start: var(--size-4-2);
-	z-index: 1;
 	display: inline-flex;
 	align-items: center;
-	top: 50%;
-	transform: translateY(-50%);
 	pointer-events: none;
 }
 
@@ -39,8 +26,10 @@
 	height: var(--icon-s);
 }
 
-.activity-map-range-mode {
-	min-width: 8rem;
+.activity-map-query-controls {
+	display: inline-grid;
+	grid-template-columns: max-content max-content;
+	gap: var(--size-4-2);
 }
 
 .activity-map-day-navigation {
@@ -50,16 +39,102 @@
 	gap: var(--size-2-1);
 }
 
-.activity-map-icon-button {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	flex: 0 0 var(--input-height);
-	width: var(--input-height);
-	height: var(--input-height);
-	min-width: var(--input-height);
-	padding: 0;
+.activity-map-popover button.activity-map-control-button {
+	box-sizing: border-box;
+	block-size: var(--input-height);
+	min-block-size: var(--input-height);
+	margin: 0;
+	border-radius: var(--input-radius);
+	color: var(--text-muted);
+	font: inherit;
 	line-height: 1;
+}
+
+.activity-map-popover button.activity-map-control-button {
+	appearance: none;
+	display: inline-grid;
+	place-items: center;
+	padding: 0;
+}
+
+.activity-map-popover button.activity-map-control-button:hover:not(:disabled) {
+	color: var(--text-normal);
+}
+
+.activity-map-popover button.activity-map-control-button:focus-visible {
+	box-shadow: var(--shadow-input-active);
+	color: var(--text-normal);
+}
+
+.activity-map-popover button.activity-map-icon-button {
+	flex: 0 0 var(--input-height);
+	inline-size: var(--input-height);
+	min-inline-size: var(--input-height);
+}
+
+.activity-map-dropdown {
+	position: relative;
+	display: inline-flex;
+}
+
+.activity-map-popover button.activity-map-query-button {
+	inline-size: max-content;
+	min-inline-size: 0;
+	padding-inline: var(--size-4-2);
+	white-space: nowrap;
+}
+
+.activity-map-popover button.activity-map-query-button.activity-map-icon-button {
+	padding: 0;
+}
+
+.activity-map-dropdown-menu {
+	position: absolute;
+	inset-block-start: calc(100% + var(--size-2-1));
+	inset-inline-end: 0;
+	z-index: 2;
+	display: grid;
+	gap: var(--size-2-1);
+	min-inline-size: max-content;
+	max-block-size: min(14rem, calc(100vh - 2rem));
+	overflow-y: auto;
+	padding: var(--size-2-2);
+	border: var(--input-border-width) solid var(--background-modifier-border);
+	border-radius: var(--input-radius);
+	background: var(--background-primary);
+	box-shadow: var(--shadow-s);
+}
+
+.activity-map-dropdown-menu[hidden] {
+	display: none;
+}
+
+.activity-map-dropdown-option {
+	box-sizing: border-box;
+	display: inline-grid;
+	place-items: center start;
+	width: 100%;
+	margin: 0;
+	min-height: var(--input-height);
+	border: 0 !important;
+	border-radius: var(--input-radius);
+	padding: 0 var(--size-4-2);
+	/* Obsidian themes commonly style every button. Keep the resting option
+	   visually continuous with its listbox instead of inheriting that surface. */
+	background: transparent !important;
+	box-shadow: none !important;
+	color: var(--text-muted) !important;
+	font: inherit;
+	line-height: 1;
+	text-align: start;
+	white-space: nowrap;
+}
+
+.activity-map-dropdown-option:hover,
+.activity-map-dropdown-option:focus-visible {
+	background: var(--background-modifier-hover) !important;
+	box-shadow: var(--shadow-input-active) !important;
+	color: var(--text-normal) !important;
 }
 
 .activity-map-hidden-date {
@@ -68,10 +143,6 @@
 	height: 1px;
 	opacity: 0;
 	pointer-events: none;
-}
-
-.activity-map-control-trailing {
-	margin-inline-start: var(--size-4-4);
 }
 
 .activity-map-control-actions {
@@ -274,15 +345,13 @@
 
 .activity-map-popover .activity-map-controls {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) max-content max-content;
+	grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
+	grid-template-areas: 'actions date query';
 	align-items: center;
 	column-gap: var(--size-4-2);
 	margin-bottom: 0;
 }
 
-.activity-map-popover .activity-map-metric-control,
-.activity-map-popover .activity-map-metric-control select,
-.activity-map-popover .activity-map-range-mode,
 .activity-map-popover .activity-map-day-navigation {
 	height: var(--input-height);
 }
@@ -291,15 +360,9 @@
 	display: grid;
 	grid-template-columns: var(--input-height) calc(10ch + var(--size-4-3)) var(--input-height);
 	grid-template-rows: var(--input-height);
-	justify-self: start;
+	grid-area: date;
+	justify-self: center;
 	gap: var(--size-2-2);
-}
-
-.activity-map-popover .activity-map-metric-control,
-.activity-map-popover .activity-map-metric-control select,
-.activity-map-popover .activity-map-range-mode {
-	width: 100%;
-	min-width: 0;
 }
 
 .activity-map-popover .activity-map-day-navigation > [data-activity-map-id='previous-day'] {
@@ -320,23 +383,39 @@
 	margin: 0;
 }
 
+.activity-map-popover .activity-map-day-navigation > .activity-map-icon-button {
+	/* The date navigation owns three exact visible tracks; no theme-defined
+	   icon padding or intrinsic sizing may shift either arrow relative to date. */
+	inline-size: 100%;
+	min-inline-size: 0;
+	block-size: 100%;
+}
+
 .activity-map-popover .activity-map-hidden-date {
 	grid-column: 2;
 	grid-row: 1;
 }
 
 .activity-map-date-button {
-	box-sizing: border-box;
 	width: calc(10ch + var(--size-4-3));
-	height: var(--input-height);
 	padding: 0 var(--size-2-2);
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
+	text-align: center;
 }
 
-.activity-map-popover .activity-map-control-trailing {
-	justify-self: end;
+.activity-map-popover .activity-map-control-leading {
+	grid-area: actions;
+	justify-self: start;
 	margin-inline-start: 0;
+}
+
+.activity-map-popover .activity-map-query-controls {
+	grid-area: query;
+	width: auto;
+	grid-template-columns: max-content max-content;
+	justify-content: end;
+	justify-self: end;
 }
 
 .activity-map-popover-result {
@@ -404,7 +483,7 @@
 
 .activity-map-chart-legend-row {
 	display: grid;
-	grid-template-columns: 0.75rem minmax(0, 1fr) 11ch 4ch;
+	grid-template-columns: 0.75rem minmax(0, 1fr) minmax(7ch, max-content) 4ch;
 	gap: var(--size-4-2);
 	align-items: center;
 	width: 100%;
@@ -467,6 +546,19 @@
 	white-space: nowrap;
 	text-align: right;
 	font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 34rem) {
+	.activity-map-popover .activity-map-controls {
+		grid-template-columns: max-content minmax(0, 1fr);
+		grid-template-areas:
+			'actions query'
+			'date date';
+	}
+
+	.activity-map-popover .activity-map-query-controls {
+		width: auto;
+	}
 }
 
 .activity-map-popover button:not(:disabled),

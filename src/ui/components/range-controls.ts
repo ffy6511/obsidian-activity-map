@@ -3,7 +3,7 @@ import { setIcon } from 'obsidian';
 import type { RangeMode } from '../../query/date-range';
 import type { MetricKey } from '../../query/path-projection';
 
-export interface RangeTrailingAction {
+export interface RangeControlAction {
 	icon: string;
 	label: string;
 	id: string;
@@ -14,8 +14,39 @@ export interface RangeTrailingAction {
 
 export interface RangeControlsHandle {
 	/** Updates an existing action without replacing its focused DOM node. */
-	updateTrailingAction(action: RangeTrailingAction): boolean;
+	updateAction(action: RangeControlAction): boolean;
+	/** Removes owner-document listeners installed by the custom query listboxes. */
+	destroy(): void;
 }
+
+interface DropdownOption<T extends string> {
+	value: T;
+	label: string;
+}
+
+interface DropdownHandle {
+	destroy(): void;
+}
+
+type RangeChoice = 'day' | 'average-7' | 'average-30' | 'average-90' | 'average-all' | 'all';
+
+const METRIC_OPTIONS: readonly DropdownOption<MetricKey>[] = [
+	{ value: 'activeMs', label: 'Activity' },
+	{ value: 'editingMs', label: 'Editing' },
+	{ value: 'typedChars', label: 'Chars' },
+	{ value: 'openCount', label: 'Opens' },
+];
+
+const RANGE_OPTIONS: readonly DropdownOption<RangeChoice>[] = [
+	{ value: 'day', label: '1day' },
+	{ value: 'average-7', label: '7d Avg' },
+	{ value: 'average-30', label: '30d Avg' },
+	{ value: 'average-90', label: '90d Avg' },
+	{ value: 'average-all', label: 'All Avg' },
+	{ value: 'all', label: 'All history' },
+];
+
+let nextDropdownId = 0;
 
 export function renderRangeControls(args: {
 	container: HTMLElement;
@@ -23,43 +54,35 @@ export function renderRangeControls(args: {
 	range: RangeMode;
 	onMetric: (metric: MetricKey) => void;
 	onRange: (range: RangeMode) => void;
-	trailingActions?: readonly RangeTrailingAction[];
+	leadingActions?: readonly RangeControlAction[];
 	renderIcon?: (container: HTMLElement, icon: string) => void;
 }): RangeControlsHandle {
 	const controls = args.container.createDiv({ cls: 'activity-map-controls' });
 	const actionButtons = new Map<string, HTMLButtonElement>();
+	const dropdowns: DropdownHandle[] = [];
 	const renderIcon = args.renderIcon ?? setIcon;
-	const metricControl = controls.createDiv({ cls: 'activity-map-metric-control' });
-	const metricIcon = metricControl.createSpan({ cls: 'activity-map-control-icon', attr: { 'aria-hidden': 'true' } });
-	renderIcon(metricIcon, iconForMetric(args.metric));
-	const metric = metricControl.createEl('select', { attr: { 'aria-label': 'Metric', 'data-activity-map-id': 'metric' } });
-	for (const [value, label] of [['activeMs', 'Activity'], ['editingMs', 'Editing'], ['typedChars', 'Typed chars'], ['openCount', 'Open count']] as const) {
-		metric.createEl('option', { value, text: label });
-	}
-	metric.value = args.metric;
-	metric.addEventListener('change', () => {
-		const selected = metric.value as MetricKey;
-		renderIcon(metricIcon, iconForMetric(selected));
-		args.onMetric(selected);
-	});
 
-	const mode = controls.createEl('select', { cls: 'activity-map-range-mode', attr: { 'aria-label': 'Date range', 'data-activity-map-id': 'date-range' } });
-	for (const [value, label] of [['day', 'One Day'], ['average-7', '7-day average'], ['average-30', '30-day average'], ['average-90', '90-day average'], ['average-all', 'All-history average'], ['all', 'All history']] as const) {
-		mode.createEl('option', { value, text: label });
+	if (args.leadingActions?.length) {
+		const actionGroup = controls.createDiv({ cls: 'activity-map-control-actions activity-map-control-leading' });
+		for (const action of args.leadingActions) {
+			const button = iconButton(actionGroup, action.icon, action.label, action.id, () => action.onActivate(), '', action.pressed, renderIcon);
+			button.disabled = action.disabled === true;
+			actionButtons.set(action.id, button);
+		}
 	}
-	mode.value = rangeValue(args.range);
-	mode.addEventListener('change', () => {
-		const today = new Date().toISOString().slice(0, 10);
-		if (mode.value === 'day') args.onRange({ mode: 'day', localDate: args.range.mode === 'day' ? args.range.localDate : today });
-		else if (mode.value === 'all') args.onRange({ mode: 'all' });
-		else args.onRange({ mode: 'average', days: mode.value === 'average-all' ? 'all' : Number(mode.value.slice(8)) as 7 | 30 | 90, today });
-	});
 
 	if (args.range.mode === 'day') {
 		const dayNavigation = controls.createDiv({ cls: 'activity-map-day-navigation' });
-		iconButton(dayNavigation, 'chevron-left', 'Previous day', 'previous-day', () => {
-			args.onRange({ mode: 'day', localDate: shiftLocalDate(args.range.mode === 'day' ? args.range.localDate : '', -1) });
-		});
+		iconButton(
+			dayNavigation,
+			'chevron-left',
+			'Previous day',
+			'previous-day',
+			() => { args.onRange({ mode: 'day', localDate: shiftLocalDate(args.range.mode === 'day' ? args.range.localDate : '', -1) }); },
+			'',
+			undefined,
+			renderIcon,
+		);
 		const date = dayNavigation.createEl('input', {
 			type: 'date',
 			cls: 'activity-map-hidden-date',
@@ -72,7 +95,7 @@ export function renderRangeControls(args: {
 		});
 		const dateButton = dayNavigation.createEl('button', {
 			text: args.range.localDate,
-			cls: 'clickable-icon activity-map-date-button',
+			cls: 'clickable-icon activity-map-control-button activity-map-date-button',
 			attr: { 'aria-label': `Choose date, ${args.range.localDate}`, 'data-activity-map-id': 'calendar-day' },
 		});
 		dateButton.addEventListener('click', () => {
@@ -83,21 +106,44 @@ export function renderRangeControls(args: {
 				date.click();
 			}
 		});
-		iconButton(dayNavigation, 'chevron-right', 'Next day', 'next-day', () => {
-			args.onRange({ mode: 'day', localDate: shiftLocalDate(args.range.mode === 'day' ? args.range.localDate : '', 1) });
-		});
+		iconButton(
+			dayNavigation,
+			'chevron-right',
+			'Next day',
+			'next-day',
+			() => { args.onRange({ mode: 'day', localDate: shiftLocalDate(args.range.mode === 'day' ? args.range.localDate : '', 1) }); },
+			'',
+			undefined,
+			renderIcon,
+		);
 	}
 
-	if (args.trailingActions?.length) {
-		const actionGroup = controls.createDiv({ cls: 'activity-map-control-actions activity-map-control-trailing' });
-		for (const action of args.trailingActions) {
-			const button = iconButton(actionGroup, action.icon, action.label, action.id, () => action.onActivate(), '', action.pressed, renderIcon);
-			button.disabled = action.disabled === true;
-			actionButtons.set(action.id, button);
-		}
-	}
+	const queryControls = controls.createDiv({ cls: 'activity-map-query-controls' });
+	const metricControl = queryControls.createDiv({ cls: 'activity-map-metric-control' });
+	dropdowns.push(renderDropdownControl({
+		container: metricControl,
+		id: 'metric',
+		label: 'Metric',
+		selected: args.metric,
+		options: METRIC_OPTIONS,
+		icon: iconForMetric(args.metric),
+		iconOnly: true,
+		onSelect: args.onMetric,
+		renderIcon,
+	}));
+
+	dropdowns.push(renderDropdownControl({
+		container: queryControls,
+		id: 'date-range',
+		label: 'Date range',
+		selected: rangeValue(args.range),
+		options: RANGE_OPTIONS,
+		onSelect: (value) => args.onRange(rangeForValue(value, args.range)),
+		renderIcon,
+	}));
+
 	return {
-		updateTrailingAction(action) {
+		updateAction(action) {
 			const button = actionButtons.get(action.id);
 			if (!button) return false;
 			renderIcon(button, action.icon);
@@ -107,7 +153,138 @@ export function renderRangeControls(args: {
 			else button.setAttribute('aria-pressed', String(action.pressed));
 			return true;
 		},
+		destroy() {
+			for (const dropdown of dropdowns) dropdown.destroy();
+		},
 	};
+}
+
+function renderDropdownControl<T extends string>(args: {
+	container: HTMLElement;
+	id: string;
+	label: string;
+	selected: T;
+	options: readonly DropdownOption<T>[];
+	icon?: string;
+	iconOnly?: boolean;
+	onSelect(value: T): void;
+	renderIcon: (container: HTMLElement, icon: string) => void;
+}): DropdownHandle {
+	const selectedIndex = Math.max(0, args.options.findIndex((option) => option.value === args.selected));
+	const selected = args.options[selectedIndex];
+	if (!selected) throw new Error('Dropdown controls require at least one option.');
+	const dropdown = args.container.createDiv({ cls: 'activity-map-dropdown' });
+	const listboxId = `activity-map-listbox-${String(++nextDropdownId)}`;
+	const trigger = dropdown.createEl('button', {
+		cls: `clickable-icon activity-map-control-button activity-map-query-button ${args.iconOnly ? 'activity-map-icon-button' : ''}`.trim(),
+		attr: {
+			'aria-label': `${args.label}: ${selected.label}`,
+			'aria-controls': listboxId,
+			'aria-expanded': 'false',
+			'aria-haspopup': 'listbox',
+			'data-activity-map-id': args.id,
+			'title': `${args.label}: ${selected.label}`,
+			type: 'button',
+		},
+	});
+	if (args.icon) {
+		const icon = trigger.createSpan({ cls: 'activity-map-control-icon', attr: { 'aria-hidden': 'true' } });
+		args.renderIcon(icon, args.icon);
+	}
+	if (!args.iconOnly) trigger.createSpan({ cls: 'activity-map-query-button-label', text: selected.label });
+
+	const listbox = dropdown.createDiv({
+		cls: 'activity-map-dropdown-menu',
+		attr: { id: listboxId, role: 'listbox', 'aria-label': args.label },
+	});
+	listbox.hidden = true;
+	const optionButtons = args.options.map((option, index) => {
+		const button = listbox.createEl('button', {
+			cls: 'activity-map-dropdown-option',
+			text: option.label,
+			attr: {
+				'aria-selected': String(index === selectedIndex),
+				'data-activity-map-option': option.value,
+				role: 'option',
+				type: 'button',
+			},
+		});
+		button.addEventListener('click', () => select(index));
+		return button;
+	});
+
+	function setOpen(open: boolean, focusIndex?: number): void {
+		listbox.hidden = !open;
+		trigger.setAttribute('aria-expanded', String(open));
+		if (open && focusIndex !== undefined) optionButtons[focusIndex]?.focus();
+	}
+
+	function select(index: number): void {
+		const option = args.options[index];
+		if (!option) return;
+		setOpen(false);
+		trigger.focus();
+		args.onSelect(option.value);
+	}
+
+	trigger.addEventListener('click', () => setOpen(listbox.hidden));
+	trigger.addEventListener('keydown', (event) => {
+		if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			setOpen(true, Math.min(selectedIndex + 1, optionButtons.length - 1));
+		} else if (event.key === 'ArrowUp') {
+			event.preventDefault();
+			setOpen(true, Math.max(selectedIndex - 1, 0));
+		} else if (event.key === 'Home') {
+			event.preventDefault();
+			setOpen(true, 0);
+		} else if (event.key === 'End') {
+			event.preventDefault();
+			setOpen(true, optionButtons.length - 1);
+		} else if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			setOpen(listbox.hidden, listbox.hidden ? selectedIndex : undefined);
+		} else if (event.key === 'Escape') {
+			setOpen(false);
+		}
+	});
+
+	listbox.addEventListener('keydown', (event) => {
+		const index = optionButtons.indexOf(event.target as HTMLButtonElement);
+		if (index < 0) return;
+		if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			optionButtons[Math.min(index + 1, optionButtons.length - 1)]?.focus();
+		} else if (event.key === 'ArrowUp') {
+			event.preventDefault();
+			optionButtons[Math.max(index - 1, 0)]?.focus();
+		} else if (event.key === 'Home') {
+			event.preventDefault();
+			optionButtons[0]?.focus();
+		} else if (event.key === 'End') {
+			event.preventDefault();
+			optionButtons[optionButtons.length - 1]?.focus();
+		} else if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			select(index);
+		} else if (event.key === 'Escape') {
+			event.preventDefault();
+			setOpen(false);
+			trigger.focus();
+		}
+	});
+
+	dropdown.addEventListener('focusout', (event) => {
+		const nextTarget = event.relatedTarget as Node | null;
+		if (!nextTarget || !dropdown.contains(nextTarget)) setOpen(false);
+	});
+	const document = dropdown.ownerDocument;
+	const closeOnOutsidePointerDown = (event: PointerEvent) => {
+		const target = event.target as Node | null;
+		if (!target || !dropdown.contains(target)) setOpen(false);
+	};
+	document.addEventListener('pointerdown', closeOnOutsidePointerDown, true);
+	return { destroy: () => document.removeEventListener('pointerdown', closeOnOutsidePointerDown, true) };
 }
 
 function iconButton(
@@ -121,7 +298,7 @@ function iconButton(
 	renderIcon: (container: HTMLElement, icon: string) => void = setIcon,
 ): HTMLButtonElement {
 	const button = container.createEl('button', {
-		cls: `clickable-icon activity-map-icon-button ${extraClass}`.trim(),
+		cls: `clickable-icon activity-map-control-button activity-map-icon-button ${extraClass}`.trim(),
 		attr: {
 			'aria-label': label,
 			'data-activity-map-id': id,
@@ -140,9 +317,16 @@ function iconForMetric(metric: MetricKey): string {
 	return 'clock-3';
 }
 
-function rangeValue(range: RangeMode): string {
+function rangeValue(range: RangeMode): RangeChoice {
 	if (range.mode === 'day' || range.mode === 'all') return range.mode;
-	return `average-${String(range.days)}`;
+	return `average-${String(range.days)}` as RangeChoice;
+}
+
+function rangeForValue(value: RangeChoice, currentRange: RangeMode): RangeMode {
+	const today = new Date().toISOString().slice(0, 10);
+	if (value === 'day') return { mode: 'day', localDate: currentRange.mode === 'day' ? currentRange.localDate : today };
+	if (value === 'all') return { mode: 'all' };
+	return { mode: 'average', days: value === 'average-all' ? 'all' : Number(value.slice(8)) as 7 | 30 | 90, today };
 }
 
 export function shiftLocalDate(localDate: string, days: number): string {

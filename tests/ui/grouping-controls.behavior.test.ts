@@ -25,8 +25,14 @@ function snapshot(state: 'active' | 'paused'): TrackingSnapshot {
 	};
 }
 
+function keydown(key: string): KeyboardEvent {
+	const event = new Event('keydown', { bubbles: true }) as KeyboardEvent;
+	Object.defineProperty(event, 'key', { value: key });
+	return event;
+}
+
 describe('grouping control behavior', () => {
-	it('offers Typed chars with a keyboard semantic icon', () => {
+	it('uses an icon-only metric trigger and textual custom listbox options', () => {
 		const { document } = installDomEnvironment();
 		const container = document.createElement('div');
 		document.body.appendChild(container);
@@ -36,12 +42,37 @@ describe('grouping control behavior', () => {
 			container, metric: 'typedChars', range: { mode: 'all' }, onMetric: (metric) => { selectedMetric = metric; }, onRange: () => {},
 			renderIcon: (_element, icon) => { renderedIcon = icon; },
 		});
-		const metric = container.querySelector<HTMLSelectElement>('[data-activity-map-id="metric"]');
-		if (!metric) throw new Error('metric selector missing');
-		expect(Array.from(metric.options).map((option) => option.textContent)).toContain('Typed chars');
+		const metric = container.querySelector<HTMLButtonElement>('[data-activity-map-id="metric"]');
+		if (!metric) throw new Error('metric trigger missing');
+		expect(metric.textContent).toBe('');
+		expect(metric.getAttribute('aria-label')).toBe('Metric: Chars');
 		expect(renderedIcon).toBe('keyboard');
-		metric.dispatchEvent(new Event('change'));
+		metric.click();
+		expect(metric.getAttribute('aria-expanded')).toBe('true');
+		const chars = container.querySelector<HTMLButtonElement>('[data-activity-map-option="typedChars"]');
+		if (!chars) throw new Error('Chars option missing');
+		expect(chars.textContent).toBe('Chars');
+		chars.click();
 		expect(selectedMetric).toBe('typedChars');
+	});
+
+	it('selects a custom range option with ArrowDown and Enter', () => {
+		const { document } = installDomEnvironment();
+		const container = document.createElement('div');
+		document.body.appendChild(container);
+		let selectedRange = '';
+		renderRangeControls({
+			container, metric: 'activeMs', range: { mode: 'all' }, onMetric: () => {}, onRange: (range) => { selectedRange = range.mode; }, renderIcon: () => {},
+		});
+		const range = container.querySelector<HTMLButtonElement>('[data-activity-map-id="date-range"]');
+		if (!range) throw new Error('range trigger missing');
+		range.dispatchEvent(keydown('ArrowDown'));
+		expect(range.getAttribute('aria-expanded')).toBe('true');
+		const allHistory = container.querySelector<HTMLButtonElement>('[data-activity-map-option="all"]');
+		if (!allHistory) throw new Error('All history option missing');
+		allHistory.dispatchEvent(keydown('Enter'));
+		expect(selectedRange).toBe('all');
+		expect(range.getAttribute('aria-expanded')).toBe('false');
 	});
 
 	it('places poster export immediately after tracking and disables it without a ready snapshot', () => {
@@ -51,7 +82,7 @@ describe('grouping control behavior', () => {
 		let exports = 0;
 		renderRangeControls({
 			container, metric: 'activeMs', range: { mode: 'all' }, onMetric: () => {}, onRange: () => {}, renderIcon: () => {},
-			trailingActions: [
+			leadingActions: [
 				createTrackingAction({ paused: false, getCurrentPaused: () => false, onTracking: () => {} }),
 				createPosterExportAction({ available: true, onExport: () => { exports += 1; } }),
 			],
@@ -68,7 +99,7 @@ describe('grouping control behavior', () => {
 		document.body.appendChild(unavailable);
 		renderRangeControls({
 			container: unavailable, metric: 'activeMs', range: { mode: 'all' }, onMetric: () => {}, onRange: () => {}, renderIcon: () => {},
-			trailingActions: [createPosterExportAction({ available: false, onExport: () => { exports += 1; } })],
+			leadingActions: [createPosterExportAction({ available: false, onExport: () => { exports += 1; } })],
 		});
 		expect(unavailable.querySelector<HTMLButtonElement>('[data-activity-map-id="poster-export"]')?.disabled).toBeTrue();
 	});
@@ -106,7 +137,7 @@ describe('grouping control behavior', () => {
 			onMetric: () => {},
 			onRange: () => {},
 			renderIcon: () => {},
-			trailingActions: [
+			leadingActions: [
 				groupingAction(),
 				{ icon: 'pause', label: 'Pause activity tracking', id: 'tracking-toggle', onActivate: () => {} },
 			],
@@ -124,7 +155,7 @@ describe('grouping control behavior', () => {
 		grouping.click();
 		expect(controller.getViewModel().query.groupBy).toBe('file');
 		expect(controller.getViewModel().loadState).toBe('loading');
-		expect(handle.updateTrailingAction(groupingAction())).toBeTrue();
+		expect(handle.updateAction(groupingAction())).toBeTrue();
 		expect(grouping.getAttribute('aria-label')).toBe('Group by path');
 		expect(grouping.getAttribute('aria-pressed')).toBe('true');
 		expect(container.querySelector('[data-activity-map-id="distribution-grouping-toggle"]')).toBe(grouping);
@@ -134,7 +165,7 @@ describe('grouping control behavior', () => {
 		// can reverse the pending selection instead of dispatching file again.
 		grouping.click();
 		expect(controller.getViewModel().query.groupBy).toBe('path');
-		expect(handle.updateTrailingAction(groupingAction())).toBeTrue();
+		expect(handle.updateAction(groupingAction())).toBeTrue();
 		expect(grouping.getAttribute('aria-label')).toBe('Show all files');
 		expect(grouping.getAttribute('aria-pressed')).toBe('false');
 		expect(container.querySelector('[data-activity-map-id="distribution-grouping-toggle"]')).toBe(grouping);
@@ -167,14 +198,14 @@ describe('grouping control behavior', () => {
 		const handle = renderRangeControls({
 			container, metric: 'activeMs', range: { mode: 'all' }, onMetric: () => {}, onRange: () => {},
 			renderIcon: (element, icon) => { element.setAttribute('data-icon', icon); },
-			trailingActions: [action()],
+			leadingActions: [action()],
 		});
 		const button = container.querySelector<HTMLButtonElement>('[data-activity-map-id="tracking-toggle"]');
 		if (!button) throw new Error('tracking toggle missing');
 		button.focus();
 		button.click();
 		expect(pauses).toBe(1);
-		expect(handle.updateTrailingAction(action())).toBeTrue();
+		expect(handle.updateAction(action())).toBeTrue();
 		expect(button.getAttribute('aria-label')).toBe('Resume activity tracking');
 		expect(button.getAttribute('data-icon')).toBe('play');
 		expect(container.querySelector('[data-activity-map-id="tracking-toggle"]')).toBe(button);
@@ -183,9 +214,41 @@ describe('grouping control behavior', () => {
 		// update mutates attributes only and never replaces or refocuses it.
 		button.click();
 		expect(resumes).toBe(1);
-		expect(handle.updateTrailingAction(action())).toBeTrue();
+		expect(handle.updateAction(action())).toBeTrue();
 		expect(button.getAttribute('aria-label')).toBe('Pause activity tracking');
 		expect(button.getAttribute('data-icon')).toBe('pause');
 		expect(container.querySelector('[data-activity-map-id="tracking-toggle"]')).toBe(button);
+	});
+
+	it('renders leading actions, one-day navigation, then query controls', () => {
+		const { document } = installDomEnvironment();
+		const container = document.createElement('div');
+		document.body.appendChild(container);
+		renderRangeControls({
+			container,
+			metric: 'activeMs',
+			range: { mode: 'day', localDate: '2026-07-23' },
+			onMetric: () => {},
+			onRange: () => {},
+			renderIcon: () => {},
+			leadingActions: [
+				{ icon: 'pause', label: 'Pause activity tracking', id: 'tracking-toggle', onActivate: () => {} },
+				{ icon: 'files', label: 'Group by path', id: 'distribution-grouping-toggle', onActivate: () => {} },
+				{ icon: 'image-down', label: 'Export activity poster', id: 'poster-export', onActivate: () => {} },
+			],
+		});
+
+		const controls = container.querySelector('.activity-map-controls');
+		if (!controls) throw new Error('controls missing');
+		expect(Array.from(controls.children).map((element) => element.className)).toEqual([
+			'activity-map-control-actions activity-map-control-leading',
+			'activity-map-day-navigation',
+			'activity-map-query-controls',
+		]);
+		expect(Array.from(controls.querySelectorAll<HTMLButtonElement>('.activity-map-control-leading > button')).map((button) => button.dataset.activityMapId)).toEqual([
+			'tracking-toggle',
+			'distribution-grouping-toggle',
+			'poster-export',
+		]);
 	});
 });

@@ -321,7 +321,7 @@ DistributionQuery(metric, range, path, view, groupBy)
 
 This document owns presentation module boundaries and dependency direction. User-visible behavior belongs to the [PRD Header Popover section](docs/PRD.md#环形图浮层), while stable cross-version constraints belong to the [Interface and Export decision](specs/constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export). Active Specs own implementation-local deltas and evidence. Pixel values, spacing, typography choices, and interaction copy do not belong here.
 
-Presentation surfaces consume immutable controller state and return typed intents. They never append evidence, rewrite summaries, or execute destructive storage mutations directly.
+Presentation surfaces consume immutable controller state and return typed intents. They never append evidence, rewrite summaries, or execute destructive storage mutations directly. `RangeControls` owns the transient query-dropdown state and its owner-document pointer listener; `SummaryPopover` destroys that handle before either re-rendering or closing so detached Popovers cannot retain listeners.
 
 ```text
 Query and tracking outputs

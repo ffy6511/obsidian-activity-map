@@ -38,12 +38,12 @@ Goals:
 - Center a width-bounded result body with `2:3` chart/list columns and equal inline padding.
 - Cap the legend's visible height at the donut height and scroll only the legend when rows overflow.
 - Display a file leaf's basename while retaining its full vault-relative path for identity and activation.
-- Ellipsize long legend names before the fixed numeric columns, emphasize the centered total with a serif face, and preserve visible spacing between the metric icon and label.
+- Ellipsize long legend names before the fixed numeric columns and emphasize the centered total with a serif face.
 
 Non-goals:
 
 - Add headings, captions, separators, totals, tooltips, status rows, or explanatory labels such as “chart area” or “list area”.
-- Change controls, metrics, range navigation, live ticking, breadcrumbs, colors, sorting, highlighting, pinning, or activation behavior.
+- Change metrics, range navigation, live ticking, breadcrumbs, colors, sorting, highlighting, pinning, or activation behavior, except for owner-directed control presentation corrections recorded below.
 - Change the dockable `ItemView`, persistence, tracking, export schema, or query membership semantics.
 
 ### Key Insight
@@ -54,7 +54,7 @@ The existing presentation already has the correct components and behavior. One w
 
 > Inherited design: [Interface and export](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), [PRD chart popover](../../docs/PRD.md#环形图浮层), and [Presentation architecture](../../ARCHITECTURE.md#presentation-and-export).
 >
-> Local delta: reflow the existing Popover result region and shorten only `kind: 'file'` display labels. No new visible component or interaction is introduced.
+> Local delta: reflow the existing Popover result region and shorten only `kind: 'file'` display labels. Later owner-directed control corrections preserve the same query intents while replacing native controls with plugin-owned listboxes; Metric uses an icon-only trigger and textual menu items.
 
 ### Data Flow
 
@@ -238,3 +238,9 @@ Keep the product and architecture descriptions aligned with the implemented layo
 - Documentation: Constitution, PRD, Architecture, README, Roadmap, and the current Spec requirements now describe the same final constraints; historical Critic records retain the layout reviewed in those rounds.
 - Technical evidence: `npm run check`, `npm run lint`, `npm test -- --run` (242 passed, 0 failed), `npm run build`, strict specs validation (0 errors, 0 warnings), and `git diff --check` passed after the tuning.
 - Lifecycle: this is not a new Critic round. One final round remains reserved for Post-Critic Acceptance evidence, and the Spec stays in `review` while the updated long-list, ellipsis, height, serif-total, basename, and activation journey is open.
+
+### Owner-Directed Query-Control Correction — 2026-07-24
+
+- Scope: replace the browser-native Metric and range selectors with plugin-owned, keyboard-equivalent listboxes. The Metric trigger is now icon-only; its menu options retain their text labels. Range selection continues to show its selected text in the trigger.
+- Invariant: selecting an option dispatches the existing metric or range intent and preserves the current path and grouping. `RangeControlsHandle.destroy()` removes the owner-document outside-pointer listener before a Popover re-render or close.
+- Evidence: `npm run check`, `npm run lint`, and `npm test -- --run` (291 passed, 0 failed) passed. Real Obsidian visual acceptance remains with the owner; this correction does not consume an additional Critic round.

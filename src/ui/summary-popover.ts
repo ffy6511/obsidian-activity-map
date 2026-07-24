@@ -7,7 +7,7 @@ import { distributionActivation } from './distribution-activation';
 import { renderBreadcrumbs } from './components/breadcrumbs';
 import { renderChartLegend, type ChartLegendHandle } from './components/chart-legend';
 import { renderDonutChart, type ChartItem } from './components/donut-chart';
-import { renderRangeControls, type RangeControlsHandle, type RangeTrailingAction } from './components/range-controls';
+import { renderRangeControls, type RangeControlAction, type RangeControlsHandle } from './components/range-controls';
 import { withLiveActivity } from './live-distribution';
 
 export function createDistributionGroupingAction(args: {
@@ -15,7 +15,7 @@ export function createDistributionGroupingAction(args: {
 	getCurrentGrouping(): DistributionGrouping;
 	onBeforeActivate(): void;
 	onGrouping(groupBy: DistributionGrouping): void;
-}): RangeTrailingAction {
+}): RangeControlAction {
 	return {
 		icon: args.groupBy === 'file' ? 'folder-tree' : 'files',
 		label: args.groupBy === 'file' ? 'Group by path' : 'Show all files',
@@ -32,7 +32,7 @@ export function createTrackingAction(args: {
 	paused: boolean;
 	getCurrentPaused(): boolean;
 	onTracking(intent: 'pause' | 'resume'): void;
-}): RangeTrailingAction {
+}): RangeControlAction {
 	return {
 		icon: args.paused ? 'play' : 'pause',
 		label: args.paused ? 'Resume activity tracking' : 'Pause activity tracking',
@@ -44,7 +44,7 @@ export function createTrackingAction(args: {
 export function createPosterExportAction(args: {
 	available: boolean;
 	onExport(): void;
-}): RangeTrailingAction {
+}): RangeControlAction {
 	return {
 		icon: 'image-down',
 		label: 'Export activity poster',
@@ -173,6 +173,7 @@ export class SummaryPopover {
 		this.unsubscribe = null;
 		if (this.liveTimer !== null) this.trigger.ownerDocument.defaultView?.clearInterval(this.liveTimer);
 		this.liveTimer = null;
+		this.controlsView?.destroy();
 		this.element?.remove();
 		this.element = null;
 		this.pinned = false;
@@ -217,9 +218,9 @@ export class SummaryPopover {
 		// a pointer-leave and close the Popover while the request is in flight.
 		if (!force && model.loadState === 'loading' && this.distributionView) {
 			this.element?.addClass('is-query-pending');
-			this.controlsView?.updateTrailingAction(this.groupingAction(model));
-			this.controlsView?.updateTrailingAction(this.trackingAction(model));
-			this.controlsView?.updateTrailingAction(this.posterExportAction(model));
+			this.controlsView?.updateAction(this.groupingAction(model));
+			this.controlsView?.updateAction(this.trackingAction(model));
+			this.controlsView?.updateAction(this.posterExportAction(model));
 			return;
 		}
 		this.render(model);
@@ -229,6 +230,8 @@ export class SummaryPopover {
 		const popover = this.element;
 		if (!popover) return;
 		const focusedId = (popover.ownerDocument.activeElement as HTMLElement | null)?.dataset.activityMapId;
+		this.controlsView?.destroy();
+		this.controlsView = null;
 		popover.empty();
 		popover.removeClass('is-query-pending');
 		this.distributionView = null;
@@ -245,9 +248,9 @@ export class SummaryPopover {
 			range: model.query.range,
 			onMetric: (metric) => { this.expandedOther = null; void this.controller.dispatch({ kind: 'set-metric', metric }); },
 			onRange: (range) => { this.expandedOther = null; void this.controller.dispatch({ kind: 'set-range', range }); },
-			trailingActions: [
-				this.groupingAction(model),
+			leadingActions: [
 				this.trackingAction(model),
+				this.groupingAction(model),
 				this.posterExportAction(model),
 			],
 		});
@@ -267,7 +270,7 @@ export class SummaryPopover {
 		this.position();
 	}
 
-	private groupingAction(model: ActivityMapViewModel): RangeTrailingAction {
+	private groupingAction(model: ActivityMapViewModel): RangeControlAction {
 		return createDistributionGroupingAction({
 			groupBy: model.query.groupBy,
 			getCurrentGrouping: () => this.controller.getViewModel().query.groupBy,
@@ -276,7 +279,7 @@ export class SummaryPopover {
 		});
 	}
 
-	private trackingAction(model: ActivityMapViewModel): RangeTrailingAction {
+	private trackingAction(model: ActivityMapViewModel): RangeControlAction {
 		return createTrackingAction({
 			paused: model.tracking?.state === 'paused',
 			getCurrentPaused: () => this.controller.getViewModel().tracking?.state === 'paused',
@@ -284,7 +287,7 @@ export class SummaryPopover {
 		});
 	}
 
-	private posterExportAction(model: ActivityMapViewModel): RangeTrailingAction {
+	private posterExportAction(model: ActivityMapViewModel): RangeControlAction {
 		return createPosterExportAction({
 			available: this.app !== undefined && model.loadState === 'ready' && model.distribution !== null,
 			onExport: () => this.openPosterExport(),

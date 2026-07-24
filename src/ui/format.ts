@@ -61,6 +61,6 @@ export function metricLabel(metric: MetricKey): string {
 		: metric === 'editingMs'
 			? 'Editing'
 			: metric === 'typedChars'
-				? 'Typed chars'
-				: 'Open count';
+				? 'Chars'
+				: 'Opens';
 }

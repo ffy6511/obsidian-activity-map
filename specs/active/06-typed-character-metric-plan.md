@@ -96,10 +96,10 @@ Evidence: `npm run check`, `npm run lint`, and `npm test -- --run` passed on 202
 ### Acceptance Criteria
 
 - [x] Changing only the metric preserves the current range, path, grouping, totals semantics, and file activation identities.
-- [x] The UI labels the metric as `Typed chars`; it never shows text content.
+- [x] The UI labels the metric as `Chars`; it never shows text content.
 - [x] Focused automated and repository gates pass with exact command output recorded below.
 
-Evidence: `npm run check`, `npm run lint`, and `npm test -- --run` passed on 2026-07-23 (254 tests); `npm run build`, strict specs validation, and `git diff --check` also passed. Focused coverage proves the fourth metric's independent projection, `Typed chars` selector and keyboard icon, and controller preservation of range, path, grouping, and detail identity.
+Evidence: `npm run check`, `npm run lint`, and `npm test -- --run` passed on 2026-07-23 (254 tests); `npm run build`, strict specs validation, and `git diff --check` also passed. Focused coverage proves the fourth metric's independent projection, `Chars` selector and keyboard icon, and controller preservation of range, path, grouping, and detail identity.
 
 ## Phase 2: explore DOM IME final-commit variants (superseded by real-input evidence)
 
