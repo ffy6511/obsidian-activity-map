@@ -10,7 +10,7 @@
 | Priority | P1 |
 | Status | review |
 | Completed | pending |
-| Dependencies | [Product requirements](../../docs/PRD.md#海报导出-modal), [Constitution](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), [typedChars](06-typed-character-metric-plan.md) |
+| Dependencies | [Product requirements](../../docs/PRD.md#海报导出-modal), [Constitution](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), [typedChars](../archive/06-typed-character-metric-plan.md) |
 | Decisions | [Export decision](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), [Privacy boundary](../constitution/2026-07-21-activity-map-product-and-data.md#privacy-and-network-boundary) |
 
 ## Phases
@@ -119,7 +119,7 @@ Evidence: `npm run check`, `npm run lint`, `npm test -- --run` (258 tests), `npm
 - `src/ui/{poster-export-modal,poster-caption-editor}.ts`
 - `styles.css`, `esbuild.config.mjs`
 - `tests/export/poster-exporter.test.ts`, `tests/ui/{poster-caption-editor,accessibility,summary-popover}.test.ts`
-- `ARCHITECTURE.md`, `README.md`, `docs/PRD.md`, `specs/{ROADMAP.md,constitution/2026-07-21-activity-map-product-and-data.md}`, `specs/active/{03-activity-map-ui-and-v0-1-release-plan,06-typed-character-metric-plan,07-poster-export-plan}.md`
+- `ARCHITECTURE.md`, `README.md`, `docs/PRD.md`, `specs/{ROADMAP.md,constitution/2026-07-21-activity-map-product-and-data.md}`, `specs/active/{03-activity-map-ui-and-v0-1-release-plan,07-poster-export-plan}.md`, `specs/archive/06-typed-character-metric-plan.md`
 
 ### Acceptance Criteria
 

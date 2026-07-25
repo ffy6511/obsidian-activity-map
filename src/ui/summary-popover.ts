@@ -6,7 +6,11 @@ import type { ActivityMapViewModel } from './view-model';
 import { distributionActivation } from './distribution-activation';
 import { renderBreadcrumbs } from './components/breadcrumbs';
 import { renderChartLegend, type ChartLegendHandle } from './components/chart-legend';
-import { renderDonutChart, type ChartItem } from './components/donut-chart';
+import {
+	renderDonutChart,
+	type ChartActivationSource,
+	type ChartItem,
+} from './components/donut-chart';
 import {
 	renderRangeControls,
 	type LeadingQueryAction,
@@ -21,6 +25,12 @@ import {
 	parentDirectory,
 } from './locate-file';
 import { scrollIntoViewAnimated } from './scroll-into-view-animated';
+import {
+	shouldOpenInNewTab,
+	type FileActivationEvent,
+	type OpenFileRequest,
+} from './file-hover-preview';
+import { FileActivationController } from './file-activation-controller';
 
 export function createDistributionGroupingAction(args: {
 	groupBy: DistributionGrouping;
@@ -101,11 +111,22 @@ export class SummaryPopover {
 	// In-flight centering scroll animation. Cancelled on re-activation, re-render,
 	// and close so a stale animation cannot move a rebuilt (or removed) list.
 	private cancelLocateScroll: (() => void) | null = null;
+	// This state-machine owns the shared path/file-mode chart confirmation policy.
+	private readonly fileActivation = new FileActivationController();
+	// Structural live-projection updates can replace the SVG and legend while the
+	// pointer stays still. Keep the semantic hover target so the replacement DOM
+	// does not visibly drop and re-enter its synchronized highlight.
+	private highlightedItemId: string | null = null;
+	// Opening a file can make the old SVG emit pointerleave/blur while the user
+	// has not moved the pointer. Keep that target highlighted until a different
+	// chart or legend item receives a real hover/focus interaction.
+	private retainedHighlightItemId: string | null = null;
+	private fileActivationHint: HTMLElement | null = null;
 
 	constructor(
 		private readonly trigger: HTMLElement,
 		private readonly controller: ActivityMapController,
-		private readonly openFile: (filePath: string) => Promise<void>,
+		private readonly openFile: (request: OpenFileRequest) => Promise<void>,
 		private readonly previewFile?: (
 			event: MouseEvent,
 			targetEl: HTMLElement,
@@ -114,15 +135,17 @@ export class SummaryPopover {
 		private readonly getNativePreview?: () => HTMLElement | null,
 		private readonly app?: App,
 		/**
-		 * Vault-relative path of the file whose header owns this Popover, read
-		 * fresh on each locate. `null`/omitted disables the locate button.
+		 * Vault-relative path of the current workspace file, read fresh on each
+		 * locate. `null`/omitted disables the locate button.
 		 */
-		private readonly getActiveFilePath?: () => string | null,
+		private readonly getCurrentFilePath?: () => string | null,
 		/**
 		 * Icon renderer for the control row. Defaults to Obsidian's `setIcon`;
 		 * tests inject a no-op so the Popover renders without Obsidian at runtime.
 		 */
 		private readonly renderIcon: (container: HTMLElement, icon: string) => void = setIcon,
+		/** Notifies the header manager when a preserved fixed Popover is dismissed. */
+		private readonly onClose?: (popover: SummaryPopover) => void,
 	) {}
 
 	open(): void {
@@ -185,12 +208,26 @@ export class SummaryPopover {
 
 	togglePinned(): void {
 		if (!this.element) this.open();
-		this.pinned = !this.pinned;
-		this.trigger.toggleClass('is-pinned', this.pinned);
-		this.trigger.setAttr('aria-pressed', String(this.pinned));
-		this.element?.toggleClass('is-pinned', this.pinned);
+		this.setPinned(!this.pinned);
+	}
+
+	/** Keeps this Popover visible even if opening a file replaces its header action. */
+	pin(): void {
+		if (!this.element) return;
+		this.setPinned(true);
+	}
+
+	isPinned(): boolean {
+		return this.pinned;
+	}
+
+	private setPinned(pinned: boolean): void {
+		this.pinned = pinned;
+		this.trigger.toggleClass('is-pinned', pinned);
+		this.trigger.setAttr('aria-pressed', String(pinned));
+		this.element?.toggleClass('is-pinned', pinned);
 		if (
-			this.pinned ||
+			pinned ||
 			this.trigger.matches(':hover') ||
 			this.trigger.ownerDocument.activeElement === this.trigger
 		) {
@@ -225,6 +262,7 @@ export class SummaryPopover {
 	close(restoreFocus: boolean): void {
 		this.cancelClose();
 		this.cancelLocate();
+		this.clearArmedFile();
 		if (this.outsideHandler)
 			this.trigger.ownerDocument.removeEventListener(
 				'pointerdown',
@@ -247,6 +285,9 @@ export class SummaryPopover {
 		this.controlsView = null;
 		this.chartHandle = null;
 		this.legendHandle = null;
+		this.highlightedItemId = null;
+		this.retainedHighlightItemId = null;
+		this.fileActivationHint = null;
 		this.pendingLocatePath = null;
 		this.pendingLocateGeneration = -1;
 		this.cancelLocateScroll?.();
@@ -255,11 +296,20 @@ export class SummaryPopover {
 		this.trigger.setAttr('aria-expanded', 'false');
 		this.trigger.setAttr('aria-pressed', 'false');
 		if (restoreFocus && this.trigger.isConnected) this.trigger.focus();
+		this.onClose?.(this);
 	}
 
 	private position(): void {
 		const popover = this.element;
 		if (!popover) return;
+		// Opening a file can replace or hide the owning header action before a
+		// queued render runs. A fixed Popover intentionally keeps its last resolved
+		// viewport position and never reads that stale (often zero-sized) anchor.
+		if (this.pinned) return;
+		if (!this.trigger.isConnected) {
+			this.close(false);
+			return;
+		}
 		const viewport = this.trigger.ownerDocument.defaultView;
 		const triggerRect = this.trigger.getBoundingClientRect();
 		const popoverRect = popover.getBoundingClientRect();
@@ -338,6 +388,7 @@ export class SummaryPopover {
 			.activityMapId;
 		this.controlsView?.destroy();
 		this.controlsView = null;
+		this.clearArmedFile();
 		// A rebuild replaces the chart/legend DOM. The old highlight handles are
 		// dead, so any pending locate clear cannot target them; cancel it. A
 		// locate-triggered scope change re-applies the highlight after the new
@@ -347,6 +398,7 @@ export class SummaryPopover {
 		this.cancelLocateScroll = null;
 		this.chartHandle = null;
 		this.legendHandle = null;
+		this.fileActivationHint = null;
 		popover.empty();
 		popover.removeClass('is-query-pending');
 		this.distributionView = null;
@@ -362,10 +414,12 @@ export class SummaryPopover {
 			metric: model.query.metric,
 			range: model.query.range,
 			onMetric: (metric) => {
+				this.clearArmedFile();
 				this.expandedOther = null;
 				void this.controller.dispatch({ kind: 'set-metric', metric });
 			},
 			onRange: (range) => {
+				this.clearArmedFile();
 				this.expandedOther = null;
 				void this.controller.dispatch({ kind: 'set-range', range });
 			},
@@ -413,6 +467,7 @@ export class SummaryPopover {
 			groupBy: model.query.groupBy,
 			getCurrentGrouping: () => this.controller.getViewModel().query.groupBy,
 			onBeforeActivate: () => {
+				this.clearArmedFile();
 				this.expandedOther = null;
 			},
 			onGrouping: (groupBy) => {
@@ -442,7 +497,7 @@ export class SummaryPopover {
 	}
 
 	private locateAction(model: ActivityMapViewModel): LeadingQueryAction {
-		const hasFile = this.getActiveFilePath?.() != null;
+		const hasFile = this.getCurrentFilePath?.() != null;
 		return {
 			// Resting glyph is the open `locate`; the fixed target remains visible
 			// for exactly the successful locate highlight lifetime below.
@@ -457,15 +512,23 @@ export class SummaryPopover {
 		};
 	}
 
+	/** Refreshes the current-workspace-file affordance without rebuilding the Popover. */
+	refreshLocateAvailability(): void {
+		if (!this.controlsView) return;
+		const model = this.controller.getViewModel();
+		this.controlsView.updateAction(this.locateAction(model));
+	}
+
 	/**
-	 * Locate the owning header's file in the current distribution and highlight
+	 * Locate the current workspace file in the current distribution and highlight
 	 * its slice and legend row for {@link LOCATE_HIGHLIGHT_MS}. In path grouping,
 	 * first narrows the scope to the file's parent directory if the file is not
 	 * already a visible child; the highlight completes on the next ready model.
 	 * Returns whether a highlight (immediate or pending) was started.
 	 */
 	locateCurrentFile(): boolean {
-		const activeFilePath = this.getActiveFilePath?.() ?? null;
+		this.clearArmedFile();
+		const activeFilePath = this.getCurrentFilePath?.() ?? null;
 		if (!activeFilePath) return false;
 		const model = this.controller.getViewModel();
 		if (model.loadState !== 'ready' || !model.distribution) return false;
@@ -617,8 +680,12 @@ export class SummaryPopover {
 		const chartHandle = renderDonutChart({
 			container: chart,
 			distribution,
-			onActivate: (item) => this.activateItem(item),
-			onHighlight: (item) => legendHandle?.highlight(item?.id ?? null),
+			onActivate: (item, event, source) => this.activateChartItem(item, event, source),
+			onHighlight: (item) => legendHandle?.highlight(this.updateHighlight(item)),
+			onDeactivate: (item) => {
+				this.clearArmedFile(item.id);
+				this.restoreRetainedHighlight(item.id);
+			},
 			showTooltip: false,
 			tightBounds: true,
 		});
@@ -635,6 +702,7 @@ export class SummaryPopover {
 			heading.createSpan({ text: 'Other items' });
 			const close = heading.createEl('button', { text: 'Show all' });
 			close.addEventListener('click', () => {
+				this.clearArmedFile();
 				this.expandedOther = null;
 				this.renderIfChanged(this.controller.getViewModel(), true);
 			});
@@ -643,12 +711,31 @@ export class SummaryPopover {
 			container: legend,
 			distribution,
 			items,
-			onActivate: (item) => this.activateItem(item),
-			onHighlight: (item) => chartHandle.highlight(item?.id ?? null),
+			onActivate: (item, event) => this.activateItem(item, event),
+			onHighlight: (item) => {
+				const highlightedItemId = this.updateHighlight(item);
+				chartHandle.highlight(highlightedItemId);
+				legendHandle?.highlight(highlightedItemId);
+			},
 			onFileHover: (event, targetEl, filePath) =>
 				this.previewFile?.(event, targetEl, filePath),
 		});
 		this.legendHandle = legendHandle;
+		if (this.highlightedItemId !== null) {
+			const retained = distribution.detailItems.some(
+				(item) => item.id === this.highlightedItemId,
+			);
+			if (retained) {
+				chartHandle.highlight(this.highlightedItemId);
+				legendHandle.highlight(this.highlightedItemId);
+			} else {
+				this.highlightedItemId = null;
+			}
+		}
+		this.fileActivationHint = popover.createEl('p', {
+			cls: 'activity-map-file-activation-hint',
+			attr: { role: 'status', 'aria-live': 'polite' },
+		});
 		this.distributionView = {
 			update: (nextDistribution) => {
 				const nextItems = this.expandedOther
@@ -680,6 +767,7 @@ export class SummaryPopover {
 			model.query.path,
 			model.query.view,
 			(nextPath) => {
+				this.clearArmedFile();
 				this.expandedOther = null;
 				void this.controller.dispatch({ kind: 'set-path', path: nextPath });
 			},
@@ -687,7 +775,60 @@ export class SummaryPopover {
 		);
 	}
 
-	private activateItem(item: DistributionItem | ChartItem): void {
+	private activateChartItem(
+		item: ChartItem,
+		event: FileActivationEvent,
+		source: ChartActivationSource,
+	): void {
+		const activation = this.fileActivation.activateChart(item, event, source);
+		if (activation === 'arm') {
+			this.armFileItem(item.id);
+			return;
+		}
+		this.activateItem(item, event);
+	}
+
+	private armFileItem(itemId: string): void {
+		this.chartHandle?.setArmedFileItem(itemId);
+		this.chartHandle?.highlight(itemId);
+		this.legendHandle?.highlight(itemId);
+		this.scrollLegendRowIntoView(itemId);
+		if (this.fileActivationHint)
+			this.fileActivationHint.textContent =
+				'Click the slice again to open the file · cmd/ctrl-click opens a new tab.';
+	}
+
+	private clearArmedFile(expectedItemId?: string): void {
+		if (!this.fileActivation.clear(expectedItemId)) return;
+		this.chartHandle?.setArmedFileItem(null);
+		if (this.fileActivationHint) this.fileActivationHint.textContent = '';
+	}
+
+	private updateHighlight(item: DistributionItem | ChartItem | null): string | null {
+		if (item) {
+			this.retainedHighlightItemId = null;
+			this.highlightedItemId = item.id;
+		} else {
+			this.highlightedItemId = this.retainedHighlightItemId;
+		}
+		return this.highlightedItemId;
+	}
+
+	private retainHighlight(itemId: string): void {
+		this.retainedHighlightItemId = itemId;
+		this.highlightedItemId = itemId;
+		this.chartHandle?.highlight(itemId);
+		this.legendHandle?.highlight(itemId);
+	}
+
+	private restoreRetainedHighlight(deactivatedItemId: string): void {
+		if (this.retainedHighlightItemId !== deactivatedItemId) return;
+		this.chartHandle?.highlight(deactivatedItemId);
+		this.legendHandle?.highlight(deactivatedItemId);
+	}
+
+	private activateItem(item: DistributionItem | ChartItem, event: FileActivationEvent): void {
+		this.clearArmedFile();
 		const activation = distributionActivation(item);
 		if (activation.kind === 'navigate') {
 			this.expandedOther = null;
@@ -700,7 +841,14 @@ export class SummaryPopover {
 			this.expandedOther = activation.memberIds;
 			this.renderIfChanged(this.controller.getViewModel(), true);
 		} else if (activation.kind === 'open-file') {
-			void this.openFile(activation.path);
+			// File activation can replace the active leaf. Pin before the request so
+			// the user can keep exploring this result after the workspace changes.
+			this.retainHighlight(item.id);
+			this.pin();
+			void this.openFile({
+				filePath: activation.path,
+				openInNewTab: shouldOpenInNewTab(event),
+			});
 		}
 	}
 

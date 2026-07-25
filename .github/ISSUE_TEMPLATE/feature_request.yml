@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest a focused improvement to Activity Map.
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please describe the user goal or workflow this would improve.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user need or workflow is currently unsupported?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the smallest useful behavior or interface.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Optional. Include workarounds or different approaches.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Optional. Screenshots or mockups must not expose private note content.

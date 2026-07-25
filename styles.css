@@ -250,6 +250,11 @@
 	opacity: 0.24;
 }
 
+.activity-map-popover .activity-map-donut path.is-file-activation-armed,
+.activity-map-popover .activity-map-chart-legend-row.is-file-activation-link {
+	cursor: alias;
+}
+
 .activity-map-donut-total {
 	fill: var(--text-normal);
 	font-size: 14px;
@@ -370,6 +375,15 @@
 		opacity 160ms ease,
 		transform 160ms ease;
 	animation: activity-map-query-result-in 160ms ease-out;
+}
+
+/* Fixed Popovers can survive a file-open leaf replacement. Suppress the
+   entrance animation on their replacement nodes so retained hover state does
+   not flash before the pointer gets another movement event. */
+.activity-map-chart-popover.is-pinned .activity-map-popover-chart,
+.activity-map-chart-popover.is-pinned .activity-map-popover-path,
+.activity-map-chart-popover.is-pinned .activity-map-popover-legend {
+	animation: none;
 }
 
 .activity-map-chart-popover.is-query-pending .activity-map-popover-chart,
@@ -595,6 +609,14 @@
 	white-space: nowrap;
 	text-align: right;
 	font-variant-numeric: tabular-nums;
+}
+
+.activity-map-file-activation-hint {
+	min-height: 1.5em;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	line-height: 1.5;
+	text-align: center;
 }
 
 @media (max-width: 34rem) {

@@ -35,7 +35,7 @@ Activity Map is an Obsidian plugin that shows how you spend focused time across 
 - **Per-file activity** — Tracks active time, editing time, typed characters, and file-open counts for the file currently in focus.
 - **Idle-aware tracking** — Excludes idle, sleep, and lock-screen gaps from focused activity.
 - **Explore by time and place** — Inspect daily and historical activity, then drill from folders into files.
-- **Header summary** — Open a compact, pinnable activity chart from eligible file headers. Locate the current file with a transient chart-and-list highlight that smoothly brings an offscreen row into view.
+- **Header summary** — Open a compact, pinnable activity chart from eligible file headers. Locate follows the current workspace file; any present-file slice first locates its row, a second click opens it, and Cmd/Ctrl-click opens a new tab immediately. File opening pins the chart for continued exploration.
 - **Local poster export** — Download the current result as a theme-matched PNG poster with an optional caption.
 - **Local settings** — Configure excluded paths and timing thresholds.
 
@@ -91,6 +91,10 @@ Activity Map is local-first. It does not itself upload, sync, sell, or send your
 - It does not read or store note content, selected text, or the actual strings you type.
 - Poster downloads are created and saved locally.
 
+### Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development, validation, and pull-request guidance.
+
 ### License
 
 [MIT](LICENSE)
@@ -106,7 +110,7 @@ Activity Map 是一款本地优先的 Obsidian 活动统计插件。它帮助你
 - **逐文件活动统计**：记录当前聚焦文件的活动时长、编辑时长、输入字符数和打开/切入次数。
 - **识别空闲与休眠**：空闲、休眠和锁屏间隔不会计入专注活动。
 - **按时间与目录查看投入**：查看每日和历史活动，并从目录逐层下钻到文件。
-- **页眉统计入口**：从符合条件的文件页眉打开可固定的紧凑活动图表；定位当前文件时，切片与列表行会短暂高亮，列表行不在可视区时会平滑滚入视野。
+- **页眉统计入口**：从符合条件的文件页眉打开可固定的紧凑活动图表；定位始终跟随当前激活的工作区文件。任意分组下的现存文件切片无修饰键首次点击定位列表行，再次点击在当前页面打开文件，`Cmd/Ctrl` 首次点击直接新建 tab；打开文件后图表自动固定，方便继续浏览。
 - **本地海报导出**：将当前结果下载为匹配主题的 PNG 海报，并可添加说明文字。
 - **本地设置**：可设置排除路径和时间阈值。
 
@@ -154,6 +158,10 @@ Activity Map 坚持本地优先：插件自身不会上传、同步、出售或�
 - 插件只在本地保存构建统计所需的活动元数据。
 - 不读取或保存笔记正文、选中文本，也不保存你实际输入的字符串。
 - 海报只在本机生成和保存。
+
+### 参与贡献
+
+开发、验证和 Pull Request 说明见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ### 许可证
 

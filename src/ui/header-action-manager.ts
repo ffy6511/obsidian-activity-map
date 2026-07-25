@@ -5,7 +5,7 @@ import type { DistributionResult } from '../query/distribution-query';
 import { statusPresentation } from './status-presentation';
 import { SummaryPopover } from './summary-popover';
 import { HeaderMiniDonut, headerDonutSlices, type HeaderMiniDonutPort } from './header-mini-donut';
-import { previewFileOnHover } from './file-hover-preview';
+import { previewFileOnHover, type OpenFileRequest } from './file-hover-preview';
 
 interface HeaderEntry {
 	view: FileView;
@@ -19,16 +19,27 @@ export interface HeaderActionDependencies {
 	app?: App;
 	workspace: Workspace;
 	controller: ActivityMapController;
-	openFile: (filePath: string) => Promise<void>;
+	openFile: (request: OpenFileRequest) => Promise<void>;
 	isFileView(view: WorkspaceLeaf['view']): view is FileView;
 	createMiniDonut?: (element: HTMLElement) => HeaderMiniDonutPort;
 	reportWarning(message: string): void;
+}
+
+/** Reads the current workspace file at activation time, never a header's stale path. */
+export function activeWorkspaceFilePath(
+	workspace: Pick<Workspace, 'getActiveFile'>,
+): string | null {
+	return workspace.getActiveFile()?.path ?? null;
 }
 
 /** Owns exactly one Activity Map action for each live file-backed view. */
 export class HeaderActionManager {
 	private readonly entriesByView = new WeakMap<FileView, HeaderEntry>();
 	private readonly entries = new Set<HeaderEntry>();
+	// A pinned Popover may outlive the header action that originally anchored it
+	// after a file-open replaces that leaf. Retain it solely for plugin teardown;
+	// SummaryPopover removes itself from this set on Escape or outside dismissal.
+	private readonly detachedPinnedPopovers = new Set<SummaryPopover>();
 	private readonly eventRefs: EventRef[] = [];
 	private unsubscribe: (() => void) | null = null;
 	private stopped = false;
@@ -59,8 +70,10 @@ export class HeaderActionManager {
 		this.eventRefs.length = 0;
 		this.unsubscribe?.();
 		this.unsubscribe = null;
-		for (const entry of this.entries) this.remove(entry);
+		for (const entry of this.entries) this.remove(entry, false);
 		this.entries.clear();
+		for (const popover of this.detachedPinnedPopovers) popover.close(false);
+		this.detachedPinnedPopovers.clear();
 	}
 
 	/** Public for deterministic lifecycle tests and layout-ready composition. */
@@ -120,11 +133,11 @@ export class HeaderActionManager {
 				}),
 			() => view.leaf.hoverPopover?.hoverEl ?? null,
 			this.dependencies.app,
-			// The Popover locates the file of the header view it belongs to. A
-			// rename rebuilds this entry (see synchronize), closing the old
-			// Popover and creating a fresh one with the new path, so the captured
-			// path stays correct for this Popover's lifetime.
-			() => filePath,
+			// A pinned Popover can outlive its original header after navigation.
+			// Locate must follow the workspace's current file, not that stale header.
+			() => activeWorkspaceFilePath(this.dependencies.workspace),
+			undefined,
+			(closedPopover) => this.detachedPinnedPopovers.delete(closedPopover),
 		);
 		const ownerWindow = action.ownerDocument.defaultView;
 		const supportsHover =
@@ -166,6 +179,7 @@ export class HeaderActionManager {
 					idleThresholdMs: model.settings.idleThresholdMs,
 				}),
 			);
+			entry.popover.refreshLocateAvailability();
 		}
 		this.refreshHeaderDistribution(model.queryGeneration);
 	}
@@ -203,8 +217,10 @@ export class HeaderActionManager {
 			});
 	}
 
-	private remove(entry: HeaderEntry): void {
-		entry.popover.close(false);
+	private remove(entry: HeaderEntry, preservePinned = true): void {
+		if (preservePinned && entry.popover.isPinned())
+			this.detachedPinnedPopovers.add(entry.popover);
+		else entry.popover.close(false);
 		entry.action.remove();
 	}
 }

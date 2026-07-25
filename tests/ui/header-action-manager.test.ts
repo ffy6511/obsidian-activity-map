@@ -1,7 +1,7 @@
 import { describe, expect, it } from '../helpers/test-harness';
 import type { FileView } from 'obsidian';
 
-import { HeaderActionManager } from '../../src/ui/header-action-manager';
+import { activeWorkspaceFilePath, HeaderActionManager } from '../../src/ui/header-action-manager';
 import {
 	HeaderMiniDonut,
 	headerDonutSlices,
@@ -56,6 +56,19 @@ function action(): FakeAction {
 }
 
 describe('header action manager', () => {
+	it('reads the current workspace file instead of a header-owned path', () => {
+		let activeFile: { path: string } | null = { path: 'notes/first.md' };
+		const workspace = {
+			getActiveFile: () => activeFile,
+		};
+
+		expect(activeWorkspaceFilePath(workspace as never)).toBe('notes/first.md');
+		activeFile = { path: 'notes/second.md' };
+		expect(activeWorkspaceFilePath(workspace as never)).toBe('notes/second.md');
+		activeFile = null;
+		expect(activeWorkspaceFilePath(workspace as never)).toBeNull();
+	});
+
 	it('keeps the same header SVG and stable slice nodes while distributions change', () => {
 		class FakeSvgNode {
 			children: FakeSvgNode[] = [];
@@ -289,6 +302,41 @@ describe('header action manager', () => {
 		expect(second.removed).toBeFalse();
 		manager.stop();
 		expect(second.removed).toBeTrue();
+	});
+
+	it('retains a pinned Popover after its header action is replaced and closes it on teardown', () => {
+		const trigger = action();
+		let closeCount = 0;
+		const manager = new HeaderActionManager({
+			workspace: {} as never,
+			controller: {} as never,
+			openFile: async () => {},
+			isFileView: (candidate): candidate is FileView => Boolean(candidate),
+			reportWarning: () => {},
+		});
+		type PinnedEntry = {
+			action: FakeAction;
+			popover: {
+				isPinned(): boolean;
+				close(restoreFocus: boolean): void;
+			};
+		};
+		const entry: PinnedEntry = {
+			action: trigger,
+			popover: {
+				isPinned: () => true,
+				close: () => {
+					closeCount += 1;
+				},
+			},
+		};
+
+		(manager as unknown as { remove(entry: PinnedEntry): void }).remove(entry);
+
+		expect(trigger.removed).toBeTrue();
+		expect(closeCount).toBe(0);
+		manager.stop();
+		expect(closeCount).toBe(1);
 	});
 
 	it('records header integration failure without throwing', () => {

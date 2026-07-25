@@ -15,6 +15,7 @@ import {
 	type TrackingControl,
 } from '../../src/ui/activity-map-controller';
 import { renderRangeControls } from '../../src/ui/components/range-controls';
+import type { ChartItem } from '../../src/ui/components/donut-chart';
 import { SummaryPopover } from '../../src/ui/summary-popover';
 import { installDomEnvironment } from '../helpers/dom-environment';
 import {
@@ -60,6 +61,15 @@ function fileItem(id: string, path: string, value: number): DistributionItem {
 	};
 }
 
+function chartFileItem(id: string, path: string, value: number): ChartItem {
+	return {
+		...fileItem(id, path, value),
+		color: 'var(--color-blue)',
+		startAngle: 0,
+		endAngle: Math.PI,
+	};
+}
+
 function distribution(query: DistributionQuery, items: DistributionItem[]): DistributionResult {
 	const detailItems = items;
 	return {
@@ -85,11 +95,15 @@ function makeController(args: {
 	rootItems: DistributionItem[];
 	/** Items to return for a given queried path; falls back to rootItems. */
 	itemsForPath?: (path: string) => DistributionItem[];
+	groupBy?: 'path' | 'file';
 }): {
 	controller: ActivityMapController;
 	queries: DistributionQuery[];
 } {
-	const settings = normalizeSettings({ deviceId: 'd1' });
+	const settings = normalizeSettings({
+		deviceId: 'd1',
+		headerPopoverGrouping: args.groupBy,
+	});
 	const queries: DistributionQuery[] = [];
 	const service: QueryService = {
 		run(query) {
@@ -148,7 +162,298 @@ describe('locate-file pure helpers', () => {
 });
 
 describe('locate current file behavior', () => {
-	it('highlights the slice and legend row for the file in file grouping', async () => {
+	it('arms ordinary chart-file clicks while a first Cmd-click opens and pins immediately', async () => {
+		const { document } = installDomEnvironment();
+		const item = chartFileItem('a', 'notes/a.md', 10);
+		const { controller } = makeController({ rootItems: [item], groupBy: 'file' });
+		const trigger = document.createElement('button');
+		document.body.appendChild(trigger);
+		const window = document.defaultView as unknown as {
+			setTimeout: () => number;
+			clearTimeout: () => void;
+			setInterval: () => number;
+			clearInterval: () => void;
+		};
+		window.setTimeout = () => 0;
+		window.clearTimeout = () => {};
+		window.setInterval = () => 0;
+		window.clearInterval = () => {};
+		const opens: Array<{ filePath: string; openInNewTab: boolean }> = [];
+		const popover = new SummaryPopover(
+			trigger,
+			controller,
+			async (request) => {
+				opens.push(request);
+			},
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			() => {},
+		);
+		popover.open();
+		await Promise.resolve();
+		await Promise.resolve();
+
+		const actions = popover as unknown as {
+			activateChartItem(
+				item: ChartItem,
+				event: MouseEvent | KeyboardEvent,
+				source: 'mouse' | 'touch' | 'keyboard',
+			): void;
+			activateItem(item: DistributionItem, event: MouseEvent): void;
+			renderIfChanged(
+				model: ReturnType<typeof controller.getViewModel>,
+				force: boolean,
+			): void;
+		};
+		actions.activateChartItem(item, { metaKey: false, ctrlKey: false } as MouseEvent, 'mouse');
+
+		const slice = document.querySelector<SVGPathElement>('[data-activity-map-id="a"]');
+		const row = document.querySelector<HTMLButtonElement>('[data-activity-map-id="legend-a"]');
+		const hint = document.querySelector<HTMLElement>('.activity-map-file-activation-hint');
+		expect(opens).toHaveLength(0);
+		expect(slice?.classList.contains('is-file-activation-armed')).toBeTrue();
+		expect(row?.classList.contains('is-file-activation-link')).toBeTrue();
+		expect(hint?.textContent).toBe(
+			'Click the slice again to open the file · cmd/ctrl-click opens a new tab.',
+		);
+
+		slice?.dispatchEvent(new Event('pointerleave'));
+		expect(slice?.classList.contains('is-file-activation-armed')).toBeFalse();
+		expect(hint?.textContent).toBe('');
+		slice?.dispatchEvent(new Event('pointerenter'));
+		expect(slice?.classList.contains('is-highlighted')).toBeTrue();
+
+		actions.activateChartItem(item, { metaKey: true, ctrlKey: false } as MouseEvent, 'mouse');
+		expect(opens).toEqual([{ filePath: 'notes/a.md', openInNewTab: true }]);
+		expect(slice?.classList.contains('is-file-activation-armed')).toBeFalse();
+		expect(
+			document.querySelector('.activity-map-chart-popover')?.classList.contains('is-pinned'),
+		).toBe(true);
+		slice?.dispatchEvent(new Event('pointerleave'));
+		expect(slice?.classList.contains('is-highlighted')).toBeTrue();
+		expect(row?.classList.contains('is-highlighted')).toBeTrue();
+		actions.renderIfChanged(controller.getViewModel(), true);
+		const refreshedSlice = document.querySelector<SVGPathElement>('[data-activity-map-id="a"]');
+		const refreshedRow = document.querySelector<HTMLButtonElement>(
+			'[data-activity-map-id="legend-a"]',
+		);
+		expect(refreshedSlice?.classList.contains('is-highlighted')).toBeTrue();
+		expect(refreshedRow?.classList.contains('is-highlighted')).toBeTrue();
+
+		actions.activateChartItem(item, { metaKey: false, ctrlKey: false } as MouseEvent, 'mouse');
+		slice?.dispatchEvent(new Event('blur'));
+		expect(slice?.classList.contains('is-file-activation-armed')).toBeFalse();
+		expect(hint?.textContent).toBe('');
+
+		actions.activateChartItem(item, { metaKey: false, ctrlKey: false } as MouseEvent, 'mouse');
+		actions.activateChartItem(item, { metaKey: true, ctrlKey: false } as MouseEvent, 'mouse');
+		// Legend rows are direct file links; they never inherit a chart arm.
+		actions.activateItem(item, { metaKey: false, ctrlKey: false } as MouseEvent);
+		actions.activateItem(item, { metaKey: false, ctrlKey: true } as MouseEvent);
+		expect(opens).toEqual([
+			{ filePath: 'notes/a.md', openInNewTab: true },
+			{ filePath: 'notes/a.md', openInNewTab: true },
+			{ filePath: 'notes/a.md', openInNewTab: false },
+			{ filePath: 'notes/a.md', openInNewTab: true },
+		]);
+		expect(hint?.textContent).toBe('');
+
+		popover.close(false);
+	});
+
+	it('arms path-mode file slices while keeping direct legend and touch activation', async () => {
+		const { document } = installDomEnvironment();
+		const item = chartFileItem('a', 'notes/a.md', 10);
+		const { controller } = makeController({ rootItems: [item] });
+		const trigger = document.createElement('button');
+		document.body.appendChild(trigger);
+		const window = document.defaultView as unknown as {
+			setTimeout: () => number;
+			clearTimeout: () => void;
+			setInterval: () => number;
+			clearInterval: () => void;
+		};
+		window.setTimeout = () => 0;
+		window.clearTimeout = () => {};
+		window.setInterval = () => 0;
+		window.clearInterval = () => {};
+		const opens: Array<{ filePath: string; openInNewTab: boolean }> = [];
+		const popover = new SummaryPopover(
+			trigger,
+			controller,
+			async (request) => {
+				opens.push(request);
+			},
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			() => {},
+		);
+		popover.open();
+		await Promise.resolve();
+		await Promise.resolve();
+		const actions = popover as unknown as {
+			activateChartItem(
+				item: ChartItem,
+				event: MouseEvent,
+				source: 'mouse' | 'touch' | 'keyboard',
+			): void;
+			activateItem(item: DistributionItem, event: MouseEvent): void;
+		};
+
+		actions.activateChartItem(item, { metaKey: false, ctrlKey: false } as MouseEvent, 'mouse');
+		const slice = document.querySelector<SVGPathElement>('[data-activity-map-id="a"]');
+		const row = document.querySelector<HTMLButtonElement>('[data-activity-map-id="legend-a"]');
+		const hint = document.querySelector<HTMLElement>('.activity-map-file-activation-hint');
+		expect(opens).toHaveLength(0);
+		expect(slice?.classList.contains('is-file-activation-armed')).toBeTrue();
+		expect(row?.classList.contains('is-file-activation-link')).toBeTrue();
+		expect(hint?.textContent).toBe(
+			'Click the slice again to open the file · cmd/ctrl-click opens a new tab.',
+		);
+
+		actions.activateChartItem(item, { metaKey: false, ctrlKey: false } as MouseEvent, 'mouse');
+		expect(opens).toEqual([{ filePath: 'notes/a.md', openInNewTab: false }]);
+
+		actions.activateChartItem(item, { metaKey: true, ctrlKey: false } as MouseEvent, 'mouse');
+		expect(opens).toEqual([
+			{ filePath: 'notes/a.md', openInNewTab: false },
+			{ filePath: 'notes/a.md', openInNewTab: true },
+		]);
+
+		// Legend file rows remain direct links in either grouping.
+		actions.activateItem(item, { metaKey: false, ctrlKey: false } as MouseEvent);
+		actions.activateChartItem(item, { metaKey: false, ctrlKey: false } as MouseEvent, 'touch');
+		expect(opens).toEqual([
+			{ filePath: 'notes/a.md', openInNewTab: false },
+			{ filePath: 'notes/a.md', openInNewTab: true },
+			{ filePath: 'notes/a.md', openInNewTab: false },
+			{ filePath: 'notes/a.md', openInNewTab: false },
+		]);
+
+		popover.close(false);
+	});
+
+	it('pins before opening a file and ignores a hidden or detached header action', async () => {
+		const { document } = installDomEnvironment();
+		const item = chartFileItem('a', 'notes/a.md', 10);
+		const { controller } = makeController({ rootItems: [item] });
+		const trigger = document.createElement('button');
+		document.body.appendChild(trigger);
+		let headerVisible = true;
+		trigger.getBoundingClientRect = () => {
+			const left = headerVisible ? 400 : 0;
+			const top = headerVisible ? 20 : 0;
+			const width = headerVisible ? 50 : 0;
+			const height = headerVisible ? 30 : 0;
+			return {
+				x: left,
+				y: top,
+				width,
+				height,
+				top,
+				right: left + width,
+				bottom: top + height,
+				left,
+				toJSON: () => ({}),
+			};
+		};
+		const window = document.defaultView as unknown as {
+			setTimeout: () => number;
+			clearTimeout: () => void;
+			setInterval: () => number;
+			clearInterval: () => void;
+		};
+		window.setTimeout = () => 0;
+		window.clearTimeout = () => {};
+		window.setInterval = () => 0;
+		window.clearInterval = () => {};
+		const opens: Array<{ filePath: string; openInNewTab: boolean }> = [];
+		const popover = new SummaryPopover(
+			trigger,
+			controller,
+			async (request) => {
+				opens.push(request);
+			},
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			() => {},
+		);
+		popover.open();
+		await Promise.resolve();
+		await Promise.resolve();
+
+		const actions = popover as unknown as {
+			activateItem(item: DistributionItem, event: MouseEvent): void;
+		};
+		actions.activateItem(item, { metaKey: true, ctrlKey: false } as MouseEvent);
+
+		expect(opens).toEqual([{ filePath: 'notes/a.md', openInNewTab: true }]);
+		const fixedPopover = document.querySelector<HTMLElement>('.activity-map-chart-popover');
+		expect(fixedPopover?.classList.contains('is-pinned')).toBeTrue();
+		expect(trigger.getAttribute('aria-pressed')).toBe('true');
+		if (!fixedPopover) throw new Error('pinned Popover missing');
+		const previousLeft = fixedPopover.style.left;
+		const previousTop = fixedPopover.style.top;
+		headerVisible = false;
+
+		(popover as unknown as { position(): void }).position();
+
+		expect(fixedPopover.style.left).toBe(previousLeft);
+		expect(fixedPopover.style.top).toBe(previousTop);
+		trigger.remove();
+
+		(popover as unknown as { position(): void }).position();
+
+		expect(document.querySelector('.activity-map-chart-popover')).toBe(fixedPopover);
+		expect(fixedPopover.style.left).toBe(previousLeft);
+		expect(fixedPopover.style.top).toBe(previousTop);
+		popover.close(false);
+	});
+
+	it('closes instead of positioning from a detached header action', async () => {
+		const { document } = installDomEnvironment();
+		const item = chartFileItem('a', 'notes/a.md', 10);
+		const { controller } = makeController({ rootItems: [item] });
+		const trigger = document.createElement('button');
+		document.body.appendChild(trigger);
+		const window = document.defaultView as unknown as {
+			setTimeout: () => number;
+			clearTimeout: () => void;
+			setInterval: () => number;
+			clearInterval: () => void;
+		};
+		window.setTimeout = () => 0;
+		window.clearTimeout = () => {};
+		window.setInterval = () => 0;
+		window.clearInterval = () => {};
+		const popover = new SummaryPopover(
+			trigger,
+			controller,
+			async () => {},
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			() => {},
+		);
+		popover.open();
+		await Promise.resolve();
+		await Promise.resolve();
+		trigger.remove();
+
+		(popover as unknown as { position(): void }).position();
+
+		expect(document.querySelector('.activity-map-chart-popover')).toBeNull();
+		expect(trigger.getAttribute('aria-expanded')).toBe('false');
+	});
+
+	it('locates the current workspace file after the Popover was already opened', async () => {
 		const { document } = installDomEnvironment();
 		const items = [fileItem('a', 'notes/a.md', 10), fileItem('b', 'notes/b.md', 30)];
 		const { controller } = makeController({ rootItems: items });
@@ -176,6 +481,7 @@ describe('locate current file behavior', () => {
 		window.setInterval = () => 0;
 		window.clearInterval = () => {};
 
+		let currentFilePath: string | null = null;
 		const popover = new SummaryPopover(
 			trigger,
 			controller,
@@ -183,18 +489,22 @@ describe('locate current file behavior', () => {
 			undefined,
 			undefined,
 			undefined,
-			() => 'notes/b.md',
+			() => currentFilePath,
 			() => {},
 		);
 		popover.open();
 		await Promise.resolve();
 		await Promise.resolve();
-
-		const started = popover.locateCurrentFile();
-		expect(started).toBeTrue();
 		const locate = document.querySelector<HTMLButtonElement>(
 			'[data-activity-map-id="locate-current-file"]',
 		);
+		expect(locate?.disabled).toBeTrue();
+		currentFilePath = 'notes/b.md';
+		popover.refreshLocateAvailability();
+		expect(locate?.disabled).toBeFalse();
+
+		const started = popover.locateCurrentFile();
+		expect(started).toBeTrue();
 		expect(locate?.classList.contains('is-locating')).toBeTrue();
 
 		const row = document.querySelector<HTMLButtonElement>('[data-activity-map-id="legend-b"]');
@@ -379,7 +689,7 @@ describe('locate current file behavior', () => {
 		popover.close(false);
 	});
 
-	it('disables the locate button when there is no owning file and renders it left of the metric', () => {
+	it('disables the locate button when there is no current file and renders it left of the metric', () => {
 		const { document } = installDomEnvironment();
 		const container = document.createElement('div');
 		document.body.appendChild(container);

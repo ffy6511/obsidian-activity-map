@@ -28,6 +28,8 @@ Deliver a local-first Obsidian plugin that measures trustworthy file activity an
 - [Spec 03 — Activity Map UI and v0.1 release](active/03-activity-map-ui-and-v0-1-release-plan.md)
 - [Spec 04 — Header Popover split layout](active/04-header-popover-split-layout-plan.md)
 - [Spec 05 — Header Popover file grouping](active/05-header-popover-file-grouping-plan.md)
+- [Spec 08 — Header Popover locate current file](active/08-header-popover-locate-current-file-plan.md)
+- [Spec 09 — Header Popover file activation](active/09-header-popover-file-activation-plan.md)
 
 ### Key Deliverables
 
@@ -35,8 +37,9 @@ Deliver a local-first Obsidian plugin that measures trustworthy file activity an
 - [x] Foreground-only per-file activity sessions with trusted activity signals, idle clipping, pause, sleep handling, and explicit corrections.
 - [x] Durable per-device daily session shards, recoverable aggregates, stable file identity, and retention.
 - [x] Correct selected-day, rolling daily-average, all-history, path aggregation, detail, and deleted-file queries.
-- [x] Stable multi-slice header mini donut as the only entry, idle-bounded real-time centered `2:3` chart/list Popover with ellipsized basename-only file leaves, and complete synchronized scrollable detail list.
+- [x] Stable multi-slice header mini donut as the only entry, idle-bounded real-time centered `2:3` chart/list Popover with ellipsized basename-only file leaves, a Locate action that follows the current workspace file, and complete synchronized scrollable detail list.
 - [x] Header Popover grouping toggle switches the current path scope between hierarchical path slices and recursive file slices, persists the last successful choice, and does not change totals or activation identity.
+- [x] Present-file chart slices in either grouping locate their matching list row before opening, while file rows remain direct links and Cmd/Ctrl file activation explicitly opens a new tab.
 - [x] Tested local services generate standalone full-infographic and chart-only SVG artifacts; their header-modal controls are deferred.
 - [ ] Full desktop behavior and a mobile interaction path that does not depend on hover.
 
@@ -70,7 +73,7 @@ Extend trusted activity reporting with privacy-preserving input metrics, local p
 
 - [Reserved metric semantics](../docs/PRD.md#交互输入字符-typedchars)
 - [Cross-version product and data boundaries](constitution/2026-07-21-activity-map-product-and-data.md#final-decision)
-- [Spec 06 — typedChars](active/06-typed-character-metric-plan.md)
+- [Spec 06 — typedChars](archive/06-typed-character-metric-plan.md)
 - [Spec 07 — poster export](active/07-poster-export-plan.md)
 
 ### Key Deliverables
