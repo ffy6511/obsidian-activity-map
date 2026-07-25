@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-activity-map",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"description": "Track trustworthy Obsidian file activity and explore it by folder.",
 	"main": "main.js",
 	"type": "module",

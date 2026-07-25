@@ -11,15 +11,25 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/ffy6511/obsidian-activity-map?style=flat&label=License&cacheSeconds=300&v=public" alt="License" /></a>
 </p>
 
+## Screenshots
+
 <table>
   <tbody>
     <tr>
-      <td width="50%"><img src="docs/assets/activity-map-by-file.jpg" alt="Activity Map grouped by file" width="100%" /></td>
-      <td width="50%"><img src="docs/assets/activity-map-by-path.jpg" alt="Activity Map grouped by path" width="100%" /></td>
+      <td width="50%"><img src="docs/assets/activity-map-screenshot-file-grouping.jpg" alt="Activity Map grouped by file" width="100%" /></td>
+      <td width="50%"><img src="docs/assets/activity-map-screenshot-path-grouping.jpg" alt="Activity Map grouped by path" width="100%" /></td>
     </tr>
     <tr>
       <td align="center">Compare focused time for individual files.</td>
-      <td align="center">Aggregate activity by folder, then drill into the part.</td>
+      <td align="center">Aggregate activity by folder, then drill into files.</td>
+    </tr>
+    <tr>
+      <td width="50%"><img src="docs/assets/activity-map-screenshot-open-count.jpg" alt="Activity Map open-count metric" width="100%" /></td>
+      <td width="50%"><img src="docs/assets/activity-map-screenshot-typed-chars.jpg" alt="Activity Map typed-characters metric" width="100%" /></td>
+    </tr>
+    <tr>
+      <td align="center">Review file-open counts.</td>
+      <td align="center">Inspect typed characters.</td>
     </tr>
   </tbody>
 </table>
