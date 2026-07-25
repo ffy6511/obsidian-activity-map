@@ -27,13 +27,13 @@ The Header Popover can drill through directories and list files under the curren
 
 ### Current Behavior
 
-The Popover control row renders leading actions (tracking, grouping, poster export), then the day navigator, then the metric and range dropdowns. Distribution rendering (`SummaryPopover.renderDistribution`) already wires bidirectional highlight between the donut chart and the legend list via `onHighlight`, and both expose programmatic `highlight(itemId)` handles. There is no scroll-into-view call anywhere in `src/`. Each live `SummaryPopover` is owned by a `HeaderEntry` that already carries the `filePath` of the file-backed view whose header it lives in (`HeaderActionManager`), but that path is not currently passed into the Popover.
+The Popover control row renders leading actions (tracking, grouping, poster export), then the day navigator, then the metric and range dropdowns. Distribution rendering (`SummaryPopover.renderDistribution`) already wires bidirectional highlight between the donut chart and the legend list via `onHighlight`, and both expose programmatic `highlight(itemId)` handles. There is no scroll-into-view call anywhere in `src/`. `HeaderEntry.filePath` remains the header-status identity, while Locate reads the current workspace file through `Workspace.getActiveFile()` at activation time.
 
 ### Goals and Non-goals
 
 Goals:
 
-- Add one icon button immediately left of the metric button in the existing control row that locates the file of the Popover's owning header view.
+- Add one icon button immediately left of the metric button in the existing control row that locates Obsidian's current workspace file.
 - In file grouping, locate highlights the file's donut slice and legend row for a fixed `2s`, scrolling the legend row into view first if it is not visible.
 - In path grouping, locate first navigates the scope to the current file's nearest ancestor directory (parent) while preserving path grouping, waits for the rerender to settle, then performs the same highlight.
 - Highlight behaves exactly like the existing hover-driven highlight: it drives the existing donut+legend bidirectional `onHighlight` path, then clears automatically.
@@ -47,7 +47,7 @@ Non-goals:
 
 ### Key Insight
 
-Locate is a pure presentation action over the existing distribution result. Its only data dependency is the owning header's file path, which `HeaderActionManager` already knows. In file grouping the file's `DistributionItem` row exists whenever the file is present under the current scope, so locate reduces to "find item by path, scroll, highlight, clear". In path grouping the file may be several levels deep, so locate first narrows the scope to the parent directory (a normal `set-path` intent that preserves grouping) and then highlights once the new result is published.
+Locate is a pure presentation action over the existing distribution result. Its only data dependency is the current workspace file path, read through the public `Workspace.getActiveFile()` API at activation time. In file grouping the file's `DistributionItem` row exists whenever the file is present under the current scope, so locate reduces to "find item by path, scroll, highlight, clear". In path grouping the file may be several levels deep, so locate first narrows the scope to the parent directory (a normal `set-path` intent that preserves grouping) and then highlights once the new result is published.
 
 ## Design
 
@@ -60,7 +60,7 @@ Locate is a pure presentation action over the existing distribution result. Its 
 ```text
 Pop popover open
   -> render locate button immediately left of the metric button
-  -> button disabled when owning header has no file path or model is not ready
+  -> button disabled when the current workspace has no file path or model is not ready
 
 Activate locate (groupBy = file)
   -> find DistributionItem with kind === 'file' && item.path === activeFilePath
@@ -88,21 +88,22 @@ Activate locate (groupBy = path)
 ### Data Flow
 
 ```text
-HeaderActionManager entry.filePath  -> SummaryPopover activeFilePath input
-                                      (passed at construction; read fresh on each locate)
+Workspace.getActiveFile() -> HeaderActionManager activeWorkspaceFilePath()
+                           -> SummaryPopover currentFilePath reader
+                              (read fresh on each locate and active-leaf update)
 
-activeFilePath + model.distribution.detailItems
-  -> match by item.kind === 'file' && item.path === activeFilePath
+currentFilePath + model.distribution.detailItems
+  -> match by item.kind === 'file' && item.path === currentFilePath
   -> itemId -> chartHandle.highlight / legendHandle.highlight
 ```
 
 ### Reference Data Structures
 
 ```ts
-// New input passed from HeaderActionManager into SummaryPopover.
+// Dynamic input passed from HeaderActionManager into SummaryPopover.
 interface LocateFileInputs {
-  /** Vault-relative path of the file whose header owns this Popover, or null. */
-  readonly activeFilePath: string | null;
+  /** Vault-relative path of the current workspace file, or null. */
+  readonly currentFilePath: string | null;
 }
 
 // New Popover method, invoked by the control's onActivate.
@@ -155,9 +156,9 @@ Expose the locate behavior as one icon button immediately left of the metric but
 
 ### Tasks
 
-- [x] Pass `activeFilePath` from `HeaderActionManager` (entry `filePath`) into each `SummaryPopover` at construction.
+- [x] Pass a fresh current-workspace-file reader from `HeaderActionManager` into each `SummaryPopover` and refresh its availability on active-leaf changes.
 - [x] Render the locate button immediately before the metric dropdown inside the existing query controls area, with a stable `data-activity-map-id`, accessible label, and Lucide icon.
-- [x] Disable the button when `activeFilePath` is null or the model is not in the ready state.
+- [x] Disable the button when the current workspace file is null or the model is not in the ready state.
 - [x] On activation, call `locateCurrentFile()` and keep focus on the locate button (do not move focus into the legend).
 - [x] Preserve loading retention, focus restoration across re-render, metric/range/date/grouping/breadcrumb behavior, live updates, pinning, Other expansion, and file activation.
 - [x] Add focused control-order, accessibility, disabled-state, and controller/Popover regression tests.
@@ -173,7 +174,7 @@ Expose the locate behavior as one icon button immediately left of the metric but
 ### Acceptance Criteria
 
 - [x] The locate button is immediately left of the metric button in the existing control row on both file and path grouping.
-- [x] The button carries a stable `data-activity-map-id`, accessible label, and icon; it is disabled when the owning header has no file or the model is not ready.
+- [x] The button carries a stable `data-activity-map-id`, accessible label, and icon; it is disabled when the current workspace has no file or the model is not ready.
 - [x] Activation does not change metric, range, date, grouping (other than the documented path-scope narrowing in path mode), pin state, or focus contract.
 - [x] Existing controls and Popover interactions remain green under pointer and keyboard tests.
 - [x] Focused UI, accessibility, type-check, lint, test, and build gates pass.
@@ -242,7 +243,7 @@ Align public behavior and architecture with the implemented locate contract and 
 
 ## Post-Critic Acceptance
 
-- [ ] In real Obsidian, the owner opens a Header Popover on a file with activity, activates locate in file grouping, and confirms the slice and legend row highlight for about two seconds with the row scrolled into view.
+- [ ] In real Obsidian, the owner keeps a Popover open, changes the active file, activates locate in file grouping, and confirms the current workspace file's slice and legend row highlight for about two seconds with the row scrolled into view.
 - [ ] The owner activates locate in path grouping from the vault root and confirms the Popover narrows to the file's parent directory, then highlights the file's row for about two seconds.
 - [ ] In real Obsidian, the owner confirms that successful locate cross-fades from `locate` to `locate-fixed` for the same 2-second interval as its highlight, then restores it, while every enabled control-row button has the same subtle press scale.
 
@@ -275,3 +276,11 @@ Align public behavior and architecture with the implemented locate contract and 
 - Verdict: pass-with-follow-ups.
 
 The two-round Critic review ended with `pass-with-follow-ups`. The Spec remains in `review` only for the two unchecked real-Obsidian journeys in Post-Critic Acceptance; successful UAT is recorded without starting another Critic round.
+
+### Owner-Directed Regression Correction — 2026-07-25
+
+- A fixed Popover could outlive the header that created it, while Locate retained that header's captured path and highlighted the wrong file after navigation.
+- `HeaderActionManager` now supplies a fresh `Workspace.getActiveFile()` reader; `SummaryPopover` reads it on activation and refreshes the Locate button's disabled state when active leaves change.
+- Focused tests cover changing the workspace file after the Popover opens and the public current-file adapter.
+- `npm test -- --run` passed: 323 tests, 0 failures; `npm run check`, `npm run lint`, `npm run build`, strict Specs validation (0 errors, 0 warnings), `git diff --check`, and `git diff --cached --check` passed.
+- This correction remains uncommitted pending owner re-test and does not alter the open Post-Critic acceptance checks.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from '../helpers/test-harness';
 import type { FileView } from 'obsidian';
 
-import { HeaderActionManager } from '../../src/ui/header-action-manager';
+import { activeWorkspaceFilePath, HeaderActionManager } from '../../src/ui/header-action-manager';
 import {
 	HeaderMiniDonut,
 	headerDonutSlices,
@@ -56,6 +56,19 @@ function action(): FakeAction {
 }
 
 describe('header action manager', () => {
+	it('reads the current workspace file instead of a header-owned path', () => {
+		let activeFile: { path: string } | null = { path: 'notes/first.md' };
+		const workspace = {
+			getActiveFile: () => activeFile,
+		};
+
+		expect(activeWorkspaceFilePath(workspace as never)).toBe('notes/first.md');
+		activeFile = { path: 'notes/second.md' };
+		expect(activeWorkspaceFilePath(workspace as never)).toBe('notes/second.md');
+		activeFile = null;
+		expect(activeWorkspaceFilePath(workspace as never)).toBeNull();
+	});
+
 	it('keeps the same header SVG and stable slice nodes while distributions change', () => {
 		class FakeSvgNode {
 			children: FakeSvgNode[] = [];

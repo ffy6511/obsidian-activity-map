@@ -135,10 +135,10 @@ export class SummaryPopover {
 		private readonly getNativePreview?: () => HTMLElement | null,
 		private readonly app?: App,
 		/**
-		 * Vault-relative path of the file whose header owns this Popover, read
-		 * fresh on each locate. `null`/omitted disables the locate button.
+		 * Vault-relative path of the current workspace file, read fresh on each
+		 * locate. `null`/omitted disables the locate button.
 		 */
-		private readonly getActiveFilePath?: () => string | null,
+		private readonly getCurrentFilePath?: () => string | null,
 		/**
 		 * Icon renderer for the control row. Defaults to Obsidian's `setIcon`;
 		 * tests inject a no-op so the Popover renders without Obsidian at runtime.
@@ -497,7 +497,7 @@ export class SummaryPopover {
 	}
 
 	private locateAction(model: ActivityMapViewModel): LeadingQueryAction {
-		const hasFile = this.getActiveFilePath?.() != null;
+		const hasFile = this.getCurrentFilePath?.() != null;
 		return {
 			// Resting glyph is the open `locate`; the fixed target remains visible
 			// for exactly the successful locate highlight lifetime below.
@@ -512,8 +512,15 @@ export class SummaryPopover {
 		};
 	}
 
+	/** Refreshes the current-workspace-file affordance without rebuilding the Popover. */
+	refreshLocateAvailability(): void {
+		if (!this.controlsView) return;
+		const model = this.controller.getViewModel();
+		this.controlsView.updateAction(this.locateAction(model));
+	}
+
 	/**
-	 * Locate the owning header's file in the current distribution and highlight
+	 * Locate the current workspace file in the current distribution and highlight
 	 * its slice and legend row for {@link LOCATE_HIGHLIGHT_MS}. In path grouping,
 	 * first narrows the scope to the file's parent directory if the file is not
 	 * already a visible child; the highlight completes on the next ready model.
@@ -521,7 +528,7 @@ export class SummaryPopover {
 	 */
 	locateCurrentFile(): boolean {
 		this.clearArmedFile();
-		const activeFilePath = this.getActiveFilePath?.() ?? null;
+		const activeFilePath = this.getCurrentFilePath?.() ?? null;
 		if (!activeFilePath) return false;
 		const model = this.controller.getViewModel();
 		if (model.loadState !== 'ready' || !model.distribution) return false;

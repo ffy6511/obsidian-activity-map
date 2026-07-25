@@ -453,7 +453,7 @@ describe('locate current file behavior', () => {
 		expect(trigger.getAttribute('aria-expanded')).toBe('false');
 	});
 
-	it('highlights the slice and legend row for the file in file grouping', async () => {
+	it('locates the current workspace file after the Popover was already opened', async () => {
 		const { document } = installDomEnvironment();
 		const items = [fileItem('a', 'notes/a.md', 10), fileItem('b', 'notes/b.md', 30)];
 		const { controller } = makeController({ rootItems: items });
@@ -481,6 +481,7 @@ describe('locate current file behavior', () => {
 		window.setInterval = () => 0;
 		window.clearInterval = () => {};
 
+		let currentFilePath: string | null = null;
 		const popover = new SummaryPopover(
 			trigger,
 			controller,
@@ -488,18 +489,22 @@ describe('locate current file behavior', () => {
 			undefined,
 			undefined,
 			undefined,
-			() => 'notes/b.md',
+			() => currentFilePath,
 			() => {},
 		);
 		popover.open();
 		await Promise.resolve();
 		await Promise.resolve();
-
-		const started = popover.locateCurrentFile();
-		expect(started).toBeTrue();
 		const locate = document.querySelector<HTMLButtonElement>(
 			'[data-activity-map-id="locate-current-file"]',
 		);
+		expect(locate?.disabled).toBeTrue();
+		currentFilePath = 'notes/b.md';
+		popover.refreshLocateAvailability();
+		expect(locate?.disabled).toBeFalse();
+
+		const started = popover.locateCurrentFile();
+		expect(started).toBeTrue();
 		expect(locate?.classList.contains('is-locating')).toBeTrue();
 
 		const row = document.querySelector<HTMLButtonElement>('[data-activity-map-id="legend-b"]');
@@ -684,7 +689,7 @@ describe('locate current file behavior', () => {
 		popover.close(false);
 	});
 
-	it('disables the locate button when there is no owning file and renders it left of the metric', () => {
+	it('disables the locate button when there is no current file and renders it left of the metric', () => {
 		const { document } = installDomEnvironment();
 		const container = document.createElement('div');
 		document.body.appendChild(container);

@@ -25,6 +25,13 @@ export interface HeaderActionDependencies {
 	reportWarning(message: string): void;
 }
 
+/** Reads the current workspace file at activation time, never a header's stale path. */
+export function activeWorkspaceFilePath(
+	workspace: Pick<Workspace, 'getActiveFile'>,
+): string | null {
+	return workspace.getActiveFile()?.path ?? null;
+}
+
 /** Owns exactly one Activity Map action for each live file-backed view. */
 export class HeaderActionManager {
 	private readonly entriesByView = new WeakMap<FileView, HeaderEntry>();
@@ -126,11 +133,9 @@ export class HeaderActionManager {
 				}),
 			() => view.leaf.hoverPopover?.hoverEl ?? null,
 			this.dependencies.app,
-			// The Popover locates the file of the header view it belongs to. A
-			// rename rebuilds this entry (see synchronize), closing the old
-			// Popover and creating a fresh one with the new path, so the captured
-			// path stays correct for this Popover's lifetime.
-			() => filePath,
+			// A pinned Popover can outlive its original header after navigation.
+			// Locate must follow the workspace's current file, not that stale header.
+			() => activeWorkspaceFilePath(this.dependencies.workspace),
 			undefined,
 			(closedPopover) => this.detachedPinnedPopovers.delete(closedPopover),
 		);
@@ -174,6 +179,7 @@ export class HeaderActionManager {
 					idleThresholdMs: model.settings.idleThresholdMs,
 				}),
 			);
+			entry.popover.refreshLocateAvailability();
 		}
 		this.refreshHeaderDistribution(model.queryGeneration);
 	}
