@@ -755,9 +755,12 @@ body.is-activity-map-action-layout-pointer-dragging * {
 .activity-map-popover-result {
 	box-sizing: border-box;
 	display: grid;
+	/* The control row stays at the top; center chart and legend in the remaining
+	   Popover space instead of pinning them to that row. */
+	flex: 1 1 auto;
 	grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
 	gap: var(--size-4-4);
-	align-items: start;
+	align-items: center;
 	width: min(100%, 36rem);
 	min-height: 0;
 	margin-inline: auto;
@@ -883,11 +886,20 @@ body.is-activity-map-action-layout-pointer-dragging * {
 }
 
 .activity-map-file-activation-hint {
-	min-height: 1.5em;
+	/* This status must not reserve a flex row. It overlays the Popover's padded
+	   bottom edge so arming a file cannot shift the centered result. */
+	position: absolute;
+	inset-inline: var(--size-4-4);
+	inset-block-end: var(--size-4-4);
+	margin: 0;
 	color: var(--text-muted);
 	font-size: var(--font-ui-small);
 	line-height: 1.5;
 	text-align: center;
+}
+
+.activity-map-file-activation-hint:empty {
+	display: none;
 }
 
 @media (max-width: 34rem) {
