@@ -24,7 +24,7 @@
 | Current blockers | `0` |
 | Potential blockers | `2` |
 
-- Next action: Run the lifted-control interaction regression gates; owner desktop/mobile UAT remains the only feature-specific acceptance evidence to collect.
+- Next action: Collect the owner desktop/mobile UAT; all scoped automated gates have passed, while the repository-wide strict workspace validator remains blocked by legacy Spec records.
 
 ### Current blockers
 
@@ -61,9 +61,9 @@ The chart, legend, breadcrumb, loading retention, live updates, pinning, locatin
 Goals:
 
 - Persist one validated user layout for six configurable Header Popover controls: `tracking-toggle`, `distribution-grouping-toggle`, `poster-export`, `locate-current-file`, `metric`, and `date-range`.
-- Keep every control on its registry-owned side of the fixed day-navigation boundary. The default left order is tracking, grouping, poster export; the default right order is Locate, metric, date range.
-- Let Settings show the full Popover action row as a single WYSIWYG draft: controls can be reordered within a side or moved to a recoverable disabled area below the row.
-- Let a long press on any visible configurable Popover control enter a temporary iOS-style edit mode: editable controls visibly wobble, pointer drag reorders or disables them, and the chart/list/breadcrumb/status remain mounted.
+- Keep the selected-day navigation fixed between two equivalent action regions. The default left order is tracking, grouping, poster export; the default right order is Locate, metric, date range.
+- Let Settings show the full Popover action row as a single WYSIWYG draft: controls can be reordered within either region, moved to the other region, or moved to a recoverable disabled area below the row.
+- Let a long press on any visible configurable Popover control enter a temporary iOS-style edit mode: that same control immediately becomes the active drag, editable controls visibly wobble, and the chart/list/breadcrumb/status remain mounted.
 - Put disabled controls in the edit footer's left area and fixed `Cancel` then `Save` actions on its right. Only `Save` persists; `Cancel` restores the pre-edit layout.
 
 Non-goals:
@@ -77,13 +77,13 @@ Non-goals:
 
 | Surface | Editable area | Fixed area | Commit behavior |
 | --- | --- | --- | --- |
-| Settings | One complete WYSIWYG Header Popover row; left and right actions appear in their actual positions and drag only within their registry-owned side. | Center previous-day / selected-date / next-day preview; no separate left/right management lists. | The local draft persists only through the section's `Save`; `Cancel`, Settings hide, and a re-display discard it. |
+| Settings | One complete WYSIWYG Header Popover row; actions appear in their actual positions and can move within or between either region. | Center previous-day / selected-date / next-day preview; no separate left/right management lists. | The local draft persists only through the section's `Save`; `Cancel`, Settings hide, and a re-display discard it. |
 | Header Popover, normal mode | None; all enabled controls retain their present behavior. | Chart, legend, breadcrumb, status, center navigation, Popover pinning, and close behavior. | No layout mutation. |
 | Header Popover, edit mode | Visible configurable controls wobble and accept pointer drag; a lifted icon/text avatar follows the pointer while dashed rounded slots preview permitted placement and reflow siblings. The lower disabled area accepts a drop and exposes recoverable controls. | Center navigation stays still; the result content remains visible and mounted. | `Save` persists the draft. `Cancel`, `Escape`, Popover close, an external committed layout change, or a structural rerender discards it. |
 
 ### Key Insight
 
-The persisted preference must contain only an action identity, side-local order, and enabled state. A built-in registry owns each action's immutable side, label, handler kind, and default order. That makes a corrupt or future layout safe to normalize, prevents a user preference from moving controls across the center navigation, and lets Settings and the live Popover share one projection and one drag reducer.
+The persisted preference must contain only an action identity, selected side, side-local order, and enabled state. A built-in registry owns each action's label, handler kind, default side, and default order. That makes a corrupt or future layout safe to normalize while letting Settings and the live Popover share one projection and one drag reducer.
 
 ## Increment Contract
 
@@ -99,7 +99,7 @@ As an Activity Map user, I can arrange the configurable controls in the actual H
 
 ### Scope Boundary
 
-- Included: a global local layout preference, registry validation, one-row staged Settings editor, in-Popover long-press edit session, side-local pointer/keyboard moves, disabled recovery area, explicit save/cancel, DOM/accessibility coverage, and real desktop/mobile verification.
+- Included: a global local layout preference, registry validation, one-row staged Settings editor, in-Popover long-press edit session with immediate drag continuation, cross-region pointer/keyboard moves, disabled recovery area, explicit save/cancel, DOM/accessibility coverage, and real desktop/mobile verification.
 - Deferred: per-vault/device layout synchronization and conflict handling to `v0.2`; new Header Popover actions to a later implementation Spec that extends the registry; any poster-export-dialog redesign remains owned by [Poster export](07-poster-export-plan.md).
 
 ### Prerequisite Audit Details
@@ -111,7 +111,7 @@ As an Activity Map user, I can arrange the configurable controls in the actual H
 | --- | --- | --- | --- | --- | --- |
 | Header Popover and its six existing controls | `baseline-verified` | `SummaryPopover`, `renderRangeControls`, and their current UI tests | Open the existing file-header action in a test vault. | All existing control IDs and their ordinary handlers are present before layout projection. | Close the Popover; no resource is created. |
 | Durable small settings write with failure retention | `baseline-verified` | `SettingsRepository` and controller `update-settings` path | Use the existing fake settings store in focused tests. | A successful write publishes the normalized setting; a rejected write keeps the former effective setting. | In-memory store only. |
-| Validated layout model and shared projection | `phase-produced` | Phase 0 | Add the registry, normalizer, move reducer, and tests. | Invalid, duplicate, unknown, side-conflicting, or partial persisted data projects to all six known actions exactly once. | No external resource is created. |
+| Validated layout model and shared projection | `phase-produced` | Phase 0 | Add the registry, normalizer, move reducer, and tests. | Invalid, duplicate, unknown, invalid-side, or partial persisted data projects to all six known actions exactly once. | No external resource is created. |
 | WYSIWYG Settings draft | `phase-produced` | Phase 1 | Mount the reusable editor in the Settings tab. | Reload/reopen proves no draft writes before Save and a failed Save preserves the draft. | Discard the local draft on cancel/hide. |
 | Long press and edit footer in native Popover | `phase-produced` | Phase 2 | Attach pointer lifecycle handling to the existing controls and render the editor/footer without replacing result nodes. | Desktop and mobile UAT prove long press, drag, cancellation, and retained chart/list behavior. | Cancel timers, pointer capture, and edit state on close/rerender. |
 
@@ -119,14 +119,14 @@ As an Activity Map user, I can arrange the configurable controls in the actual H
 
 ### Runnable Acceptance
 
-- Success smoke: customize the whole row in Settings, save, open the Header Popover and observe the same side-local order/visibility; long-press a visible Popover control, move another control to the disabled footer, restore one to its permitted side, then save and reopen the Popover.
-- Expected failure: dropping a control across the center navigation or into the other side is rejected with no layout change; a failed settings write preserves the committed layout and leaves the draft available for retry or cancel.
+- Success smoke: customize the whole row in Settings, save, open the Header Popover and observe the same side/order/visibility; long-press a visible Popover control, continue dragging it into the other region, move another control to the disabled footer, restore one to either region, then save and reopen the Popover.
+- Expected failure: dropping directly onto the fixed center navigation leaves the layout unchanged; a failed settings write preserves the committed layout and leaves the draft available for retry or cancel.
 - Regression smokes: ordinary click/keyboard activation of every still-enabled action, day navigation, chart/list live update, breadcrumb navigation, Locate, grouping, tracking pause/resume, pin/unpin, file activation, and poster export launcher retain their current contracts.
 - Observable evidence: focused normalization/repository/DOM tests, production gates, and owner desktop/mobile recordings or screenshots that show the Settings row, edit footer, saved result, and cancel rollback.
 
 ### Extension Seams
 
-- Action registry: adding a future configurable action requires one registry entry with fixed side/default order plus an explicit production renderer/handler; persisted data never supplies a handler or side.
+- Action registry: adding a future configurable action requires one registry entry with default side/order plus an explicit production renderer/handler; persisted data never supplies a handler.
 - Layout reducer: both Settings and Popover issue the same typed move request, so a later keyboard, touch, or alternate surface uses the same validation without cloning reorder rules.
 - Edit session: the committed setting remains the sole source of runtime behavior; the volatile draft can later gain conflict UI without changing persistence semantics.
 
@@ -134,7 +134,7 @@ As an Activity Map user, I can arrange the configurable controls in the actual H
 
 > Inherited design: [Header Popover UI contract](../../docs/PRD.md#环形图浮层), [stable presentation and local-settings boundaries](../constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export), and [current presentation flow](../../ARCHITECTURE.md#presentation-and-export).
 >
-> Local delta: make the six existing Header Popover controls a validated, side-constrained presentation preference. The entire customization workflow operates on the Header Popover row; no export dialog is reinterpreted as the target surface.
+> Local delta: make the six existing Header Popover controls a validated, two-region presentation preference. The entire customization workflow operates on the Header Popover row; no export dialog is reinterpreted as the target surface.
 
 ### Control Flow
 
@@ -143,7 +143,7 @@ Plugin load
   -> SettingsRepository.load()
   -> normalizeSettings()
        -> normalizeHeaderPopoverActionLayout()
-       -> known registry actions exactly once, fixed side, safe default for missing/invalid data
+       -> known registry actions exactly once, safe default side for missing/invalid data
   -> ActivityMapController view model
   -> Header Popover projects enabled actions into left / right regions
 
@@ -151,7 +151,7 @@ Settings: open Header Popover controls
   -> clone committed layout into a local draft
   -> render one day-mode WYSIWYG row: left actions | fixed navigation | right actions
   -> pointer drag or keyboard move
-       -> shared reducer accepts only same-side reorder or move-to-disabled
+       -> shared reducer reorders, changes region, or moves to disabled
   -> Save
        -> controller update-settings
        -> repository serialized write succeeds
@@ -166,9 +166,9 @@ Header Popover: pointerdown on an enabled configurable control
        -> suppress that action's activation and context menu
        -> freeze hover-close scheduling for the edit session
        -> clone committed layout into Popover draft
-       -> replace only control-row interaction layer with draggable controls
+       -> replace only control-row interaction layer and immediately lift that same action into a drag
        -> keep chart, legend, breadcrumb, and status mounted
-  -> drag within registry-owned side or to disabled footer
+  -> drag to either action region or to disabled footer
        -> shared reducer updates draft and insertion affordance
   -> Save
        -> durable controller update then exit edit mode
@@ -217,14 +217,16 @@ type HeaderPopoverActionId =
 
 interface HeaderPopoverActionLayoutItem {
 	readonly id: HeaderPopoverActionId;
-	/** Zero-based order among actions that have the same registry-owned side. */
+	/** Current region around the fixed selected-day navigation. */
+	readonly side: HeaderPopoverActionSide;
+	/** Zero-based order among actions in the current side. */
 	readonly order: number;
 	readonly enabled: boolean;
 }
 
 interface HeaderPopoverActionDefinition {
 	readonly id: HeaderPopoverActionId;
-	readonly side: HeaderPopoverActionSide;
+	readonly defaultSide: HeaderPopoverActionSide;
 	readonly defaultOrder: number;
 }
 
@@ -233,16 +235,16 @@ type HeaderPopoverLayoutDestination =
 	| { readonly kind: 'disabled' };
 ```
 
-`HeaderPopoverActionDefinition` is application code, not persisted JSON. `normalizeHeaderPopoverActionLayout()` accepts only known action IDs, keeps the registry side immutable, uses the first valid record for a duplicate, repairs order deterministically, applies defaults for missing records, and produces one canonical item per registry action. `moveHeaderPopoverAction()` rejects an attempt to use the center area or another side; a disabled action becomes enabled only when dropped into its own side. Disabled items retain identity and remain visible in the lower recovery area during editing.
+`HeaderPopoverActionDefinition` is application code, not persisted JSON. `normalizeHeaderPopoverActionLayout()` accepts only known action IDs, uses the first valid record for a duplicate, repairs side/order deterministically, applies default placement for missing or malformed records, and produces one canonical item per registry action. `moveHeaderPopoverAction()` accepts either action region while the fixed center navigation remains non-droppable. Disabled items retain identity and remain visible in the lower recovery area during editing.
 
 ### Rendering and Interaction Rules
 
 - Normal rendering projects enabled left actions, the unchanged center day navigation when the selected range is a day, and enabled right actions. The right controls retain their existing component-specific behavior: Locate is an icon action, metric is a metric listbox, and date range is a range listbox.
 - The Settings preview uses the same control descriptors in an inert day-mode representation with a deterministic selected-date label. It visually mirrors the whole row without invoking tracking, query, download, or date behavior.
-- Settings has no left/right management sections. Its row and its lower disabled zone are the only management surface. A side may be empty; edit mode then renders an explicit same-side insertion target rather than allowing a cross-boundary drop.
-- A pointer drag uses Pointer Events and pointer capture, not HTML5 drag-and-drop, so desktop mouse and touch use one model. Adjustable controls expose `grab`, the active drag exposes `grabbing`, and a cloned icon/text avatar follows the pointer without receiving events. The source action leaves a dashed rounded slot; moving across an action's horizontal midpoint moves that slot between the adjacent actions so siblings reflow as a draft-only ordering preview. Invalid center/opposite-side targets never mutate the draft and release restores the unchanged row.
-- Keyboard operations call the same reducer: focused action plus `Space` begins/ends a move, left/right changes its same-side order, down disables it, and a disabled action can return only to its registry side. The editor announces the resulting position or rejected target through a scoped live region. `Escape` cancels the active keyboard move before it cancels the draft.
-- The long-press threshold is 500 ms with an 8 px movement tolerance. `pointerup`, `pointercancel`, or movement beyond tolerance cancels the timer. Once the threshold fires, the source action's click is consumed and the normal context menu is suppressed for that gesture.
+- Settings has no left/right management sections. Its row and its lower disabled zone are the only management surface. Either action region may be empty; edit mode renders an explicit insertion target in it.
+- A pointer drag uses Pointer Events and pointer capture, not HTML5 drag-and-drop, so desktop mouse and touch use one model. Adjustable controls expose `grab`, the active drag exposes `grabbing`, and a cloned icon/text avatar follows the pointer without receiving events. The source action leaves a dashed rounded slot; moving across an action's horizontal midpoint moves that slot between adjacent actions in either region so siblings reflow as a draft-only ordering preview. Dropping on the fixed center navigation never mutates the draft and release restores the unchanged row.
+- Keyboard operations call the same reducer: focused action plus `Space` begins/ends a move, left/right changes its position and crosses to the adjacent region at its outer edge, down disables it, and a disabled action can return to either region. The editor announces the resulting position through a scoped live region. `Escape` cancels the active keyboard move before it cancels the draft.
+- The long-press threshold is 500 ms with an 8 px movement tolerance. `pointerup`, `pointercancel`, or movement beyond tolerance cancels the timer. Once the threshold fires, the source action's click is consumed, the source enters the active drag immediately, and the normal context menu is suppressed for that gesture.
 - Edit mode makes enabled configurable controls visibly wobble with a non-motion outline/focus alternative under `prefers-reduced-motion`. The fixed center navigation never wobbles or becomes a drop target.
 - Edit mode is an interaction lock, not a data refresh. It cancels the existing hover-close timer and prevents hover leave from closing the Popover while a drag is active. Outside close still follows the existing close path and discards the draft.
 - The edit footer is appended below the still-mounted Popover result. Its disabled controls sit at the left; `Cancel` and primary `Save` stay at the right. Saving disables reorder/cancel until the persistence promise resolves. A failed save restores editing controls, announces the error, and does not change the committed layout.
@@ -252,9 +254,9 @@ type HeaderPopoverLayoutDestination =
 
 | Event | Required result |
 | --- | --- |
-| Missing, corrupted, unknown, duplicate, or side-conflicting persisted item | Normalize to a complete six-action canonical layout; do not throw and do not create a new handler or side. |
+| Missing, corrupted, unknown, duplicate, invalid-side, or partial persisted item | Normalize to a complete six-action canonical layout; do not throw and do not create a new handler. |
 | A side has no enabled actions | Keep its edit-mode drop target; ordinary Popover remains usable through the fixed center controls and Settings remains the recovery entry. |
-| Attempted cross-center or wrong-side drop | Reject the move, retain the exact draft, and announce the constraint. |
+| Drop onto fixed center navigation | Retain the exact draft and restore its current row after release. |
 | Save succeeds | Publish the normalized layout through the controller, exit the local edit state, and render only the persisted projection. |
 | Save rejects | Retain the pre-save committed layout, keep the draft editable, show an actionable error, and never optimistically reorder another Popover. |
 | Cancel, Escape, Settings hide, Popover close, or structural rerender | Destroy transient pointer/timer/listener state and discard the draft without a settings write. |
@@ -270,9 +272,9 @@ Make one durable, safe layout contract available to both surfaces before any dra
 ### Tasks
 
 - [x] Add a narrow domain module containing the immutable six-action registry, default layout, normalizer, side-aware projection, and pure move reducer.
-- [x] Add `headerPopoverActionLayout` to `ActivityMapSettings` and `DEFAULT_SETTINGS`; normalize it at the settings boundary without accepting a persisted side, label, callback, or unknown action.
+- [x] Add `headerPopoverActionLayout` to `ActivityMapSettings` and `DEFAULT_SETTINGS`; normalize it at the settings boundary without accepting a persisted label, callback, or unknown action.
 - [x] Preserve the current six-control visual order as the first-run default and serialize the canonical layout through the existing settings repository/controller path.
-- [x] Add focused domain and repository tests for absent/legacy settings, malformed records, duplicates, unknown IDs, fractional/negative orders, missing entries, same-side reorder, disable/re-enable, empty-side insertion, cross-side rejection, reload, serialized saves, and rejected saves.
+- [x] Add focused domain and repository tests for absent/legacy settings, malformed records, duplicates, unknown IDs, fractional/negative orders, missing entries, region-local reorder, cross-region moves, disable/re-enable, empty-side insertion, reload, serialized saves, and rejected saves.
 
 ### Files
 
@@ -287,8 +289,8 @@ Make one durable, safe layout contract available to both surfaces before any dra
 ### Acceptance Criteria
 
 - [x] Absent settings normalize to the current tracking/grouping/poster-export | Locate/metric/date-range order, all enabled.
-- [x] Every normalized layout contains each of the six recognized IDs exactly once, has deterministic side-local order, and cannot encode a different side.
-- [x] A pure reducer can reorder only inside an action's side, move it to disabled, and restore it into an explicit index on its registry side.
+- [x] Every normalized layout contains each of the six recognized IDs exactly once and has deterministic side-local order with a valid selected side.
+- [x] A pure reducer can reorder an action, move it between either region, move it to disabled, and restore it into an explicit region/index.
 - [x] A failed `SettingsRepository` save leaves the controller's committed layout and all runtime behavior unchanged.
 - [x] Focused domain, repository, and controller tests pass without relying on a mounted Popover.
 
@@ -296,7 +298,7 @@ Make one durable, safe layout contract available to both surfaces before any dra
 
 - `npm run lint` passed.
 - `npm run check` passed.
-- `npm test -- --run` passed: 330 tests, 0 failures. This includes action-layout normalization, same-side move, recovery-area restore, wrong-side rejection, repository reload, and failed-save retention coverage.
+- `npm test -- --run` passed: 330 tests, 0 failures. This includes the earlier normalization, recovery-area, repository-reload, and failed-save retention coverage; current cross-region evidence is recorded in Phase 3.
 - `npx prettier --check src/domain/header-popover-action-layout.ts src/domain/settings.ts tests/domain/header-popover-action-layout.test.ts tests/data/settings-repository.test.ts` passed after formatting.
 - `git diff --check` passed.
 
@@ -335,7 +337,7 @@ Give users a safe, staged WYSIWYG way to customize the complete Header Popover r
 
 - `npm run lint` passed.
 - `npm run check` passed.
-- `npm test -- --run` passed: 335 tests, 0 failures. This includes the settings-row DOM coverage for fixed navigation, pointer disable/restore, wrong-side rejection, and keyboard reordering; the repository/controller tests cover durable save and failure retention.
+- `npm test -- --run` passed: 335 tests, 0 failures. This includes the earlier settings-row DOM coverage for fixed navigation, pointer disable/restore, and keyboard reordering; current cross-region evidence is recorded in Phase 3.
 - `git diff --check` passed.
 
 ## Phase 2: Add In-Popover Long-Press Editing
@@ -348,7 +350,7 @@ Let users make the same staged layout change directly in the live Header Popover
 
 - [x] Refactor `renderRangeControls` around the registry-backed left/right action projection while retaining current action handlers, DOM IDs, metric/range listboxes, day navigation, and in-place update APIs.
 - [x] Mount the reusable action-layout editor in `SummaryPopover` edit mode. Add 500 ms long-press detection and click/context-menu suppression only after the gesture enters edit mode.
-- [x] Make all visible configurable controls wobble and draggable in edit mode; provide a pointer-following icon/text avatar, `grab`/`grabbing` cursors, and rounded dashed insertion slots with same-side reflow preview. Keep center navigation, chart, legend, breadcrumb, loading/error status, pinning, and file-activation surfaces mounted and non-draggable.
+- [x] Make all visible configurable controls wobble and draggable in edit mode; provide a pointer-following icon/text avatar, `grab`/`grabbing` cursors, rounded dashed insertion slots with cross-region reflow preview, and direct drag continuation from long press. Keep center navigation, chart, legend, breadcrumb, loading/error status, pinning, and file-activation surfaces mounted and non-draggable.
 - [x] Add the lower footer with disabled controls on the left and fixed `Cancel` / `Save` on the right. Use the shared draft/reducer and controller persistence path.
 - [x] Implement cancellation on Escape, close, structural rerender, and externally committed layout changes; dispose timers, pointer capture, custom listbox listeners, and edit affordances at their owning boundary.
 - [x] Add DOM behavior tests for normal short activation, long-press activation suppression, drag/reorder/disable/restore, rejected targets, save/cancel/failure behavior, close/rerender disposal, retained chart/legend node identity, and existing Popover interactions.
@@ -369,7 +371,7 @@ Let users make the same staged layout change directly in the live Header Popover
 ### Acceptance Criteria
 
 - [x] A short activation retains the current handler behavior; a 500 ms long press enters edit mode without triggering the pressed control.
-- [x] In edit mode the user sees all enabled configurable controls wobble, a lifted icon/text avatar, `grab`/`grabbing` cursors, and a dashed rounded insertion slot that previews same-side reflow. The user can reorder only inside their side, can move controls to the footer, and can restore a disabled control only to its registry side.
+- [x] In edit mode the user sees all enabled configurable controls wobble, a lifted icon/text avatar, `grab`/`grabbing` cursors, and a dashed rounded insertion slot that previews reflow in either action region. Long press immediately lifts the pressed control; users can move it across the fixed center navigation, move controls to the footer, and restore a disabled control to either region.
 - [x] Chart, legend, breadcrumb, and status remain visible and preserve their mounted DOM identity while entering/exiting edit mode and during draft-only moves.
 - [x] `Cancel`, Escape, Popover close, structural rerender, and external committed-layout change discard the local draft; `Save` is the only persistence path.
 - [x] The footer keeps disabled controls left and `Cancel`/`Save` right; a rejected save returns to an editable, correctly announced draft.
@@ -419,17 +421,17 @@ Describe the new Header Popover behavior accurately and prove it through technic
 - `npm run format:check` passed.
 - `npm run check` passed.
 - `npm run lint` passed.
-- `npm test -- --run` passed: 339 tests, 0 failures. This includes the repository-relative Markdown target and heading-fragment validation, plus focused action-layout DOM coverage for the lifted avatar, `grabbing` session class, insertion-slot reflow, invalid-drop restoration, persistence, and accessibility.
+- `npm test -- --run` passed: 341 tests, 0 failures. This includes repository-relative Markdown target and heading-fragment validation, plus focused action-layout coverage for persisted cross-region placement, direct long-press lift, avatar/`grabbing` feedback, insertion-slot reflow, cross-region moves, direct-Popover cross-region save, invalid-drop restoration, persistence, and accessibility.
 - `npm run build` passed.
 - `git diff --check` passed.
-- `python3 "${SPEC_DRIVEN_DELIVERY_DIR:?set SPEC_DRIVEN_DELIVERY_DIR}/scripts/validate_specs_workspace.py" . --strict` ran and reported 16 errors and 2 warnings outside this Spec: legacy active Specs 01–05 and 07–09 lack the newer Decision Summary and Increment Contract headings; unchanged root and `specs/AGENTS.md` architecture-link checks also warn. This feature's documents and links are covered by the passing Markdown-link test, but the repository-wide strict acceptance checkbox remains open until those historical workspace records are separately repaired.
+- The strict validator (`python3 "$SPEC_DRIVEN_DELIVERY_DIR/scripts/validate_specs_workspace.py" . --strict`) ran and reported 16 errors and 2 warnings outside this Spec: legacy active Specs 01–05 and 07–09 lack the newer Decision Summary and Increment Contract headings; unchanged root and `specs/AGENTS.md` architecture-link checks also warn. This feature's documents and links are covered by the passing Markdown-link test, but the repository-wide strict acceptance checkbox remains open until those historical workspace records are separately repaired.
 - Real desktop and mobile UAT remain user-owned and open below; no fixture or DOM test is presented as that evidence.
 
 ## Risks and Mitigations
 
 | Risk | Mitigation |
 | --- | --- |
-| A persisted layout moves a control across the fixed date navigation | Keep side in the code registry and reject any move whose destination is the center or another side. |
+| A persisted layout moves the center navigation or creates an action | Keep action identity and handlers in the code registry; persist only a validated action side, order, and enabled state. |
 | Corrupt JSON hides all controls permanently | Normalize all six known IDs exactly once; Settings remains a recovery path even if both action sides are empty. |
 | Dragging a dropdown opens it or starts a query | Consume activation only after long-press entry and make all configurable controls inert while edit mode owns their pointer events. |
 | Hover Popover closes in the middle of a drag | Use an edit-session interaction lock, pointer capture, and the existing close path's mandatory draft discard. |
@@ -440,8 +442,8 @@ Describe the new Header Popover behavior accurately and prove it through technic
 
 ## User Acceptance
 
-- [ ] Desktop: in a real vault, open Settings and arrange the full one-row preview by moving an action within its side and another into the disabled area. Save, reopen the Header Popover, and confirm the same row layout while previous/selected/next day remains centered and fixed.
-- [ ] Desktop: long-press an enabled Header Popover control for 500 ms, confirm the control itself did not activate, every editable action has the edit affordance, and the chart, legend, breadcrumb, and status remain visible. Drag a control into the disabled footer, restore one to its permitted side, then Save.
+- [ ] Desktop: in a real vault, open Settings and arrange the full one-row preview by moving an action across the fixed center navigation and another into the disabled area. Save, reopen the Header Popover, and confirm the same row layout while previous/selected/next day remains centered and fixed.
+- [ ] Desktop: long-press an enabled Header Popover control for 500 ms, confirm the control itself did not activate, immediately lifts into drag without a second press, every editable action has the edit affordance, and the chart, legend, breadcrumb, and status remain visible. Move it across the center navigation, drag a control into the disabled footer, restore one to either region, then Save.
 - [ ] Desktop: repeat a direct edit, choose Cancel, then repeat and press Escape; close the Popover during a third draft. Each time confirm the pre-edit persisted layout returns. Confirm a failed-save test path preserves the draft and the last committed runtime row.
 - [ ] Mobile: open the Header Popover through the non-hover entry, long-press and drag with touch, Save and reopen, then confirm the fixed navigation and remaining control actions remain usable without relying on hover.
 - [ ] Desktop and mobile: verify tracking, grouping, Locate, metric, date range, day navigation, chart/list updates, file activation, and the poster-export launcher still perform their existing jobs. The poster-export dialog itself remains unchanged.

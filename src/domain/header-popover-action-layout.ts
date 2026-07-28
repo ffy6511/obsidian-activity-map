@@ -3,9 +3,9 @@
  *
  * Persisted layout data may decide whether a built-in action is visible and
  * where it appears among siblings. The registry deliberately owns everything
- * that can alter behavior—action identity, handler, and side of the fixed
- * date-navigation boundary—so malformed JSON cannot turn presentation data
- * into a new control or move one through the center navigation.
+ * that can alter behavior—action identity and handler—while the preference
+ * safely records which side of the fixed date navigation renders that action.
+ * Malformed JSON can never turn presentation data into a new control.
  */
 
 export type HeaderPopoverActionSide = 'left' | 'right';
@@ -20,13 +20,14 @@ export type HeaderPopoverActionId =
 
 export interface HeaderPopoverActionDefinition {
 	readonly id: HeaderPopoverActionId;
-	readonly side: HeaderPopoverActionSide;
+	readonly defaultSide: HeaderPopoverActionSide;
 	readonly defaultOrder: number;
 }
 
-/** A user-owned visibility and side-local order; the registry owns the side. */
+/** A user-owned visibility, side, and side-local order. */
 export interface HeaderPopoverActionLayoutItem {
 	readonly id: HeaderPopoverActionId;
+	readonly side: HeaderPopoverActionSide;
 	readonly order: number;
 	readonly enabled: boolean;
 }
@@ -45,21 +46,21 @@ export type HeaderPopoverActionMoveResult =
 	| { readonly kind: 'moved'; readonly layout: HeaderPopoverActionLayoutItem[] }
 	| {
 			readonly kind: 'rejected';
-			readonly reason: 'wrong-side' | 'invalid-index' | 'already-disabled';
+			readonly reason: 'invalid-index' | 'already-disabled';
 			readonly layout: HeaderPopoverActionLayoutItem[];
 	  };
 
 /**
  * This order is the pre-layout Popover order. New actions must be added here
- * with a fixed side before they can become configurable.
+ * with a default side before they can become configurable.
  */
 export const HEADER_POPOVER_ACTION_REGISTRY: readonly HeaderPopoverActionDefinition[] = [
-	{ id: 'tracking-toggle', side: 'left', defaultOrder: 0 },
-	{ id: 'distribution-grouping-toggle', side: 'left', defaultOrder: 1 },
-	{ id: 'poster-export', side: 'left', defaultOrder: 2 },
-	{ id: 'locate-current-file', side: 'right', defaultOrder: 0 },
-	{ id: 'metric', side: 'right', defaultOrder: 1 },
-	{ id: 'date-range', side: 'right', defaultOrder: 2 },
+	{ id: 'tracking-toggle', defaultSide: 'left', defaultOrder: 0 },
+	{ id: 'distribution-grouping-toggle', defaultSide: 'left', defaultOrder: 1 },
+	{ id: 'poster-export', defaultSide: 'left', defaultOrder: 2 },
+	{ id: 'locate-current-file', defaultSide: 'right', defaultOrder: 0 },
+	{ id: 'metric', defaultSide: 'right', defaultOrder: 1 },
+	{ id: 'date-range', defaultSide: 'right', defaultOrder: 2 },
 ];
 
 interface LayoutCandidate {
@@ -72,12 +73,13 @@ interface LayoutCandidate {
 export function defaultHeaderPopoverActionLayout(): HeaderPopoverActionLayoutItem[] {
 	return HEADER_POPOVER_ACTION_REGISTRY.map((definition) => ({
 		id: definition.id,
+		side: definition.defaultSide,
 		order: definition.defaultOrder,
 		enabled: true,
 	}));
 }
 
-/** Immutable registry lookup for renderers and side-constrained move targets. */
+/** Immutable registry lookup for renderers and safe default placement. */
 export function headerPopoverActionDefinition(
 	id: HeaderPopoverActionId,
 ): HeaderPopoverActionDefinition {
@@ -106,6 +108,7 @@ export function normalizeHeaderPopoverActionLayout(
 			sourceIndex,
 			item: {
 				id: definition.id,
+				side: validSide(candidate.side, definition.defaultSide),
 				order: validOrder(candidate.order, definition.defaultOrder),
 				enabled: typeof candidate.enabled === 'boolean' ? candidate.enabled : true,
 			},
@@ -113,10 +116,7 @@ export function normalizeHeaderPopoverActionLayout(
 	}
 
 	return (['left', 'right'] as const).flatMap((side) => {
-		const knownSide = HEADER_POPOVER_ACTION_REGISTRY.filter(
-			(definition) => definition.side === side,
-		);
-		const sideCandidates = knownSide.map((definition) => {
+		const sideCandidates = HEADER_POPOVER_ACTION_REGISTRY.map((definition) => {
 			const existing = candidates.get(definition.id);
 			return (
 				existing ?? {
@@ -124,13 +124,14 @@ export function normalizeHeaderPopoverActionLayout(
 					sourceIndex: source.length + definition.defaultOrder,
 					item: {
 						id: definition.id,
+						side: definition.defaultSide,
 						order: definition.defaultOrder,
 						enabled: true,
 					},
 				}
 			);
 		});
-		return canonicalizeSide(sideCandidates);
+		return canonicalizeSide(sideCandidates.filter((candidate) => candidate.item.side === side));
 	});
 }
 
@@ -140,12 +141,8 @@ export function projectHeaderPopoverActionLayout(
 ): HeaderPopoverActionLayoutProjection {
 	const normalized = normalizeHeaderPopoverActionLayout(layout);
 	return {
-		left: normalized.filter(
-			(item) => item.enabled && headerPopoverActionDefinition(item.id).side === 'left',
-		),
-		right: normalized.filter(
-			(item) => item.enabled && headerPopoverActionDefinition(item.id).side === 'right',
-		),
+		left: normalized.filter((item) => item.enabled && item.side === 'left'),
+		right: normalized.filter((item) => item.enabled && item.side === 'right'),
 		disabled: normalized.filter((item) => !item.enabled),
 	};
 }
@@ -161,43 +158,57 @@ export function moveHeaderPopoverAction(
 	destination: HeaderPopoverLayoutDestination,
 ): HeaderPopoverActionMoveResult {
 	const normalized = normalizeHeaderPopoverActionLayout(layout);
-	const definition = headerPopoverActionDefinition(id);
-	const sideItems = normalized.filter(
-		(item) => headerPopoverActionDefinition(item.id).side === definition.side,
-	);
-	const action = sideItems.find((item) => item.id === id);
+	const action = normalized.find((item) => item.id === id);
 	if (!action) throw new Error(`Missing Header Popover action: ${id}`);
+	const sourceItems = normalized.filter((item) => item.side === action.side);
 
 	if (destination.kind === 'disabled') {
 		if (!action.enabled) {
 			return { kind: 'rejected', reason: 'already-disabled', layout: normalized };
 		}
-		const enabled = sideItems.filter((item) => item.enabled && item.id !== id);
-		const disabled = sideItems.filter((item) => !item.enabled);
+		const enabled = sourceItems.filter((item) => item.enabled && item.id !== id);
+		const disabled = sourceItems.filter((item) => !item.enabled);
 		return {
 			kind: 'moved',
 			layout: replaceSide(
 				normalized,
-				definition.side,
+				action.side,
 				withSideOrders(enabled, [...disabled, { ...action, enabled: false }]),
 			),
 		};
 	}
 
-	if (destination.side !== definition.side) {
-		return { kind: 'rejected', reason: 'wrong-side', layout: normalized };
-	}
 	if (!Number.isSafeInteger(destination.index) || destination.index < 0) {
 		return { kind: 'rejected', reason: 'invalid-index', layout: normalized };
 	}
 
-	const enabled = sideItems.filter((item) => item.enabled && item.id !== id);
+	const sourceReplacement = withSideOrders(
+		sourceItems.filter((item) => item.enabled && item.id !== id),
+		sourceItems.filter((item) => !item.enabled && item.id !== id),
+	);
+	const destinationItems =
+		destination.side === action.side
+			? sourceReplacement
+			: normalized.filter((item) => item.side === destination.side);
+	const enabled = destinationItems.filter((item) => item.enabled);
 	const index = Math.min(destination.index, enabled.length);
-	enabled.splice(index, 0, { ...action, enabled: true });
-	const disabled = sideItems.filter((item) => !item.enabled && item.id !== id);
+	enabled.splice(index, 0, { ...action, side: destination.side, enabled: true });
+	const replacement = withSideOrders(
+		enabled,
+		destinationItems.filter((item) => !item.enabled),
+	);
 	return {
 		kind: 'moved',
-		layout: replaceSide(normalized, definition.side, withSideOrders(enabled, disabled)),
+		layout:
+			destination.side === action.side
+				? replaceSide(normalized, action.side, replacement)
+				: normalizeHeaderPopoverActionLayout([
+						...normalized.filter(
+							(item) => item.side !== action.side && item.side !== destination.side,
+						),
+						...sourceReplacement,
+						...replacement,
+					]),
 	};
 }
 
@@ -209,6 +220,10 @@ function validOrder(value: unknown, fallback: number): number {
 	return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
 		? value
 		: fallback;
+}
+
+function validSide(value: unknown, fallback: HeaderPopoverActionSide): HeaderPopoverActionSide {
+	return value === 'left' || value === 'right' ? value : fallback;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -240,7 +255,7 @@ function replaceSide(
 	replacement: readonly HeaderPopoverActionLayoutItem[],
 ): HeaderPopoverActionLayoutItem[] {
 	return normalizeHeaderPopoverActionLayout([
-		...layout.filter((item) => headerPopoverActionDefinition(item.id).side !== side),
+		...layout.filter((item) => item.side !== side),
 		...replacement,
 	]);
 }

@@ -45,7 +45,7 @@ Activity Map is an Obsidian plugin that shows how you spend focused time across 
 - **Per-file activity** — Tracks active time, editing time, typed characters, and file-open counts for the file currently in focus.
 - **Idle-aware tracking** — Excludes idle, sleep, and lock-screen gaps from focused activity.
 - **Explore by time and place** — Inspect daily and historical activity, then drill from folders into files.
-- **Header summary** — Open a compact, pinnable activity chart from eligible file headers. Reorder or recoverably disable its six action controls in Settings or by long-pressing a control in the popover; the day navigation stays fixed in the center, while the chart remains visible during direct editing. Locate follows the current workspace file; any present-file slice first locates its row, a second click opens it, and Cmd/Ctrl-click opens a new tab immediately. File opening pins the chart for continued exploration.
+- **Header summary** — Open a compact, pinnable activity chart from eligible file headers. Reorder, move between either side of the fixed day navigation, or recoverably disable its six action controls in Settings or by long-pressing a control in the popover; the chart remains visible during direct editing. Locate follows the current workspace file; any present-file slice first locates its row, a second click opens it, and Cmd/Ctrl-click opens a new tab immediately. File opening pins the chart for continued exploration.
 - **Local poster export** — Download the current result as a theme-matched PNG poster with an optional caption.
 - **Local settings** — Configure excluded paths, timing thresholds, and the Header Popover control row; editing the row does not customize the poster-export dialog.
 
@@ -120,7 +120,7 @@ Activity Map 是一款本地优先的 Obsidian 活动统计插件。它帮助你
 - **逐文件活动统计**：记录当前聚焦文件的活动时长、编辑时长、输入字符数和打开/切入次数。
 - **识别空闲与休眠**：空闲、休眠和锁屏间隔不会计入专注活动。
 - **按时间与目录查看投入**：查看每日和历史活动，并从目录逐层下钻到文件。
-- **页眉统计入口**：从符合条件的文件页眉打开可固定的紧凑活动图表；可在设置中或在浮层内长按某个控制按钮后，对六个动作排序或恢复性停用，中心日期导航保持固定，直接编辑时图表继续显示。定位始终跟随当前激活的工作区文件。任意分组下的现存文件切片无修饰键首次点击定位列表行，再次点击在当前页面打开文件，`Cmd/Ctrl` 首次点击直接新建 tab；打开文件后图表自动固定，方便继续浏览。
+- **页眉统计入口**：从符合条件的文件页眉打开可固定的紧凑活动图表；可在设置中或在浮层内长按某个控制按钮后，对六个动作排序、跨过固定的中心日期导航调整左右区域，或恢复性停用，直接编辑时图表继续显示。定位始终跟随当前激活的工作区文件。任意分组下的现存文件切片无修饰键首次点击定位列表行，再次点击在当前页面打开文件，`Cmd/Ctrl` 首次点击直接新建 tab；打开文件后图表自动固定，方便继续浏览。
 - **本地海报导出**：将当前结果下载为匹配主题的 PNG 海报，并可添加说明文字。
 - **本地设置**：可设置排除路径、时间阈值和 Header Popover 控制行；控制行编辑不定制海报导出 modal。
 

@@ -53,7 +53,7 @@ describe('Header Popover action layout editor', () => {
 		expect(container.textContent).toContain('Drop a control here to disable it');
 	});
 
-	it('uses pointer drag targets to disable an action and restore it only to its own side', () => {
+	it('uses pointer drag targets to disable an action and restore it to either side', () => {
 		const { document } = installDomEnvironment();
 		const container = document.createElement('div');
 		document.body.appendChild(container);
@@ -87,31 +87,31 @@ describe('Header Popover action layout editor', () => {
 		);
 		if (!restored) throw new Error('recovery source missing');
 		restored.dispatchEvent(pointer('pointerdown'));
-		const left = container.querySelector<HTMLElement>(
-			"[data-header-popover-layout-side='left']",
+		const right = container.querySelector<HTMLElement>(
+			"[data-header-popover-layout-side='right']",
 		);
-		if (!left) throw new Error('recovery left target missing');
-		left.dispatchEvent(pointer('pointerup'));
+		if (!right) throw new Error('recovery right target missing');
+		right.dispatchEvent(pointer('pointerup'));
 		expect(drafts).toHaveLength(2);
 		expect(
 			Array.from(
 				container.querySelectorAll(
-					'.activity-map-action-layout-side-left [data-header-popover-layout-action]',
+					'.activity-map-action-layout-side-right [data-header-popover-layout-action]',
 				),
 			).map((element) => element.getAttribute('data-header-popover-layout-action')),
-		).toEqual(['tracking-toggle', 'distribution-grouping-toggle', 'poster-export']);
+		).toEqual(['locate-current-file', 'metric', 'date-range', 'poster-export']);
 	});
 
-	it('rejects a pointer drop across the fixed center boundary', () => {
+	it('moves a pointer-dragged action across the fixed center navigation', () => {
 		const { document } = installDomEnvironment();
 		const container = document.createElement('div');
 		document.body.appendChild(container);
-		let changes = 0;
+		let lastDraft = defaultHeaderPopoverActionLayout();
 		renderHeaderPopoverActionLayoutEditor({
 			container,
 			layout: defaultHeaderPopoverActionLayout(),
-			onChange: () => {
-				changes += 1;
+			onChange: (layout) => {
+				lastDraft = layout;
 			},
 			renderIcon: () => {},
 		});
@@ -126,12 +126,11 @@ describe('Header Popover action layout editor', () => {
 		);
 		if (!left) throw new Error('cross-side left target missing');
 		left.dispatchEvent(pointer('pointerup'));
-		expect(changes).toBe(0);
-		expect(container.querySelector('[aria-live="polite"]')?.textContent).toContain(
-			'right side',
-		);
+		expect(lastDraft.find((item) => item.id === 'metric')?.side).toBe('left');
 		expect(
-			container.querySelector("[data-header-popover-layout-action='metric']"),
+			container.querySelector(
+				".activity-map-action-layout-side-left [data-header-popover-layout-action='metric']",
+			),
 		).toBeDefined();
 	});
 

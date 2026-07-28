@@ -53,7 +53,7 @@ Deliver a local-first Obsidian plugin that measures trustworthy file activity an
 - [ ] A real Obsidian desktop journey covers installation, tracking, idle recovery, pause/resume, and header-popover drill-down.
 - [ ] A real Obsidian mobile journey covers loading statistics, changing ranges, drill-down, and details without hover.
 - [x] Keyboard, focus, pin/unpin, stable-highlight layout, accessible-name, non-color encoding, theme, and reduced-motion checks pass across the header donut and popover.
-- [x] Automated DOM and persistence coverage proves that Settings and Header Popover direct editing provide the same saved action layout, reject moves across the fixed center navigation, preserve the chart/list during editing, and discard unsaved changes on cancel or close.
+- [x] Automated DOM and persistence coverage proves that Settings and Header Popover direct editing provide the same saved action layout, allow action moves across the fixed center navigation without moving the navigation itself, preserve the chart/list during editing, and discard unsaved changes on cancel or close.
 - [ ] Owner desktop/mobile UAT verifies the control-row editor's long press, drag, save/cancel, failed-save, and fixed-navigation behavior in real Obsidian without relying on hover.
 - [ ] Type checking, lint, automated tests, production build, specs validation, and independent Critic evaluation pass.
 - [x] README, PRD, Constitution, settings help, release notes, and installation instructions describe the verified behavior accurately.

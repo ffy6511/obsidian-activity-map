@@ -33,14 +33,33 @@ describe('Header Popover action layout normalization', () => {
 			'date-range',
 		]);
 		expect(layout.map((item) => item.order)).toEqual([0, 1, 2, 0, 1, 2]);
+		expect(layout.map((item) => item.side)).toEqual([
+			'left',
+			'left',
+			'left',
+			'right',
+			'right',
+			'right',
+		]);
 		expect(layout.find((item) => item.id === 'poster-export')?.enabled).toBeFalse();
 		expect(layout.find((item) => item.id === 'metric')?.enabled).toBeTrue();
 		expect(layout.find((item) => item.id === 'date-range')?.enabled).toBeFalse();
 	});
+
+	it('preserves a persisted action side while supplying the default for legacy items', () => {
+		const layout = normalizeHeaderPopoverActionLayout([
+			{ id: 'metric', side: 'left', order: 1, enabled: true },
+			{ id: 'tracking-toggle', order: 0, enabled: true },
+		]);
+
+		expect(layout.find((item) => item.id === 'metric')?.side).toBe('left');
+		expect(layout.find((item) => item.id === 'tracking-toggle')?.side).toBe('left');
+		expect(layout.find((item) => item.id === 'date-range')?.side).toBe('right');
+	});
 });
 
 describe('Header Popover action layout moves', () => {
-	it('reorders enabled controls only within their registry-owned side', () => {
+	it('reorders enabled controls within their persisted side', () => {
 		const result = moveHeaderPopoverAction(
 			defaultHeaderPopoverActionLayout(),
 			'tracking-toggle',
@@ -53,7 +72,7 @@ describe('Header Popover action layout moves', () => {
 		);
 	});
 
-	it('moves actions to the recovery area and restores them at an explicit same-side index', () => {
+	it('moves actions to the recovery area and restores them at an explicit side index', () => {
 		const disabled = moveHeaderPopoverAction(
 			defaultHeaderPopoverActionLayout(),
 			'poster-export',
@@ -77,17 +96,26 @@ describe('Header Popover action layout moves', () => {
 		).toEqual(['tracking-toggle', 'poster-export', 'distribution-grouping-toggle']);
 	});
 
-	it('rejects a wrong-side target without changing the canonical layout', () => {
-		const original = defaultHeaderPopoverActionLayout();
-		const result = moveHeaderPopoverAction(original, 'metric', {
+	it('moves enabled controls across the fixed navigation into either action region', () => {
+		const result = moveHeaderPopoverAction(defaultHeaderPopoverActionLayout(), 'metric', {
 			kind: 'side',
 			side: 'left',
-			index: 0,
+			index: 1,
 		});
-		expect(result.kind).toBe('rejected');
-		if (result.kind !== 'rejected') return;
-		expect(result.reason).toBe('wrong-side');
-		expect(result.layout).toEqual(original);
+		expect(result.kind).toBe('moved');
+		if (result.kind !== 'moved') return;
+		const projection = projectHeaderPopoverActionLayout(result.layout);
+		expect(projection.left.map((item) => item.id)).toEqual([
+			'tracking-toggle',
+			'metric',
+			'distribution-grouping-toggle',
+			'poster-export',
+		]);
+		expect(projection.right.map((item) => item.id)).toEqual([
+			'locate-current-file',
+			'date-range',
+		]);
+		expect(result.layout.find((item) => item.id === 'metric')?.side).toBe('left');
 	});
 
 	it('can restore an action into an otherwise empty side', () => {

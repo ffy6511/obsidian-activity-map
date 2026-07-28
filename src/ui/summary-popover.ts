@@ -97,6 +97,12 @@ interface HeaderPopoverLongPress {
 	readonly timer: number;
 }
 
+interface HeaderPopoverInitialLayoutDrag {
+	readonly id: HeaderPopoverActionId;
+	readonly clientX: number;
+	readonly clientY: number;
+}
+
 /** Interactive, pinnable header chart sharing the controller's query state. */
 export class SummaryPopover {
 	private element: HTMLElement | null = null;
@@ -576,7 +582,11 @@ export class SummaryPopover {
 			this.longPress = null;
 			this.releaseLongPressCapture(press);
 			this.consumeLongPressClick = source;
-			this.enterActionLayoutEdit();
+			this.enterActionLayoutEdit({
+				id: press.actionId,
+				clientX: press.startX,
+				clientY: press.startY,
+			});
 		}, 500);
 		this.longPress = {
 			actionId,
@@ -618,7 +628,7 @@ export class SummaryPopover {
 		}
 	}
 
-	private enterActionLayoutEdit(): void {
+	private enterActionLayoutEdit(initialDrag?: HeaderPopoverInitialLayoutDrag): void {
 		const popover = this.element;
 		const host = this.controlsHost;
 		if (!popover || !host || this.actionLayoutEditor) return;
@@ -670,6 +680,7 @@ export class SummaryPopover {
 			renderIcon: this.renderIcon,
 		});
 		this.position();
+		if (initialDrag) this.actionLayoutEditor.beginPointerDrag(initialDrag.id, initialDrag);
 	}
 
 	private async saveActionLayoutEdit(
@@ -1152,7 +1163,7 @@ function samePointer(expected: number | null, actual: number | undefined): boole
 
 function actionLayoutKey(layout: readonly HeaderPopoverActionLayoutItem[]): string {
 	return normalizeHeaderPopoverActionLayout(layout)
-		.map((item) => `${item.id}:${String(item.order)}:${String(item.enabled)}`)
+		.map((item) => `${item.id}:${item.side}:${String(item.order)}:${String(item.enabled)}`)
 		.join('|');
 }
 

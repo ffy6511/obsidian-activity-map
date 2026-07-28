@@ -138,7 +138,7 @@ function makePopover(args: { failSave?: boolean } = {}): {
 	return { document, popover, controller, writes, timers, pauses: () => pauseCount };
 }
 
-function enterEdit(fixture: ReturnType<typeof makePopover>): void {
+function enterEdit(fixture: ReturnType<typeof makePopover>, keepPointerDrag = false): void {
 	const control = fixture.document.querySelector<HTMLButtonElement>(
 		'[data-activity-map-id="tracking-toggle"]',
 	);
@@ -148,6 +148,10 @@ function enterEdit(fixture: ReturnType<typeof makePopover>): void {
 	const timer = nextTimer.done ? undefined : nextTimer.value;
 	if (!timer) throw new Error('long-press timer missing');
 	timer();
+	if (keepPointerDrag) return;
+	const row = fixture.document.querySelector<HTMLElement>('.activity-map-action-layout-row');
+	if (!row) throw new Error('action layout row missing');
+	row.dispatchEvent(pointer('pointerup'));
 }
 
 describe('Header Popover action layout projection and edit session', () => {
@@ -155,10 +159,20 @@ describe('Header Popover action layout projection and edit session', () => {
 		const { document } = installDomEnvironment();
 		const container = document.createElement('div');
 		document.body.appendChild(container);
-		const moved = moveHeaderPopoverAction(defaultHeaderPopoverActionLayout(), 'poster-export', {
-			kind: 'disabled',
+		const disabled = moveHeaderPopoverAction(
+			defaultHeaderPopoverActionLayout(),
+			'poster-export',
+			{
+				kind: 'disabled',
+			},
+		);
+		if (disabled.kind !== 'moved') throw new Error('expected disabled poster layout');
+		const moved = moveHeaderPopoverAction(disabled.layout, 'metric', {
+			kind: 'side',
+			side: 'left',
+			index: 1,
 		});
-		if (moved.kind !== 'moved') throw new Error('expected disabled poster layout');
+		if (moved.kind !== 'moved') throw new Error('expected cross-side metric layout');
 		renderRangeControls({
 			container,
 			metric: 'activeMs',
@@ -189,13 +203,13 @@ describe('Header Popover action layout projection and edit session', () => {
 			Array.from(
 				container.querySelectorAll('.activity-map-control-leading [data-activity-map-id]'),
 			).map((element) => element.getAttribute('data-activity-map-id')),
-		).toEqual(['tracking-toggle', 'distribution-grouping-toggle']);
+		).toEqual(['tracking-toggle', 'metric', 'distribution-grouping-toggle']);
 		expect(container.querySelector('[data-activity-map-id="poster-export"]')).toBeNull();
 		expect(
 			Array.from(
 				container.querySelectorAll('.activity-map-query-controls [data-activity-map-id]'),
 			).map((element) => element.getAttribute('data-activity-map-id')),
-		).toEqual(['locate-current-file', 'metric', 'date-range']);
+		).toEqual(['locate-current-file', 'date-range']);
 	});
 
 	it('enters edit mode after a long press without replacing result nodes and Cancel restores normal controls', async () => {
@@ -219,7 +233,7 @@ describe('Header Popover action layout projection and edit session', () => {
 		const legend = fixture.document.querySelector('.activity-map-popover-legend');
 		if (!chart || !legend) throw new Error('result nodes missing');
 
-		enterEdit(fixture);
+		enterEdit(fixture, true);
 		expect(
 			fixture.document
 				.querySelector('.activity-map-chart-popover')
@@ -231,6 +245,14 @@ describe('Header Popover action layout projection and edit session', () => {
 		expect(
 			fixture.document.querySelector('.activity-map-popover-layout-actions')?.textContent,
 		).toContain('Cancel');
+		expect(
+			fixture.document.body.querySelector('.activity-map-action-layout-drag-avatar'),
+		).toBeDefined();
+		expect(
+			fixture.document.querySelector(
+				".activity-map-action-layout-drop-slot[data-header-popover-layout-dragged-action='tracking-toggle']",
+			),
+		).toBeDefined();
 		expect(fixture.document.querySelector('.activity-map-popover-chart')).toBe(chart);
 		expect(fixture.document.querySelector('.activity-map-popover-legend')).toBe(legend);
 
@@ -243,6 +265,41 @@ describe('Header Popover action layout projection and edit session', () => {
 		expect(fixture.document.querySelector('.activity-map-popover-chart')).toBe(chart);
 		expect(
 			fixture.document.querySelector('[data-activity-map-id="tracking-toggle"]'),
+		).toBeDefined();
+		fixture.popover.close(false);
+	});
+
+	it('continues the long-pressed drag across the fixed navigation and saves the new region', async () => {
+		const fixture = makePopover();
+		await settle();
+		enterEdit(fixture, true);
+		const right = fixture.document.querySelector<HTMLElement>(
+			"[data-header-popover-layout-side='right']",
+		);
+		if (!right) throw new Error('right action region missing');
+		right.dispatchEvent(pointer('pointerup'));
+		expect(
+			fixture.document.querySelector(
+				".activity-map-action-layout-side-right [data-header-popover-layout-action='tracking-toggle']",
+			),
+		).toBeDefined();
+
+		const save = Array.from(
+			fixture.document.querySelectorAll<HTMLButtonElement>('button'),
+		).find((button) => button.textContent === 'Save');
+		if (!save) throw new Error('save button missing');
+		save.click();
+		await settle();
+		expect(
+			fixture.controller
+				.getViewModel()
+				.settings.headerPopoverActionLayout.find((item) => item.id === 'tracking-toggle')
+				?.side,
+		).toBe('right');
+		expect(
+			fixture.document.querySelector(
+				".activity-map-query-controls [data-activity-map-id='tracking-toggle']",
+			),
 		).toBeDefined();
 		fixture.popover.close(false);
 	});

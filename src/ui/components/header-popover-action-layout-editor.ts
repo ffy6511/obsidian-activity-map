@@ -1,16 +1,21 @@
 import { setIcon } from 'obsidian';
 
 import {
-	headerPopoverActionDefinition,
 	moveHeaderPopoverAction,
 	normalizeHeaderPopoverActionLayout,
 	projectHeaderPopoverActionLayout,
 	type HeaderPopoverActionId,
 	type HeaderPopoverActionLayoutItem,
+	type HeaderPopoverActionSide,
 	type HeaderPopoverLayoutDestination,
 } from '../../domain/header-popover-action-layout';
 
 export interface HeaderPopoverActionLayoutEditorHandle {
+	/** Starts a pointer drag from a rendered control without requiring a second press. */
+	beginPointerDrag(
+		id: HeaderPopoverActionId,
+		pointer: { readonly clientX: number; readonly clientY: number },
+	): boolean;
 	setLayout(layout: readonly HeaderPopoverActionLayoutItem[]): void;
 	setDisabled(disabled: boolean): void;
 	destroy(): void;
@@ -98,7 +103,7 @@ export function renderHeaderPopoverActionLayoutEditor(
 		if (result.kind === 'rejected') {
 			announce(rejectionMessage(id, result.reason));
 			// Pointerup has already removed the lifted preview. Restore the unchanged
-			// draft so an invalid cross-boundary drop cannot leave a false vacancy.
+			// draft so an invalid destination cannot leave a false vacancy.
 			render();
 			return;
 		}
@@ -115,8 +120,7 @@ export function renderHeaderPopoverActionLayoutEditor(
 		event.preventDefault();
 		positionDragAvatar(drag.avatar, event);
 		const destination = destinationForEvent(event);
-		const preview =
-			destination && acceptsPointerDestination(drag.id, destination) ? destination : null;
+		const preview = destination;
 		if (sameDestination(drag.preview, preview)) return;
 		drag.preview = preview;
 		render();
@@ -263,7 +267,7 @@ export function renderHeaderPopoverActionLayoutEditor(
 		index: number | undefined,
 	): void {
 		const visual = ACTION_VISUALS[item.id];
-		const side = headerPopoverActionDefinition(item.id).side;
+		const side = item.side;
 		const button = parent.createEl('button', {
 			cls: 'activity-map-action-layout-control clickable-icon',
 			attr: {
@@ -281,28 +285,37 @@ export function renderHeaderPopoverActionLayoutEditor(
 		else renderIcon(button, visual.icon);
 		button.addEventListener('click', (event) => event.preventDefault());
 		button.addEventListener('pointerdown', (event) => {
-			if (disabled || (event.button !== undefined && event.button !== 0)) return;
+			if (disabled || pointerDrag || (event.button !== undefined && event.button !== 0))
+				return;
 			event.preventDefault();
 			// The editor owns this gesture. Keep the Popover's ordinary long-press and
 			// outside-close listeners from interpreting a control that this render will
 			// immediately replace as a new interaction.
 			event.stopPropagation();
-			const projection = projectHeaderPopoverActionLayout(layout);
-			const visibleItems = side === 'left' ? projection.left : projection.right;
-			const sourceIndex = visibleItems.findIndex((candidate) => candidate.id === item.id);
-			const preview: HeaderPopoverLayoutDestination = item.enabled
-				? { kind: 'side', side, index: Math.max(0, sourceIndex) }
-				: { kind: 'disabled' };
-			const avatar = createDragAvatar(button, event);
-			pointerDrag = { id: item.id, avatar, preview };
-			root.addClass('is-action-layout-pointer-dragging');
-			document.body.classList.add('is-activity-map-action-layout-pointer-dragging');
-			document.addEventListener('pointermove', onPointerMove, true);
-			document.addEventListener('pointerup', onPointerUp, true);
-			document.addEventListener('pointercancel', onPointerCancel, true);
-			render();
+			startPointerDrag(button, item, event);
 		});
 		button.addEventListener('keydown', (event) => onKeydown(event, item.id));
+	}
+
+	function startPointerDrag(
+		source: HTMLButtonElement,
+		item: HeaderPopoverActionLayoutItem,
+		pointer: { readonly clientX: number; readonly clientY: number },
+	): void {
+		const projection = projectHeaderPopoverActionLayout(layout);
+		const visibleItems = item.side === 'left' ? projection.left : projection.right;
+		const sourceIndex = visibleItems.findIndex((candidate) => candidate.id === item.id);
+		const preview: HeaderPopoverLayoutDestination = item.enabled
+			? { kind: 'side', side: item.side, index: Math.max(0, sourceIndex) }
+			: { kind: 'disabled' };
+		const avatar = createDragAvatar(source, pointer);
+		pointerDrag = { id: item.id, avatar, preview };
+		root.addClass('is-action-layout-pointer-dragging');
+		document.body.classList.add('is-activity-map-action-layout-pointer-dragging');
+		document.addEventListener('pointermove', onPointerMove, true);
+		document.addEventListener('pointerup', onPointerUp, true);
+		document.addEventListener('pointercancel', onPointerCancel, true);
+		render();
 	}
 
 	function onKeydown(event: KeyboardEvent, id: HeaderPopoverActionId): void {
@@ -331,8 +344,9 @@ export function renderHeaderPopoverActionLayoutEditor(
 		}
 
 		const projection = projectHeaderPopoverActionLayout(layout);
-		const definition = headerPopoverActionDefinition(id);
-		const sideItems = definition.side === 'left' ? projection.left : projection.right;
+		const action = layout.find((item) => item.id === id);
+		if (!action) return;
+		const sideItems = action.side === 'left' ? projection.left : projection.right;
 		const currentIndex = sideItems.findIndex((item) => item.id === id);
 		if (event.key === 'ArrowDown' && currentIndex >= 0) {
 			event.preventDefault();
@@ -341,19 +355,38 @@ export function renderHeaderPopoverActionLayoutEditor(
 		}
 		if (event.key === 'ArrowUp' && projection.disabled.some((item) => item.id === id)) {
 			event.preventDefault();
-			applyMove(
-				id,
-				{ kind: 'side', side: definition.side, index: sideItems.length },
-				'keyboard',
-			);
+			applyMove(id, { kind: 'side', side: action.side, index: sideItems.length }, 'keyboard');
+			return;
+		}
+		if (currentIndex < 0 && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+			event.preventDefault();
+			const side: HeaderPopoverActionSide = event.key === 'ArrowLeft' ? 'left' : 'right';
+			const destinationItems = side === 'left' ? projection.left : projection.right;
+			applyMove(id, { kind: 'side', side, index: destinationItems.length }, 'keyboard');
 			return;
 		}
 		if (currentIndex < 0 || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
 		event.preventDefault();
+		if (event.key === 'ArrowLeft' && action.side === 'right' && currentIndex === 0) {
+			applyMove(
+				id,
+				{ kind: 'side', side: 'left', index: projection.left.length },
+				'keyboard',
+			);
+			return;
+		}
+		if (
+			event.key === 'ArrowRight' &&
+			action.side === 'left' &&
+			currentIndex === sideItems.length - 1
+		) {
+			applyMove(id, { kind: 'side', side: 'right', index: 0 }, 'keyboard');
+			return;
+		}
 		const offset = event.key === 'ArrowLeft' ? -1 : 1;
 		applyMove(
 			id,
-			{ kind: 'side', side: definition.side, index: Math.max(0, currentIndex + offset) },
+			{ kind: 'side', side: action.side, index: Math.max(0, currentIndex + offset) },
 			'keyboard',
 		);
 	}
@@ -416,6 +449,16 @@ export function renderHeaderPopoverActionLayoutEditor(
 
 	render();
 	return {
+		beginPointerDrag(id, pointer) {
+			if (disabled || pointerDrag) return false;
+			const item = layout.find((candidate) => candidate.id === id);
+			const source = root.querySelector<HTMLButtonElement>(
+				`[data-header-popover-layout-action='${id}']`,
+			);
+			if (!item || !source) return false;
+			startPointerDrag(source, item, pointer);
+			return true;
+		},
 		setLayout(nextLayout) {
 			layout = normalizeHeaderPopoverActionLayout(nextLayout);
 			keyboardAction = null;
@@ -445,23 +488,10 @@ function moveMessage(
 
 function rejectionMessage(
 	id: HeaderPopoverActionId,
-	reason: 'wrong-side' | 'invalid-index' | 'already-disabled',
+	reason: 'invalid-index' | 'already-disabled',
 ): string {
-	if (reason === 'wrong-side') {
-		return `${ACTION_VISUALS[id].label} stays on the ${headerPopoverActionDefinition(id).side} side.`;
-	}
 	if (reason === 'already-disabled') return `${ACTION_VISUALS[id].label} is already disabled.`;
 	return `Choose a valid position for ${ACTION_VISUALS[id].label}.`;
-}
-
-function acceptsPointerDestination(
-	id: HeaderPopoverActionId,
-	destination: HeaderPopoverLayoutDestination,
-): boolean {
-	return (
-		destination.kind === 'disabled' ||
-		destination.side === headerPopoverActionDefinition(id).side
-	);
 }
 
 function sameDestination(
@@ -479,7 +509,10 @@ function sameDestination(
 	);
 }
 
-function createDragAvatar(source: HTMLButtonElement, event: PointerEvent): HTMLElement {
+function createDragAvatar(
+	source: HTMLButtonElement,
+	pointer: { readonly clientX: number; readonly clientY: number },
+): HTMLElement {
 	const avatar = source.cloneNode(true) as HTMLElement;
 	avatar.classList.add('activity-map-action-layout-drag-avatar');
 	avatar.removeAttribute('id');
@@ -492,14 +525,17 @@ function createDragAvatar(source: HTMLButtonElement, event: PointerEvent): HTMLE
 		avatar.style.inlineSize = `${String(rect.width)}px`;
 	if (Number.isFinite(rect.height) && rect.height > 0)
 		avatar.style.blockSize = `${String(rect.height)}px`;
-	positionDragAvatar(avatar, event);
+	positionDragAvatar(avatar, pointer);
 	source.ownerDocument.body.appendChild(avatar);
 	return avatar;
 }
 
-function positionDragAvatar(avatar: HTMLElement, event: PointerEvent): void {
-	avatar.style.left = `${String(pointerCoordinate(event.clientX))}px`;
-	avatar.style.top = `${String(pointerCoordinate(event.clientY))}px`;
+function positionDragAvatar(
+	avatar: HTMLElement,
+	pointer: { readonly clientX: number; readonly clientY: number },
+): void {
+	avatar.style.left = `${String(pointerCoordinate(pointer.clientX))}px`;
+	avatar.style.top = `${String(pointerCoordinate(pointer.clientY))}px`;
 }
 
 function pointerCoordinate(value: unknown): number {

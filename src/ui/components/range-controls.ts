@@ -75,9 +75,8 @@ export function renderRangeControls(args: {
 	/** Action rendered immediately left of the metric dropdown, inside the query area. */
 	leadingQueryAction?: LeadingQueryAction;
 	/**
-	 * A normalized Header Popover layout. The registry projection remains the
-	 * only source of side placement; handlers still arrive through the existing
-	 * action and query callbacks below.
+	 * A normalized Header Popover layout. It owns side placement and order;
+	 * handlers still arrive through the existing action and query callbacks below.
 	 */
 	actionLayout?: readonly HeaderPopoverActionLayoutItem[];
 	renderIcon?: (container: HTMLElement, icon: string) => void;
@@ -262,10 +261,10 @@ function fallbackLayout(
 } {
 	const left = leadingActions.flatMap((action) => {
 		const definition = HEADER_POPOVER_ACTION_REGISTRY.find((entry) => entry.id === action.id);
-		return definition?.side === 'left' ? [definition.id] : [];
+		return definition?.defaultSide === 'left' ? [definition.id] : [];
 	});
 	const locate = HEADER_POPOVER_ACTION_REGISTRY.find(
-		(entry) => entry.id === leadingQueryAction?.id && entry.side === 'right',
+		(entry) => entry.id === leadingQueryAction?.id && entry.defaultSide === 'right',
 	)?.id;
 	return {
 		left,

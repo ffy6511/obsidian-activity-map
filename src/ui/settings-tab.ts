@@ -174,7 +174,7 @@ export class ActivityMapSettingsTab extends PluginSettingTab {
 		});
 		new Setting(section).setName('Header popover controls').setHeading();
 		section.createEl('p', {
-			text: 'Drag controls in this row to change their order. Drop one below to disable it; the date navigation in the middle stays fixed.',
+			text: 'Drag controls to reorder them, move them across the fixed date navigation, or drop them below to disable them.',
 			cls: 'setting-item-description',
 		});
 		this.actionLayoutDraft = normalizeHeaderPopoverActionLayout(
@@ -270,6 +270,7 @@ function sameActionLayout(
 		left.every(
 			(item, index) =>
 				item.id === right[index]?.id &&
+				item.side === right[index]?.side &&
 				item.order === right[index]?.order &&
 				item.enabled === right[index]?.enabled,
 		)
