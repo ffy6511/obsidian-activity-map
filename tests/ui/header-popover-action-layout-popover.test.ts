@@ -254,11 +254,12 @@ describe('Header Popover action layout projection and edit session', () => {
 		const poster = successful.document.querySelector<HTMLButtonElement>(
 			"[data-header-popover-layout-action='poster-export']",
 		);
+		if (!poster) throw new Error('edit drag source missing');
+		poster.dispatchEvent(pointer('pointerdown'));
 		const disabled = successful.document.querySelector<HTMLElement>(
 			"[data-header-popover-layout-destination='disabled']",
 		);
-		if (!poster || !disabled) throw new Error('edit targets missing');
-		poster.dispatchEvent(pointer('pointerdown'));
+		if (!disabled) throw new Error('edit disabled target missing');
 		disabled.dispatchEvent(pointer('pointerup'));
 		const save = Array.from(
 			successful.document.querySelectorAll<HTMLButtonElement>('button'),

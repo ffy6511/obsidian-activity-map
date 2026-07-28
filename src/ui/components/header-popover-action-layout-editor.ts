@@ -37,6 +37,13 @@ interface ActionVisual {
 	readonly text?: string;
 }
 
+/** The pointer-only state that renders a lifted control without mutating the draft. */
+interface PointerDrag {
+	readonly id: HeaderPopoverActionId;
+	readonly avatar: HTMLElement;
+	preview: HeaderPopoverLayoutDestination | null;
+}
+
 const ACTION_VISUALS: Record<HeaderPopoverActionId, ActionVisual> = {
 	'tracking-toggle': { icon: 'pause', label: 'Pause activity tracking' },
 	'distribution-grouping-toggle': { icon: 'files', label: 'Show all files' },
@@ -67,17 +74,19 @@ export function renderHeaderPopoverActionLayoutEditor(
 	const document = root.ownerDocument;
 	let layout = normalizeHeaderPopoverActionLayout(args.layout);
 	let disabled = false;
-	let pointerAction: HeaderPopoverActionId | null = null;
+	let pointerDrag: PointerDrag | null = null;
 	let keyboardAction: HeaderPopoverActionId | null = null;
 
-	const clearPointer = () => {
-		pointerAction = null;
+	const clearPointer = (restorePreview = true) => {
+		const drag = pointerDrag;
+		pointerDrag = null;
 		root.removeClass('is-action-layout-pointer-dragging');
-		for (const target of Array.from(root.querySelectorAll('.is-action-layout-drop-target')))
-			target.removeClass('is-action-layout-drop-target');
+		document.body.classList.remove('is-activity-map-action-layout-pointer-dragging');
+		drag?.avatar.remove();
 		document.removeEventListener('pointermove', onPointerMove, true);
 		document.removeEventListener('pointerup', onPointerUp, true);
-		document.removeEventListener('pointercancel', clearPointer, true);
+		document.removeEventListener('pointercancel', onPointerCancel, true);
+		if (restorePreview && root.isConnected) render();
 	};
 
 	const applyMove = (
@@ -88,6 +97,9 @@ export function renderHeaderPopoverActionLayoutEditor(
 		const result = moveHeaderPopoverAction(layout, id, destination);
 		if (result.kind === 'rejected') {
 			announce(rejectionMessage(id, result.reason));
+			// Pointerup has already removed the lifted preview. Restore the unchanged
+			// draft so an invalid cross-boundary drop cannot leave a false vacancy.
+			render();
 			return;
 		}
 		layout = result.layout;
@@ -98,20 +110,32 @@ export function renderHeaderPopoverActionLayoutEditor(
 	};
 
 	const onPointerMove = (event: PointerEvent): void => {
+		const drag = pointerDrag;
+		if (!drag) return;
+		event.preventDefault();
+		positionDragAvatar(drag.avatar, event);
 		const destination = destinationForEvent(event);
-		for (const target of Array.from(root.querySelectorAll('.is-action-layout-drop-target')))
-			target.removeClass('is-action-layout-drop-target');
-		if (!destination) return;
-		const target = targetForEvent(event);
-		target?.addClass('is-action-layout-drop-target');
+		const preview =
+			destination && acceptsPointerDestination(drag.id, destination) ? destination : null;
+		if (sameDestination(drag.preview, preview)) return;
+		drag.preview = preview;
+		render();
 	};
 
 	const onPointerUp = (event: PointerEvent): void => {
-		const action = pointerAction;
+		const drag = pointerDrag;
+		if (!drag) return;
 		const destination = destinationForEvent(event);
-		clearPointer();
-		if (action && destination) applyMove(action, destination, 'pointer');
+		const action = drag.id;
+		clearPointer(false);
+		if (destination) {
+			applyMove(action, destination, 'pointer');
+			return;
+		}
+		render();
 	};
+
+	const onPointerCancel = (): void => clearPointer();
 
 	function render(): void {
 		content.empty();
@@ -137,13 +161,19 @@ export function renderHeaderPopoverActionLayoutEditor(
 		const disabledItems = disabledArea.createDiv({
 			cls: 'activity-map-action-layout-disabled-items',
 		});
-		if (projection.disabled.length === 0) {
+		const disabledItemsWithoutDrag = projection.disabled.filter(
+			(item) => item.id !== pointerDrag?.id,
+		);
+		const disabledPreview = pointerDrag?.preview?.kind === 'disabled';
+		if (disabledItemsWithoutDrag.length === 0 && !disabledPreview) {
 			disabledItems.createSpan({
 				cls: 'activity-map-action-layout-empty',
 				text: 'Drop a control here to disable it',
 			});
 		} else {
-			for (const item of projection.disabled) renderAction(disabledItems, item, undefined);
+			for (const item of disabledItemsWithoutDrag)
+				renderAction(disabledItems, item, undefined);
+			if (disabledPreview) renderDropSlot(disabledItems, { kind: 'disabled' });
 		}
 	}
 
@@ -152,15 +182,20 @@ export function renderHeaderPopoverActionLayoutEditor(
 		side: 'left' | 'right',
 		items: readonly HeaderPopoverActionLayoutItem[],
 	): void {
+		const visibleItems = items.filter((item) => item.id !== pointerDrag?.id);
+		const preview =
+			pointerDrag?.preview?.kind === 'side' && pointerDrag.preview.side === side
+				? pointerDrag.preview
+				: null;
 		const region = row.createDiv({
 			cls: `activity-map-action-layout-side activity-map-action-layout-side-${side}`,
 			attr: {
 				'data-header-popover-layout-destination': 'side',
 				'data-header-popover-layout-side': side,
-				'data-header-popover-layout-index': String(items.length),
+				'data-header-popover-layout-index': String(visibleItems.length),
 			},
 		});
-		if (items.length === 0) {
+		if (visibleItems.length === 0 && !preview) {
 			region.addClass('is-action-layout-empty-side');
 			region.createSpan({
 				cls: 'activity-map-action-layout-empty',
@@ -168,7 +203,33 @@ export function renderHeaderPopoverActionLayoutEditor(
 			});
 			return;
 		}
-		for (const [index, item] of items.entries()) renderAction(region, item, index);
+		for (let index = 0; index <= visibleItems.length; index += 1) {
+			if (preview?.index === index) renderDropSlot(region, { kind: 'side', side, index });
+			const item = visibleItems[index];
+			if (item) renderAction(region, item, index);
+		}
+	}
+
+	function renderDropSlot(
+		parent: HTMLElement,
+		destination: HeaderPopoverLayoutDestination,
+	): void {
+		const slot = parent.createSpan({
+			cls: 'activity-map-action-layout-drop-slot',
+			attr: {
+				'aria-hidden': 'true',
+				'data-header-popover-layout-destination': destination.kind,
+				'data-header-popover-layout-dragged-action': pointerDrag?.id ?? '',
+				...(destination.kind === 'side'
+					? {
+							'data-header-popover-layout-side': destination.side,
+							'data-header-popover-layout-index': String(destination.index),
+						}
+					: {}),
+			},
+		});
+		if (pointerDrag?.id === 'date-range')
+			slot.textContent = ACTION_VISUALS['date-range'].text ?? '';
 	}
 
 	function renderFixedNavigation(row: HTMLElement): void {
@@ -222,11 +283,24 @@ export function renderHeaderPopoverActionLayoutEditor(
 		button.addEventListener('pointerdown', (event) => {
 			if (disabled || (event.button !== undefined && event.button !== 0)) return;
 			event.preventDefault();
-			pointerAction = item.id;
+			// The editor owns this gesture. Keep the Popover's ordinary long-press and
+			// outside-close listeners from interpreting a control that this render will
+			// immediately replace as a new interaction.
+			event.stopPropagation();
+			const projection = projectHeaderPopoverActionLayout(layout);
+			const visibleItems = side === 'left' ? projection.left : projection.right;
+			const sourceIndex = visibleItems.findIndex((candidate) => candidate.id === item.id);
+			const preview: HeaderPopoverLayoutDestination = item.enabled
+				? { kind: 'side', side, index: Math.max(0, sourceIndex) }
+				: { kind: 'disabled' };
+			const avatar = createDragAvatar(button, event);
+			pointerDrag = { id: item.id, avatar, preview };
 			root.addClass('is-action-layout-pointer-dragging');
+			document.body.classList.add('is-activity-map-action-layout-pointer-dragging');
 			document.addEventListener('pointermove', onPointerMove, true);
 			document.addEventListener('pointerup', onPointerUp, true);
-			document.addEventListener('pointercancel', clearPointer, true);
+			document.addEventListener('pointercancel', onPointerCancel, true);
+			render();
 		});
 		button.addEventListener('keydown', (event) => onKeydown(event, item.id));
 	}
@@ -294,12 +368,32 @@ export function renderHeaderPopoverActionLayoutEditor(
 		const action = target.closest<HTMLElement>('[data-header-popover-layout-action]');
 		const side =
 			action?.dataset.headerPopoverLayoutSide ?? destination?.dataset.headerPopoverLayoutSide;
+		const actionIndex = action?.dataset.headerPopoverLayoutIndex;
 		const index = Number(
-			action?.dataset.headerPopoverLayoutIndex ??
-				destination?.dataset.headerPopoverLayoutIndex,
+			actionIndex === undefined || !action
+				? destination?.dataset.headerPopoverLayoutIndex
+				: insertionIndexForAction(action, Number(actionIndex), event),
 		);
 		if ((side !== 'left' && side !== 'right') || !Number.isSafeInteger(index)) return null;
 		return { kind: 'side', side, index };
+	}
+
+	function insertionIndexForAction(
+		action: HTMLElement,
+		index: number,
+		event: PointerEvent,
+	): number {
+		const rect = action.getBoundingClientRect();
+		if (
+			Number.isFinite(rect.left) &&
+			Number.isFinite(rect.width) &&
+			rect.width > 0 &&
+			Number.isFinite(event.clientX) &&
+			event.clientX > rect.left + rect.width / 2
+		) {
+			return index + 1;
+		}
+		return index;
 	}
 
 	function targetForEvent(event: PointerEvent): HTMLElement | null {
@@ -325,16 +419,17 @@ export function renderHeaderPopoverActionLayoutEditor(
 		setLayout(nextLayout) {
 			layout = normalizeHeaderPopoverActionLayout(nextLayout);
 			keyboardAction = null;
-			clearPointer();
+			clearPointer(false);
 			render();
 		},
 		setDisabled(nextDisabled) {
+			clearPointer(false);
 			disabled = nextDisabled;
 			render();
 		},
 		destroy() {
 			keyboardAction = null;
-			clearPointer();
+			clearPointer(false);
 			root.remove();
 		},
 	};
@@ -357,4 +452,56 @@ function rejectionMessage(
 	}
 	if (reason === 'already-disabled') return `${ACTION_VISUALS[id].label} is already disabled.`;
 	return `Choose a valid position for ${ACTION_VISUALS[id].label}.`;
+}
+
+function acceptsPointerDestination(
+	id: HeaderPopoverActionId,
+	destination: HeaderPopoverLayoutDestination,
+): boolean {
+	return (
+		destination.kind === 'disabled' ||
+		destination.side === headerPopoverActionDefinition(id).side
+	);
+}
+
+function sameDestination(
+	left: HeaderPopoverLayoutDestination | null,
+	right: HeaderPopoverLayoutDestination | null,
+): boolean {
+	if (left === right) return true;
+	if (!left || !right || left.kind !== right.kind) return false;
+	if (left.kind === 'disabled' && right.kind === 'disabled') return true;
+	return (
+		left.kind === 'side' &&
+		right.kind === 'side' &&
+		left.side === right.side &&
+		left.index === right.index
+	);
+}
+
+function createDragAvatar(source: HTMLButtonElement, event: PointerEvent): HTMLElement {
+	const avatar = source.cloneNode(true) as HTMLElement;
+	avatar.classList.add('activity-map-action-layout-drag-avatar');
+	avatar.removeAttribute('id');
+	avatar.removeAttribute('disabled');
+	avatar.removeAttribute('aria-label');
+	avatar.setAttribute('aria-hidden', 'true');
+	avatar.tabIndex = -1;
+	const rect = source.getBoundingClientRect();
+	if (Number.isFinite(rect.width) && rect.width > 0)
+		avatar.style.inlineSize = `${String(rect.width)}px`;
+	if (Number.isFinite(rect.height) && rect.height > 0)
+		avatar.style.blockSize = `${String(rect.height)}px`;
+	positionDragAvatar(avatar, event);
+	source.ownerDocument.body.appendChild(avatar);
+	return avatar;
+}
+
+function positionDragAvatar(avatar: HTMLElement, event: PointerEvent): void {
+	avatar.style.left = `${String(pointerCoordinate(event.clientX))}px`;
+	avatar.style.top = `${String(pointerCoordinate(event.clientY))}px`;
+}
+
+function pointerCoordinate(value: unknown): number {
+	return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }

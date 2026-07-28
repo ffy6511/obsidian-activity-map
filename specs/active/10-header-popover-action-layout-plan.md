@@ -24,7 +24,7 @@
 | Current blockers | `0` |
 | Potential blockers | `2` |
 
-- Next action: Commit the completed implementation and documentation phases; owner desktop/mobile UAT remains the only feature-specific acceptance evidence to collect.
+- Next action: Run the lifted-control interaction regression gates; owner desktop/mobile UAT remains the only feature-specific acceptance evidence to collect.
 
 ### Current blockers
 
@@ -79,7 +79,7 @@ Non-goals:
 | --- | --- | --- | --- |
 | Settings | One complete WYSIWYG Header Popover row; left and right actions appear in their actual positions and drag only within their registry-owned side. | Center previous-day / selected-date / next-day preview; no separate left/right management lists. | The local draft persists only through the section's `Save`; `Cancel`, Settings hide, and a re-display discard it. |
 | Header Popover, normal mode | None; all enabled controls retain their present behavior. | Chart, legend, breadcrumb, status, center navigation, Popover pinning, and close behavior. | No layout mutation. |
-| Header Popover, edit mode | Visible configurable controls wobble and accept pointer drag; the lower disabled area accepts a drop and exposes recoverable controls. | Center navigation stays still; the result content remains visible and mounted. | `Save` persists the draft. `Cancel`, `Escape`, Popover close, an external committed layout change, or a structural rerender discards it. |
+| Header Popover, edit mode | Visible configurable controls wobble and accept pointer drag; a lifted icon/text avatar follows the pointer while dashed rounded slots preview permitted placement and reflow siblings. The lower disabled area accepts a drop and exposes recoverable controls. | Center navigation stays still; the result content remains visible and mounted. | `Save` persists the draft. `Cancel`, `Escape`, Popover close, an external committed layout change, or a structural rerender discards it. |
 
 ### Key Insight
 
@@ -240,7 +240,7 @@ type HeaderPopoverLayoutDestination =
 - Normal rendering projects enabled left actions, the unchanged center day navigation when the selected range is a day, and enabled right actions. The right controls retain their existing component-specific behavior: Locate is an icon action, metric is a metric listbox, and date range is a range listbox.
 - The Settings preview uses the same control descriptors in an inert day-mode representation with a deterministic selected-date label. It visually mirrors the whole row without invoking tracking, query, download, or date behavior.
 - Settings has no left/right management sections. Its row and its lower disabled zone are the only management surface. A side may be empty; edit mode then renders an explicit same-side insertion target rather than allowing a cross-boundary drop.
-- A pointer drag uses Pointer Events and pointer capture, not HTML5 drag-and-drop, so desktop mouse and touch use one model. The dragged item has a visible insertion marker, and invalid center/opposite-side targets never mutate the draft.
+- A pointer drag uses Pointer Events and pointer capture, not HTML5 drag-and-drop, so desktop mouse and touch use one model. Adjustable controls expose `grab`, the active drag exposes `grabbing`, and a cloned icon/text avatar follows the pointer without receiving events. The source action leaves a dashed rounded slot; moving across an action's horizontal midpoint moves that slot between the adjacent actions so siblings reflow as a draft-only ordering preview. Invalid center/opposite-side targets never mutate the draft and release restores the unchanged row.
 - Keyboard operations call the same reducer: focused action plus `Space` begins/ends a move, left/right changes its same-side order, down disables it, and a disabled action can return only to its registry side. The editor announces the resulting position or rejected target through a scoped live region. `Escape` cancels the active keyboard move before it cancels the draft.
 - The long-press threshold is 500 ms with an 8 px movement tolerance. `pointerup`, `pointercancel`, or movement beyond tolerance cancels the timer. Once the threshold fires, the source action's click is consumed and the normal context menu is suppressed for that gesture.
 - Edit mode makes enabled configurable controls visibly wobble with a non-motion outline/focus alternative under `prefers-reduced-motion`. The fixed center navigation never wobbles or becomes a drop target.
@@ -348,7 +348,7 @@ Let users make the same staged layout change directly in the live Header Popover
 
 - [x] Refactor `renderRangeControls` around the registry-backed left/right action projection while retaining current action handlers, DOM IDs, metric/range listboxes, day navigation, and in-place update APIs.
 - [x] Mount the reusable action-layout editor in `SummaryPopover` edit mode. Add 500 ms long-press detection and click/context-menu suppression only after the gesture enters edit mode.
-- [x] Make all visible configurable controls wobble and draggable in edit mode; keep center navigation, chart, legend, breadcrumb, loading/error status, pinning, and file-activation surfaces mounted and non-draggable.
+- [x] Make all visible configurable controls wobble and draggable in edit mode; provide a pointer-following icon/text avatar, `grab`/`grabbing` cursors, and rounded dashed insertion slots with same-side reflow preview. Keep center navigation, chart, legend, breadcrumb, loading/error status, pinning, and file-activation surfaces mounted and non-draggable.
 - [x] Add the lower footer with disabled controls on the left and fixed `Cancel` / `Save` on the right. Use the shared draft/reducer and controller persistence path.
 - [x] Implement cancellation on Escape, close, structural rerender, and externally committed layout changes; dispose timers, pointer capture, custom listbox listeners, and edit affordances at their owning boundary.
 - [x] Add DOM behavior tests for normal short activation, long-press activation suppression, drag/reorder/disable/restore, rejected targets, save/cancel/failure behavior, close/rerender disposal, retained chart/legend node identity, and existing Popover interactions.
@@ -369,7 +369,7 @@ Let users make the same staged layout change directly in the live Header Popover
 ### Acceptance Criteria
 
 - [x] A short activation retains the current handler behavior; a 500 ms long press enters edit mode without triggering the pressed control.
-- [x] In edit mode the user sees all enabled configurable controls wobble, can reorder only inside their side, can move controls to the footer, and can restore a disabled control only to its registry side.
+- [x] In edit mode the user sees all enabled configurable controls wobble, a lifted icon/text avatar, `grab`/`grabbing` cursors, and a dashed rounded insertion slot that previews same-side reflow. The user can reorder only inside their side, can move controls to the footer, and can restore a disabled control only to its registry side.
 - [x] Chart, legend, breadcrumb, and status remain visible and preserve their mounted DOM identity while entering/exiting edit mode and during draft-only moves.
 - [x] `Cancel`, Escape, Popover close, structural rerender, and external committed-layout change discard the local draft; `Save` is the only persistence path.
 - [x] The footer keeps disabled controls left and `Cancel`/`Save` right; a rejected save returns to an editable, correctly announced draft.
@@ -419,7 +419,7 @@ Describe the new Header Popover behavior accurately and prove it through technic
 - `npm run format:check` passed.
 - `npm run check` passed.
 - `npm run lint` passed.
-- `npm test -- --run` passed: 338 tests, 0 failures. This includes the repository-relative Markdown target and heading-fragment validation, plus the focused action-layout DOM, persistence, and accessibility coverage.
+- `npm test -- --run` passed: 339 tests, 0 failures. This includes the repository-relative Markdown target and heading-fragment validation, plus focused action-layout DOM coverage for the lifted avatar, `grabbing` session class, insertion-slot reflow, invalid-drop restoration, persistence, and accessibility.
 - `npm run build` passed.
 - `git diff --check` passed.
 - `python3 "${SPEC_DRIVEN_DELIVERY_DIR:?set SPEC_DRIVEN_DELIVERY_DIR}/scripts/validate_specs_workspace.py" . --strict` ran and reported 16 errors and 2 warnings outside this Spec: legacy active Specs 01–05 and 07–09 lack the newer Decision Summary and Increment Contract headings; unchanged root and `specs/AGENTS.md` architecture-link checks also warn. This feature's documents and links are covered by the passing Markdown-link test, but the repository-wide strict acceptance checkbox remains open until those historical workspace records are separately repaired.
