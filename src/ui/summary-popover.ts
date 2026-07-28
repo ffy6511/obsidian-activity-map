@@ -1,11 +1,21 @@
 import { setIcon, type App } from 'obsidian';
 
+import {
+	HEADER_POPOVER_ACTION_REGISTRY,
+	normalizeHeaderPopoverActionLayout,
+	type HeaderPopoverActionId,
+	type HeaderPopoverActionLayoutItem,
+} from '../domain/header-popover-action-layout';
 import type { DistributionGrouping, DistributionItem } from '../query/distribution-query';
 import type { ActivityMapController } from './activity-map-controller';
 import type { ActivityMapViewModel } from './view-model';
 import { distributionActivation } from './distribution-activation';
 import { renderBreadcrumbs } from './components/breadcrumbs';
 import { renderChartLegend, type ChartLegendHandle } from './components/chart-legend';
+import {
+	renderHeaderPopoverActionLayoutEditor,
+	type HeaderPopoverActionLayoutEditorHandle,
+} from './components/header-popover-action-layout-editor';
 import {
 	renderDonutChart,
 	type ChartActivationSource,
@@ -78,6 +88,15 @@ export function createPosterExportAction(args: {
 	};
 }
 
+interface HeaderPopoverLongPress {
+	readonly actionId: HeaderPopoverActionId;
+	readonly source: HTMLButtonElement;
+	readonly pointerId: number | null;
+	readonly startX: number;
+	readonly startY: number;
+	readonly timer: number;
+}
+
 /** Interactive, pinnable header chart sharing the controller's query state. */
 export class SummaryPopover {
 	private element: HTMLElement | null = null;
@@ -92,6 +111,15 @@ export class SummaryPopover {
 		update(distribution: import('../query/distribution-query').DistributionResult): boolean;
 	} | null = null;
 	private controlsView: RangeControlsHandle | null = null;
+	private controlsHost: HTMLElement | null = null;
+	private actionLayoutEditor: HeaderPopoverActionLayoutEditorHandle | null = null;
+	private actionLayoutDraft: HeaderPopoverActionLayoutItem[] | null = null;
+	private actionLayoutCommitted: HeaderPopoverActionLayoutItem[] | null = null;
+	private actionLayoutFooter: HTMLElement | null = null;
+	private actionLayoutSaving = false;
+	private longPress: HeaderPopoverLongPress | null = null;
+	private consumeLongPressClick: HTMLButtonElement | null = null;
+	private renderedActionLayout = '';
 	private posterModal: { close(): void } | null = null;
 	private openingPoster = false;
 	// Live highlight handles for the mounted chart/legend, so locate can drive
@@ -175,8 +203,29 @@ export class SummaryPopover {
 		popover.addEventListener('keydown', (event) => {
 			if (event.key === 'Escape') {
 				event.preventDefault();
-				this.close(true);
+				if (this.actionLayoutEditor) this.cancelActionLayoutEdit();
+				else this.close(true);
 			}
+		});
+		popover.addEventListener('pointerdown', (event) => this.startLongPress(event));
+		popover.addEventListener('pointermove', (event) => this.cancelLongPressForMovement(event));
+		popover.addEventListener('pointerup', (event) => this.cancelLongPressForPointer(event));
+		popover.addEventListener('pointercancel', (event) => this.cancelLongPressForPointer(event));
+		popover.addEventListener(
+			'click',
+			(event) => {
+				const source = this.consumeLongPressClick;
+				const target = event.target as Node | null;
+				if (!source || !target || (target !== source && !source.contains(target))) return;
+				this.consumeLongPressClick = null;
+				event.preventDefault();
+				event.stopImmediatePropagation();
+			},
+			true,
+		);
+		popover.addEventListener('contextmenu', (event) => {
+			if (!this.actionLayoutEditor && !this.longPress) return;
+			event.preventDefault();
 		});
 		this.outsideHandler = (event) => {
 			const target = event.target;
@@ -238,7 +287,7 @@ export class SummaryPopover {
 	}
 
 	scheduleClose(): void {
-		if (this.pinned) return;
+		if (this.pinned || this.actionLayoutEditor) return;
 		this.cancelClose();
 		this.closeTimer =
 			this.trigger.ownerDocument.defaultView?.setTimeout(() => {
@@ -261,6 +310,9 @@ export class SummaryPopover {
 
 	close(restoreFocus: boolean): void {
 		this.cancelClose();
+		this.discardActionLayoutEdit();
+		this.clearLongPress();
+		this.consumeLongPressClick = null;
 		this.cancelLocate();
 		this.clearArmedFile();
 		if (this.outsideHandler)
@@ -283,6 +335,7 @@ export class SummaryPopover {
 		this.lastRenderKey = '';
 		this.distributionView = null;
 		this.controlsView = null;
+		this.controlsHost = null;
 		this.chartHandle = null;
 		this.legendHandle = null;
 		this.highlightedItemId = null;
@@ -290,6 +343,7 @@ export class SummaryPopover {
 		this.fileActivationHint = null;
 		this.pendingLocatePath = null;
 		this.pendingLocateGeneration = -1;
+		this.renderedActionLayout = '';
 		this.cancelLocateScroll?.();
 		this.cancelLocateScroll = null;
 		this.trigger.removeClass('is-pinned');
@@ -333,6 +387,24 @@ export class SummaryPopover {
 	}
 
 	private renderIfChanged(model: ActivityMapViewModel, force = false): void {
+		const layoutKey = actionLayoutKey(model.settings.headerPopoverActionLayout);
+		if (
+			this.actionLayoutEditor &&
+			!this.actionLayoutSaving &&
+			this.actionLayoutCommitted &&
+			!sameActionLayout(model.settings.headerPopoverActionLayout, this.actionLayoutCommitted)
+		) {
+			// An independent Settings save wins over an uncommitted Popover draft.
+			// Restore the committed projection without touching mounted result nodes.
+			this.discardActionLayoutEdit();
+			this.renderControls(model);
+		} else if (
+			!this.actionLayoutEditor &&
+			this.controlsHost &&
+			layoutKey !== this.renderedActionLayout
+		) {
+			this.renderControls(model);
+		}
 		const paused = model.tracking?.state === 'paused';
 		const key = `${String(model.queryGeneration)}:${model.loadState}:${String(paused)}:${this.expandedOther?.join(',') ?? ''}`;
 		if (!force && key === this.lastRenderKey) {
@@ -386,8 +458,10 @@ export class SummaryPopover {
 		if (!popover) return;
 		const focusedId = (popover.ownerDocument.activeElement as HTMLElement | null)?.dataset
 			.activityMapId;
+		this.discardActionLayoutEdit();
 		this.controlsView?.destroy();
 		this.controlsView = null;
+		this.controlsHost = null;
 		this.clearArmedFile();
 		// A rebuild replaces the chart/legend DOM. The old highlight handles are
 		// dead, so any pending locate clear cannot target them; cancel it. A
@@ -409,28 +483,8 @@ export class SummaryPopover {
 				})
 			: null;
 
-		this.controlsView = renderRangeControls({
-			container: popover,
-			metric: model.query.metric,
-			range: model.query.range,
-			onMetric: (metric) => {
-				this.clearArmedFile();
-				this.expandedOther = null;
-				void this.controller.dispatch({ kind: 'set-metric', metric });
-			},
-			onRange: (range) => {
-				this.clearArmedFile();
-				this.expandedOther = null;
-				void this.controller.dispatch({ kind: 'set-range', range });
-			},
-			leadingActions: [
-				this.trackingAction(model),
-				this.groupingAction(model),
-				this.posterExportAction(model),
-			],
-			leadingQueryAction: this.locateAction(model),
-			renderIcon: this.renderIcon,
-		});
+		this.controlsHost = popover.createDiv({ cls: 'activity-map-popover-controls' });
+		this.renderControls(model);
 
 		if (model.loadState === 'loading') {
 			popover.createEl('p', {
@@ -460,6 +514,207 @@ export class SummaryPopover {
 				.querySelector<HTMLElement>(`[data-activity-map-id="${css.escape(focusedId)}"]`)
 				?.focus();
 		this.position();
+	}
+
+	/** Rebuilds only the control row; chart, legend, breadcrumb, and status stay mounted. */
+	private renderControls(model: ActivityMapViewModel): void {
+		const host = this.controlsHost;
+		if (!host || this.actionLayoutEditor) return;
+		this.controlsView?.destroy();
+		host.empty();
+		this.controlsView = renderRangeControls({
+			container: host,
+			metric: model.query.metric,
+			range: model.query.range,
+			onMetric: (metric) => {
+				this.clearArmedFile();
+				this.expandedOther = null;
+				void this.controller.dispatch({ kind: 'set-metric', metric });
+			},
+			onRange: (range) => {
+				this.clearArmedFile();
+				this.expandedOther = null;
+				void this.controller.dispatch({ kind: 'set-range', range });
+			},
+			leadingActions: [
+				this.trackingAction(model),
+				this.groupingAction(model),
+				this.posterExportAction(model),
+			],
+			leadingQueryAction: this.locateAction(model),
+			actionLayout: model.settings.headerPopoverActionLayout,
+			renderIcon: this.renderIcon,
+		});
+		this.renderedActionLayout = actionLayoutKey(model.settings.headerPopoverActionLayout);
+	}
+
+	private startLongPress(event: PointerEvent): void {
+		if (this.actionLayoutEditor || this.longPress) return;
+		if (event.button !== undefined && event.button !== 0) return;
+		const target = event.target;
+		if (!target || typeof (target as Element).closest !== 'function') return;
+		const source = (target as Element).closest<HTMLButtonElement>(
+			'[data-header-popover-layout-action]',
+		);
+		if (!source || source.disabled) return;
+		const actionId = headerPopoverActionId(source.dataset.headerPopoverLayoutAction);
+		if (!actionId) return;
+		const view = this.trigger.ownerDocument.defaultView;
+		if (!view) return;
+		const pointerId = typeof event.pointerId === 'number' ? event.pointerId : null;
+		if (pointerId !== null && 'setPointerCapture' in source) {
+			try {
+				source.setPointerCapture(pointerId);
+			} catch {
+				// Pointer capture is unavailable in some WebViews; the Popover root
+				// still owns cancellation through bubbling pointer events.
+			}
+		}
+		const timer = view.setTimeout(() => {
+			const press = this.longPress;
+			if (!press || press.source !== source) return;
+			this.longPress = null;
+			this.releaseLongPressCapture(press);
+			this.consumeLongPressClick = source;
+			this.enterActionLayoutEdit();
+		}, 500);
+		this.longPress = {
+			actionId,
+			source,
+			pointerId,
+			startX: pointerCoordinate(event.clientX),
+			startY: pointerCoordinate(event.clientY),
+			timer,
+		};
+	}
+
+	private cancelLongPressForMovement(event: PointerEvent): void {
+		const press = this.longPress;
+		if (!press || !samePointer(press.pointerId, event.pointerId)) return;
+		const x = pointerCoordinate(event.clientX);
+		const y = pointerCoordinate(event.clientY);
+		if (Math.hypot(x - press.startX, y - press.startY) > 8) this.clearLongPress();
+	}
+
+	private cancelLongPressForPointer(event: PointerEvent): void {
+		const press = this.longPress;
+		if (press && samePointer(press.pointerId, event.pointerId)) this.clearLongPress();
+	}
+
+	private clearLongPress(): void {
+		const press = this.longPress;
+		if (!press) return;
+		this.trigger.ownerDocument.defaultView?.clearTimeout(press.timer);
+		this.releaseLongPressCapture(press);
+		this.longPress = null;
+	}
+
+	private releaseLongPressCapture(press: HeaderPopoverLongPress): void {
+		if (press.pointerId === null || !('releasePointerCapture' in press.source)) return;
+		try {
+			press.source.releasePointerCapture(press.pointerId);
+		} catch {
+			// A cancelled or detached pointer can no longer be released.
+		}
+	}
+
+	private enterActionLayoutEdit(): void {
+		const popover = this.element;
+		const host = this.controlsHost;
+		if (!popover || !host || this.actionLayoutEditor) return;
+		const model = this.controller.getViewModel();
+		this.cancelClose();
+		this.clearArmedFile();
+		this.controlsView?.destroy();
+		this.controlsView = null;
+		host.empty();
+		this.actionLayoutDraft = normalizeHeaderPopoverActionLayout(
+			model.settings.headerPopoverActionLayout,
+		);
+		this.actionLayoutCommitted = normalizeHeaderPopoverActionLayout(
+			model.settings.headerPopoverActionLayout,
+		);
+		popover.addClass('is-action-layout-editing');
+
+		const footer = popover.createDiv({ cls: 'activity-map-popover-layout-footer' });
+		this.actionLayoutFooter = footer;
+		const disabled = footer.createDiv({
+			cls: 'activity-map-popover-layout-disabled',
+		});
+		const actions = footer.createDiv({ cls: 'activity-map-popover-layout-actions' });
+		const cancel = actions.createEl('button', { text: 'Cancel', attr: { type: 'button' } });
+		const save = actions.createEl('button', {
+			text: 'Save',
+			cls: 'mod-cta',
+			attr: { type: 'button' },
+		});
+		const status = footer.createEl('p', {
+			cls: 'activity-map-popover-layout-status',
+			attr: { 'aria-live': 'polite', 'aria-atomic': 'true' },
+		});
+		cancel.addEventListener('click', () => this.cancelActionLayoutEdit());
+		save.addEventListener('click', () => {
+			void this.saveActionLayoutEdit(save, cancel, status);
+		});
+		this.actionLayoutEditor = renderHeaderPopoverActionLayoutEditor({
+			container: host,
+			layout: this.actionLayoutDraft,
+			footerContainer: disabled,
+			presentation: 'popover',
+			selectedDate:
+				model.query.range.mode === 'day' ? model.query.range.localDate : undefined,
+			showFixedNavigation: model.query.range.mode === 'day',
+			onChange: (layout) => {
+				this.actionLayoutDraft = layout;
+			},
+			renderIcon: this.renderIcon,
+		});
+		this.position();
+	}
+
+	private async saveActionLayoutEdit(
+		save: HTMLButtonElement,
+		cancel: HTMLButtonElement,
+		status: HTMLElement,
+	): Promise<void> {
+		const draft = this.actionLayoutDraft;
+		if (!draft || this.actionLayoutSaving) return;
+		this.actionLayoutSaving = true;
+		save.disabled = true;
+		cancel.disabled = true;
+		this.actionLayoutEditor?.setDisabled(true);
+		try {
+			await this.controller.dispatch({
+				kind: 'update-settings',
+				patch: { headerPopoverActionLayout: draft },
+			});
+			this.actionLayoutSaving = false;
+			this.discardActionLayoutEdit();
+			this.renderControls(this.controller.getViewModel());
+		} catch (error) {
+			status.textContent = `Could not save Header Popover controls: ${messageForError(error)}. Retry or Cancel.`;
+			this.actionLayoutSaving = false;
+			save.disabled = false;
+			cancel.disabled = false;
+			this.actionLayoutEditor?.setDisabled(false);
+		}
+	}
+
+	private cancelActionLayoutEdit(): void {
+		this.discardActionLayoutEdit();
+		this.renderControls(this.controller.getViewModel());
+	}
+
+	/** Drops the volatile editor without any settings write. */
+	private discardActionLayoutEdit(): void {
+		this.actionLayoutEditor?.destroy();
+		this.actionLayoutEditor = null;
+		this.actionLayoutDraft = null;
+		this.actionLayoutCommitted = null;
+		this.actionLayoutFooter?.remove();
+		this.actionLayoutFooter = null;
+		this.actionLayoutSaving = false;
+		this.element?.removeClass('is-action-layout-editing');
 	}
 
 	private groupingAction(model: ActivityMapViewModel): RangeControlAction {
@@ -881,4 +1136,33 @@ function isLiveTodayQuery(model: ActivityMapViewModel): boolean {
 		model.query.metric === 'activeMs' &&
 		model.query.range.mode === 'day'
 	);
+}
+
+function headerPopoverActionId(value: string | undefined): HeaderPopoverActionId | null {
+	return HEADER_POPOVER_ACTION_REGISTRY.find((entry) => entry.id === value)?.id ?? null;
+}
+
+function pointerCoordinate(value: number | undefined): number {
+	return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function samePointer(expected: number | null, actual: number | undefined): boolean {
+	return expected === null || actual === undefined || expected === actual;
+}
+
+function actionLayoutKey(layout: readonly HeaderPopoverActionLayoutItem[]): string {
+	return normalizeHeaderPopoverActionLayout(layout)
+		.map((item) => `${item.id}:${String(item.order)}:${String(item.enabled)}`)
+		.join('|');
+}
+
+function sameActionLayout(
+	left: readonly HeaderPopoverActionLayoutItem[],
+	right: readonly HeaderPopoverActionLayoutItem[],
+): boolean {
+	return actionLayoutKey(left) === actionLayoutKey(right);
+}
+
+function messageForError(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
 }

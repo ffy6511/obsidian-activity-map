@@ -24,7 +24,7 @@
 | Current blockers | `0` |
 | Potential blockers | `2` |
 
-- Next action: Project the committed layout into the live Header Popover and add its long-press edit session in Phase 2.
+- Next action: Synchronize the product and architecture documentation, then collect the separate desktop/mobile owner UAT evidence in Phase 3.
 
 ### Current blockers
 
@@ -32,14 +32,14 @@
 
 ### Potential blockers
 
-- `R1` (Owner: Agent / Phase 2): The current hover Popover may receive a leave, context-menu, or pointer-cancel event during a long press or touch drag; verify the real desktop and mobile gesture before treating the direct editor as accepted.
-- `R2` (Owner: Agent / Phase 2): The custom metric and range listboxes must become inert and draggable in edit mode without losing the existing focus, close, or live-update contracts; cover the DOM path before owner UAT.
+- `R1` (Owner: Agent / Phase 3): The current hover Popover may receive a leave, context-menu, or pointer-cancel event during a long press or touch drag; collect separate real desktop and mobile evidence before treating the direct editor as accepted.
+- `R2` (Owner: Agent / Phase 3): Verify in Obsidian that entering edit mode makes the metric and range controls inert without disturbing ordinary custom-listbox focus, close, or live-update behavior after exit.
 
 ## Phases
 
 - [x] Phase 0: Add the validated action-layout preference and pure move projection.
 - [x] Phase 1: Add the one-row, staged Settings editor.
-- [ ] Phase 2: Add Header Popover long-press editing without unmounting results.
+- [x] Phase 2: Add Header Popover long-press editing without unmounting results.
 - [ ] Phase 3: Synchronize product documentation, run gates, and collect owner UAT.
 
 ## Background
@@ -346,12 +346,12 @@ Let users make the same staged layout change directly in the live Header Popover
 
 ### Tasks
 
-- [ ] Refactor `renderRangeControls` around the registry-backed left/right action projection while retaining current action handlers, DOM IDs, metric/range listboxes, day navigation, and in-place update APIs.
-- [ ] Mount the reusable action-layout editor in `SummaryPopover` edit mode. Add 500 ms long-press detection and click/context-menu suppression only after the gesture enters edit mode.
-- [ ] Make all visible configurable controls wobble and draggable in edit mode; keep center navigation, chart, legend, breadcrumb, loading/error status, pinning, and file-activation surfaces mounted and non-draggable.
-- [ ] Add the lower footer with disabled controls on the left and fixed `Cancel` / `Save` on the right. Use the shared draft/reducer and controller persistence path.
-- [ ] Implement cancellation on Escape, close, structural rerender, and externally committed layout changes; dispose timers, pointer capture, custom listbox listeners, and edit affordances at their owning boundary.
-- [ ] Add DOM behavior tests for normal short activation, long-press activation suppression, drag/reorder/disable/restore, rejected targets, save/cancel/failure behavior, close/rerender disposal, retained chart/legend node identity, and existing Popover interactions.
+- [x] Refactor `renderRangeControls` around the registry-backed left/right action projection while retaining current action handlers, DOM IDs, metric/range listboxes, day navigation, and in-place update APIs.
+- [x] Mount the reusable action-layout editor in `SummaryPopover` edit mode. Add 500 ms long-press detection and click/context-menu suppression only after the gesture enters edit mode.
+- [x] Make all visible configurable controls wobble and draggable in edit mode; keep center navigation, chart, legend, breadcrumb, loading/error status, pinning, and file-activation surfaces mounted and non-draggable.
+- [x] Add the lower footer with disabled controls on the left and fixed `Cancel` / `Save` on the right. Use the shared draft/reducer and controller persistence path.
+- [x] Implement cancellation on Escape, close, structural rerender, and externally committed layout changes; dispose timers, pointer capture, custom listbox listeners, and edit affordances at their owning boundary.
+- [x] Add DOM behavior tests for normal short activation, long-press activation suppression, drag/reorder/disable/restore, rejected targets, save/cancel/failure behavior, close/rerender disposal, retained chart/legend node identity, and existing Popover interactions.
 
 ### Files
 
@@ -361,18 +361,28 @@ Let users make the same staged layout change directly in the live Header Popover
 - `styles.css`
 - `tests/ui/summary-popover.test.ts`
 - `tests/ui/header-popover-action-layout-editor.test.ts`
+- `tests/ui/header-popover-action-layout-popover.test.ts`
 - `tests/ui/grouping-controls.behavior.test.ts`
 - `tests/ui/locate-current-file.behavior.test.ts`
 - `tests/ui/accessibility.test.ts`
 
 ### Acceptance Criteria
 
-- [ ] A short activation retains the current handler behavior; a 500 ms long press enters edit mode without triggering the pressed control.
-- [ ] In edit mode the user sees all enabled configurable controls wobble, can reorder only inside their side, can move controls to the footer, and can restore a disabled control only to its registry side.
-- [ ] Chart, legend, breadcrumb, and status remain visible and preserve their mounted DOM identity while entering/exiting edit mode and during draft-only moves.
-- [ ] `Cancel`, Escape, Popover close, structural rerender, and external committed-layout change discard the local draft; `Save` is the only persistence path.
-- [ ] The footer keeps disabled controls left and `Cancel`/`Save` right; a rejected save returns to an editable, correctly announced draft.
-- [ ] Existing day navigation, Locate, metric/range listboxes, grouping, tracking, pinning, live updates, and file-activation regression tests pass.
+- [x] A short activation retains the current handler behavior; a 500 ms long press enters edit mode without triggering the pressed control.
+- [x] In edit mode the user sees all enabled configurable controls wobble, can reorder only inside their side, can move controls to the footer, and can restore a disabled control only to its registry side.
+- [x] Chart, legend, breadcrumb, and status remain visible and preserve their mounted DOM identity while entering/exiting edit mode and during draft-only moves.
+- [x] `Cancel`, Escape, Popover close, structural rerender, and external committed-layout change discard the local draft; `Save` is the only persistence path.
+- [x] The footer keeps disabled controls left and `Cancel`/`Save` right; a rejected save returns to an editable, correctly announced draft.
+- [x] Existing day navigation, Locate, metric/range listboxes, grouping, tracking, pinning, live updates, and file-activation regression tests pass.
+
+### Evidence — 2026-07-28
+
+- `npx prettier --write src/ui/components/header-popover-action-layout-editor.ts src/ui/components/range-controls.ts src/ui/summary-popover.ts styles.css tests/ui/header-popover-action-layout-popover.test.ts` completed.
+- `npm run check` passed.
+- `npm run lint` passed.
+- `npm test -- --run` passed: 338 tests, 0 failures. The direct-Popover DOM coverage verifies committed layout projection, normal short activation, 500 ms long press, retained chart/legend nodes, cancel rollback, disabled-footer save, and failed-save retention.
+- `npm run build` passed.
+- `git diff --check` passed.
 
 ## Phase 3: Synchronize Documentation and Verify the Runnable Journey
 

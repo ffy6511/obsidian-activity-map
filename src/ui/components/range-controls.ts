@@ -1,5 +1,11 @@
 import { setIcon } from 'obsidian';
 
+import {
+	HEADER_POPOVER_ACTION_REGISTRY,
+	projectHeaderPopoverActionLayout,
+	type HeaderPopoverActionId,
+	type HeaderPopoverActionLayoutItem,
+} from '../../domain/header-popover-action-layout';
 import type { RangeMode } from '../../query/date-range';
 import type { MetricKey } from '../../query/path-projection';
 
@@ -35,6 +41,7 @@ interface DropdownOption<T extends string> {
 }
 
 interface DropdownHandle {
+	readonly trigger: HTMLButtonElement;
 	destroy(): void;
 }
 
@@ -67,32 +74,37 @@ export function renderRangeControls(args: {
 	leadingActions?: readonly RangeControlAction[];
 	/** Action rendered immediately left of the metric dropdown, inside the query area. */
 	leadingQueryAction?: LeadingQueryAction;
+	/**
+	 * A normalized Header Popover layout. The registry projection remains the
+	 * only source of side placement; handlers still arrive through the existing
+	 * action and query callbacks below.
+	 */
+	actionLayout?: readonly HeaderPopoverActionLayoutItem[];
 	renderIcon?: (container: HTMLElement, icon: string) => void;
 }): RangeControlsHandle {
 	const controls = args.container.createDiv({ cls: 'activity-map-controls' });
 	const actionButtons = new Map<string, HTMLButtonElement>();
 	const dropdowns: DropdownHandle[] = [];
 	const renderIcon = args.renderIcon ?? setIcon;
+	const sourceActions = new Map<string, RangeControlAction>();
+	for (const action of args.leadingActions ?? []) sourceActions.set(action.id, action);
+	if (args.leadingQueryAction)
+		sourceActions.set(args.leadingQueryAction.id, args.leadingQueryAction);
+	const projection = args.actionLayout
+		? projectHeaderPopoverActionLayout(args.actionLayout)
+		: null;
+	const layout = projection
+		? {
+				left: projection.left.map((item) => item.id),
+				right: projection.right.map((item) => item.id),
+			}
+		: fallbackLayout(args.leadingActions ?? [], args.leadingQueryAction);
 
-	if (args.leadingActions?.length) {
-		const actionGroup = controls.createDiv({
-			cls: 'activity-map-control-actions activity-map-control-leading',
-		});
-		for (const action of args.leadingActions) {
-			const button = iconButton(
-				actionGroup,
-				action.icon,
-				action.label,
-				action.id,
-				() => action.onActivate(),
-				'',
-				action.pressed,
-				renderIcon,
-			);
-			button.disabled = action.disabled === true;
-			actionButtons.set(action.id, button);
-		}
-	}
+	const leading = controls.createDiv({
+		cls: 'activity-map-control-actions activity-map-control-leading',
+		attr: { 'data-header-popover-layout-side': 'left' },
+	});
+	for (const id of layout.left) renderLayoutAction(leading, id);
 
 	if (args.range.mode === 'day') {
 		const dayNavigation = controls.createDiv({ cls: 'activity-map-day-navigation' });
@@ -160,64 +172,64 @@ export function renderRangeControls(args: {
 		);
 	}
 
-	const queryControls = controls.createDiv({ cls: 'activity-map-query-controls' });
-	if (args.leadingQueryAction) {
-		const action = args.leadingQueryAction;
-		// When an activeIcon is set, render the button empty and stack the two
-		// glyphs ourselves so its owner can cross-fade them with a state class.
-		// Otherwise fall back to the shared single-icon button.
-		const button = iconButton(
-			queryControls,
-			'',
-			action.label,
-			action.id,
-			() => action.onActivate(),
-			'',
-			action.pressed,
-			// Empty container; icons are stacked below.
-			() => {},
-		);
-		if (action.activeIcon) {
-			const stack = button.createDiv({
-				cls: 'activity-map-control-icon',
-				attr: { 'aria-hidden': 'true', 'data-activity-map-icon-stack': '' },
+	const queryControls = controls.createDiv({
+		cls: 'activity-map-query-controls',
+		attr: { 'data-header-popover-layout-side': 'right' },
+	});
+	for (const id of layout.right) renderLayoutAction(queryControls, id);
+
+	function renderLayoutAction(container: HTMLElement, id: HeaderPopoverActionId): void {
+		if (id === 'metric') {
+			const metricControl = container.createDiv({ cls: 'activity-map-metric-control' });
+			const dropdown = renderDropdownControl({
+				container: metricControl,
+				id,
+				label: 'Metric',
+				selected: args.metric,
+				options: METRIC_OPTIONS,
+				icon: iconForMetric(args.metric),
+				iconOnly: true,
+				onSelect: args.onMetric,
+				renderIcon,
 			});
-			const rest = stack.createSpan({ cls: 'activity-map-locate-icon' });
-			const pressed = stack.createSpan({ cls: 'activity-map-locate-icon-fixed' });
-			renderIcon(rest, action.icon);
-			renderIcon(pressed, action.activeIcon);
-		} else {
-			renderIcon(button, action.icon);
+			dropdown.trigger.setAttr('data-header-popover-layout-action', id);
+			dropdowns.push(dropdown);
+			return;
 		}
+		if (id === 'date-range') {
+			const dropdown = renderDropdownControl({
+				container,
+				id,
+				label: 'Date range',
+				selected: rangeValue(args.range),
+				options: RANGE_OPTIONS,
+				onSelect: (value) => args.onRange(rangeForValue(value, args.range)),
+				renderIcon,
+			});
+			dropdown.trigger.setAttr('data-header-popover-layout-action', id);
+			dropdowns.push(dropdown);
+			return;
+		}
+
+		const action = sourceActions.get(id);
+		if (!action) return;
+		const button =
+			id === 'locate-current-file'
+				? renderLeadingQueryAction(container, action, renderIcon)
+				: iconButton(
+						container,
+						action.icon,
+						action.label,
+						action.id,
+						() => action.onActivate(),
+						'',
+						action.pressed,
+						renderIcon,
+					);
 		button.disabled = action.disabled === true;
+		button.setAttr('data-header-popover-layout-action', id);
 		actionButtons.set(action.id, button);
 	}
-	const metricControl = queryControls.createDiv({ cls: 'activity-map-metric-control' });
-	dropdowns.push(
-		renderDropdownControl({
-			container: metricControl,
-			id: 'metric',
-			label: 'Metric',
-			selected: args.metric,
-			options: METRIC_OPTIONS,
-			icon: iconForMetric(args.metric),
-			iconOnly: true,
-			onSelect: args.onMetric,
-			renderIcon,
-		}),
-	);
-
-	dropdowns.push(
-		renderDropdownControl({
-			container: queryControls,
-			id: 'date-range',
-			label: 'Date range',
-			selected: rangeValue(args.range),
-			options: RANGE_OPTIONS,
-			onSelect: (value) => args.onRange(rangeForValue(value, args.range)),
-			renderIcon,
-		}),
-	);
 
 	return {
 		updateAction(action) {
@@ -239,6 +251,58 @@ export function renderRangeControls(args: {
 			for (const dropdown of dropdowns) dropdown.destroy();
 		},
 	};
+}
+
+function fallbackLayout(
+	leadingActions: readonly RangeControlAction[],
+	leadingQueryAction: LeadingQueryAction | undefined,
+): {
+	readonly left: readonly HeaderPopoverActionId[];
+	readonly right: readonly HeaderPopoverActionId[];
+} {
+	const left = leadingActions.flatMap((action) => {
+		const definition = HEADER_POPOVER_ACTION_REGISTRY.find((entry) => entry.id === action.id);
+		return definition?.side === 'left' ? [definition.id] : [];
+	});
+	const locate = HEADER_POPOVER_ACTION_REGISTRY.find(
+		(entry) => entry.id === leadingQueryAction?.id && entry.side === 'right',
+	)?.id;
+	return {
+		left,
+		right: [...(locate ? [locate] : []), 'metric', 'date-range'],
+	};
+}
+
+function renderLeadingQueryAction(
+	container: HTMLElement,
+	action: LeadingQueryAction,
+	renderIcon: (container: HTMLElement, icon: string) => void,
+): HTMLButtonElement {
+	// When an activeIcon is set, render the button empty and stack the two
+	// glyphs ourselves so its owner can cross-fade them with a state class.
+	const button = iconButton(
+		container,
+		'',
+		action.label,
+		action.id,
+		() => action.onActivate(),
+		'',
+		action.pressed,
+		() => {},
+	);
+	if (action.activeIcon) {
+		const stack = button.createDiv({
+			cls: 'activity-map-control-icon',
+			attr: { 'aria-hidden': 'true', 'data-activity-map-icon-stack': '' },
+		});
+		const rest = stack.createSpan({ cls: 'activity-map-locate-icon' });
+		const pressed = stack.createSpan({ cls: 'activity-map-locate-icon-fixed' });
+		renderIcon(rest, action.icon);
+		renderIcon(pressed, action.activeIcon);
+	} else {
+		renderIcon(button, action.icon);
+	}
+	return button;
 }
 
 function renderDropdownControl<T extends string>(args: {
@@ -374,6 +438,7 @@ function renderDropdownControl<T extends string>(args: {
 	};
 	document.addEventListener('pointerdown', closeOnOutsidePointerDown, true);
 	return {
+		trigger,
 		destroy: () => document.removeEventListener('pointerdown', closeOnOutsidePointerDown, true),
 	};
 }

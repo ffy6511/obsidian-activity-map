@@ -23,6 +23,12 @@ export interface HeaderPopoverActionLayoutEditorOptions {
 	/** The Settings preview is intentionally inert; callers own persistence. */
 	renderIcon?: (container: HTMLElement, icon: string) => void;
 	selectedDate?: string;
+	/** Render the recovery controls outside the row, for the Popover edit footer. */
+	footerContainer?: HTMLElement;
+	/** The direct Popover editor shares the row chrome instead of the Settings card. */
+	presentation?: 'settings' | 'popover';
+	/** Non-day Popover ranges have no fixed previous/date/next control. */
+	showFixedNavigation?: boolean;
 }
 
 interface ActionVisual {
@@ -48,7 +54,10 @@ const ACTION_VISUALS: Record<HeaderPopoverActionId, ActionVisual> = {
 export function renderHeaderPopoverActionLayoutEditor(
 	args: HeaderPopoverActionLayoutEditorOptions,
 ): HeaderPopoverActionLayoutEditorHandle {
-	const root = args.container.createDiv({ cls: 'activity-map-action-layout-editor' });
+	const presentation = args.presentation ?? 'settings';
+	const root = args.container.createDiv({
+		cls: `activity-map-action-layout-editor activity-map-action-layout-editor-${presentation}`,
+	});
 	const content = root.createDiv({ cls: 'activity-map-action-layout-editor-content' });
 	const liveRegion = root.createDiv({
 		cls: 'activity-map-action-layout-live-region',
@@ -106,14 +115,15 @@ export function renderHeaderPopoverActionLayoutEditor(
 
 	function render(): void {
 		content.empty();
+		args.footerContainer?.empty();
 		root.toggleClass('is-action-layout-disabled', disabled);
 		const projection = projectHeaderPopoverActionLayout(layout);
 		const row = content.createDiv({ cls: 'activity-map-action-layout-row' });
 		renderSide(row, 'left', projection.left);
-		renderFixedNavigation(row);
+		if (args.showFixedNavigation !== false) renderFixedNavigation(row);
 		renderSide(row, 'right', projection.right);
 
-		const disabledArea = content.createDiv({
+		const disabledArea = (args.footerContainer ?? content).createDiv({
 			cls: 'activity-map-action-layout-disabled-area',
 			attr: {
 				'data-header-popover-layout-destination': 'disabled',
@@ -239,6 +249,7 @@ export function renderHeaderPopoverActionLayoutEditor(
 		if (keyboardAction !== id) return;
 		if (event.key === 'Escape') {
 			event.preventDefault();
+			event.stopPropagation();
 			keyboardAction = null;
 			root.removeClass('is-action-layout-keyboard-dragging');
 			announce(`Stopped moving ${ACTION_VISUALS[id].label}.`);

@@ -218,6 +218,16 @@
 	background: var(--background-primary-alt);
 }
 
+/* Direct editing replaces only the control-row interaction layer. Result
+   nodes remain below it, while the recovery controls move into a footer. */
+.activity-map-action-layout-editor-popover {
+	min-inline-size: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+}
+
 .activity-map-action-layout-row {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
@@ -361,6 +371,51 @@
 	min-block-size: 1.3em;
 	margin: var(--size-2-2) 0 0;
 	color: var(--text-muted);
+}
+
+.activity-map-popover-layout-footer {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) max-content;
+	gap: var(--size-4-2);
+	align-items: center;
+	border-top: 1px solid var(--background-modifier-border);
+	padding-top: var(--size-4-3);
+}
+
+.activity-map-popover-layout-footer .activity-map-action-layout-disabled-area {
+	min-block-size: var(--input-height);
+	margin: 0;
+	border: 0;
+	padding: 0;
+}
+
+.activity-map-popover-layout-actions {
+	display: flex;
+	gap: var(--size-2-2);
+	justify-self: end;
+}
+
+.activity-map-popover-layout-status {
+	grid-column: 1 / -1;
+	min-block-size: 1.3em;
+	margin: 0;
+	color: var(--text-muted);
+}
+
+/* Wobble is scoped to the temporary direct-edit session. The non-motion focus
+   ring and contrast change above remain available when animation is reduced. */
+.activity-map-chart-popover.is-action-layout-editing .activity-map-action-layout-control {
+	animation: activity-map-action-layout-wobble 110ms ease-in-out infinite alternate;
+}
+
+@keyframes activity-map-action-layout-wobble {
+	from {
+		transform: rotate(-1.5deg);
+	}
+
+	to {
+		transform: rotate(1.5deg);
+	}
 }
 
 @media (max-width: 42rem) {
@@ -824,6 +879,7 @@
 	.activity-map-chart-popover .activity-map-popover-path,
 	.activity-map-chart-popover .activity-map-popover-legend,
 	.activity-map-popover button.activity-map-control-button,
+	.activity-map-action-layout-control,
 	.activity-map-popover
 		button[data-activity-map-id='locate-current-file']
 		.activity-map-locate-icon,
