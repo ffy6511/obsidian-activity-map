@@ -7,6 +7,12 @@
  * persistence and serialization.
  */
 
+import {
+	defaultHeaderPopoverActionLayout,
+	normalizeHeaderPopoverActionLayout,
+	type HeaderPopoverActionLayoutItem,
+} from './header-popover-action-layout';
+
 /** Rolling-average windows supported by the query engine. `all` performs no division for totals. */
 export type AverageWindowDays = 7 | 30 | 90 | 'all';
 
@@ -29,6 +35,7 @@ export interface ActivityMapSettings {
 	headerPopoverGrouping: 'path' | 'file';
 	headerPopoverMetric: HeaderPopoverMetric;
 	headerPopoverRange: HeaderPopoverRange;
+	headerPopoverActionLayout: HeaderPopoverActionLayoutItem[];
 	idleThresholdMs: number;
 	recoveryLimitMs: number;
 	editSilenceMs: number;
@@ -49,6 +56,7 @@ export const DEFAULT_SETTINGS: ActivityMapSettings = {
 	headerPopoverGrouping: 'path',
 	headerPopoverMetric: 'activeMs',
 	headerPopoverRange: 'day',
+	headerPopoverActionLayout: defaultHeaderPopoverActionLayout(),
 	// 180 s — PRD default idle threshold; adjustable 30–1800 s.
 	idleThresholdMs: 180_000,
 	// 30 min — gaps up to here surface a pending include/exclude decision.
@@ -135,6 +143,9 @@ export function normalizeSettings(input: unknown): ActivityMapSettings {
 		headerPopoverRange: isHeaderPopoverRange(source.headerPopoverRange)
 			? source.headerPopoverRange
 			: DEFAULT_SETTINGS.headerPopoverRange,
+		headerPopoverActionLayout: normalizeHeaderPopoverActionLayout(
+			source.headerPopoverActionLayout,
+		),
 		idleThresholdMs: clampNumber(
 			source.idleThresholdMs,
 			RANGES.idleThresholdMs,

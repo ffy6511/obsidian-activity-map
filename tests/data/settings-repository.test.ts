@@ -2,6 +2,7 @@ import { describe, expect, it } from '../helpers/test-harness';
 
 import { SettingsRepository, type SettingsStore } from '../../src/data/settings-repository';
 import { DEFAULT_SETTINGS } from '../../src/domain/settings';
+import { moveHeaderPopoverAction } from '../../src/domain/header-popover-action-layout';
 
 /** In-memory SettingsStore mirroring Obsidian Plugin loadData/saveData. */
 function memoryStore(): SettingsStore & { data: unknown } {
@@ -34,6 +35,9 @@ describe('settings repository load', () => {
 		expect(settings.headerPopoverGrouping).toBe('path');
 		expect(settings.headerPopoverMetric).toBe('activeMs');
 		expect(settings.headerPopoverRange).toBe('day');
+		expect(settings.headerPopoverActionLayout).toEqual(
+			DEFAULT_SETTINGS.headerPopoverActionLayout,
+		);
 		expect(deviceIdAssigned).toBeTrue();
 		expect(settings.deviceId).toBeDefined();
 	});
@@ -104,6 +108,21 @@ describe('settings repository update', () => {
 		expect(reloaded.settings.headerPopoverRange).toBe('average-30');
 	});
 
+	it('persists a normalized Header Popover action layout across repository reloads', async () => {
+		const store = memoryStore();
+		const repo = new SettingsRepository(store);
+		const { settings } = await repo.load();
+		const moved = moveHeaderPopoverAction(settings.headerPopoverActionLayout, 'poster-export', {
+			kind: 'disabled',
+		});
+		expect(moved.kind).toBe('moved');
+		if (moved.kind !== 'moved') return;
+		await repo.update({ headerPopoverActionLayout: moved.layout });
+
+		const reloaded = await new SettingsRepository(store).load();
+		expect(reloaded.settings.headerPopoverActionLayout).toEqual(moved.layout);
+	});
+
 	it('a failed save leaves the previous effective value', async () => {
 		const failingStore: SettingsStore = {
 			async loadData() {
@@ -116,6 +135,7 @@ describe('settings repository update', () => {
 		const repo = new SettingsRepository(failingStore);
 		await repo.load();
 		const before = repo.get()?.idleThresholdMs;
+		const beforeLayout = repo.get()?.headerPopoverActionLayout;
 		let threw = false;
 		try {
 			await repo.update({ idleThresholdMs: 90_000 });
@@ -124,6 +144,7 @@ describe('settings repository update', () => {
 		}
 		expect(threw).toBeTrue();
 		expect(repo.get()?.idleThresholdMs).toBe(before);
+		expect(repo.get()?.headerPopoverActionLayout).toEqual(beforeLayout);
 	});
 
 	it('clamps out-of-range patches into the documented ranges', async () => {

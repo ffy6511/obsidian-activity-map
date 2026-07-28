@@ -24,7 +24,7 @@
 | Current blockers | `0` |
 | Potential blockers | `2` |
 
-- Next action: Implement the validated, registry-backed action-layout preference and its failure-path tests in Phase 0.
+- Next action: Build the one-row staged Settings editor in Phase 1 on the validated action-layout contract.
 
 ### Current blockers
 
@@ -37,7 +37,7 @@
 
 ## Phases
 
-- [ ] Phase 0: Add the validated action-layout preference and pure move projection.
+- [x] Phase 0: Add the validated action-layout preference and pure move projection.
 - [ ] Phase 1: Add the one-row, staged Settings editor.
 - [ ] Phase 2: Add Header Popover long-press editing without unmounting results.
 - [ ] Phase 3: Synchronize product documentation, run gates, and collect owner UAT.
@@ -269,10 +269,10 @@ Make one durable, safe layout contract available to both surfaces before any dra
 
 ### Tasks
 
-- [ ] Add a narrow domain module containing the immutable six-action registry, default layout, normalizer, side-aware projection, and pure move reducer.
-- [ ] Add `headerPopoverActionLayout` to `ActivityMapSettings` and `DEFAULT_SETTINGS`; normalize it at the settings boundary without accepting a persisted side, label, callback, or unknown action.
-- [ ] Preserve the current six-control visual order as the first-run default and serialize the canonical layout through the existing settings repository/controller path.
-- [ ] Add focused domain and repository tests for absent/legacy settings, malformed records, duplicates, unknown IDs, fractional/negative orders, missing entries, same-side reorder, disable/re-enable, empty-side insertion, cross-side rejection, reload, serialized saves, and rejected saves.
+- [x] Add a narrow domain module containing the immutable six-action registry, default layout, normalizer, side-aware projection, and pure move reducer.
+- [x] Add `headerPopoverActionLayout` to `ActivityMapSettings` and `DEFAULT_SETTINGS`; normalize it at the settings boundary without accepting a persisted side, label, callback, or unknown action.
+- [x] Preserve the current six-control visual order as the first-run default and serialize the canonical layout through the existing settings repository/controller path.
+- [x] Add focused domain and repository tests for absent/legacy settings, malformed records, duplicates, unknown IDs, fractional/negative orders, missing entries, same-side reorder, disable/re-enable, empty-side insertion, cross-side rejection, reload, serialized saves, and rejected saves.
 
 ### Files
 
@@ -286,11 +286,19 @@ Make one durable, safe layout contract available to both surfaces before any dra
 
 ### Acceptance Criteria
 
-- [ ] Absent settings normalize to the current tracking/grouping/poster-export | Locate/metric/date-range order, all enabled.
-- [ ] Every normalized layout contains each of the six recognized IDs exactly once, has deterministic side-local order, and cannot encode a different side.
-- [ ] A pure reducer can reorder only inside an action's side, move it to disabled, and restore it into an explicit index on its registry side.
-- [ ] A failed `SettingsRepository` save leaves the controller's committed layout and all runtime behavior unchanged.
-- [ ] Focused domain, repository, and controller tests pass without relying on a mounted Popover.
+- [x] Absent settings normalize to the current tracking/grouping/poster-export | Locate/metric/date-range order, all enabled.
+- [x] Every normalized layout contains each of the six recognized IDs exactly once, has deterministic side-local order, and cannot encode a different side.
+- [x] A pure reducer can reorder only inside an action's side, move it to disabled, and restore it into an explicit index on its registry side.
+- [x] A failed `SettingsRepository` save leaves the controller's committed layout and all runtime behavior unchanged.
+- [x] Focused domain, repository, and controller tests pass without relying on a mounted Popover.
+
+### Evidence — 2026-07-28
+
+- `npm run lint` passed.
+- `npm run check` passed.
+- `npm test -- --run` passed: 330 tests, 0 failures. This includes action-layout normalization, same-side move, recovery-area restore, wrong-side rejection, repository reload, and failed-save retention coverage.
+- `npx prettier --check src/domain/header-popover-action-layout.ts src/domain/settings.ts tests/domain/header-popover-action-layout.test.ts tests/data/settings-repository.test.ts` passed after formatting.
+- `git diff --check` passed.
 
 ## Phase 1: Add the One-Row Settings Editor
 
