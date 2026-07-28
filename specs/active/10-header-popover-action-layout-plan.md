@@ -24,7 +24,7 @@
 | Current blockers | `0` |
 | Potential blockers | `2` |
 
-- Next action: Build the one-row staged Settings editor in Phase 1 on the validated action-layout contract.
+- Next action: Project the committed layout into the live Header Popover and add its long-press edit session in Phase 2.
 
 ### Current blockers
 
@@ -38,7 +38,7 @@
 ## Phases
 
 - [x] Phase 0: Add the validated action-layout preference and pure move projection.
-- [ ] Phase 1: Add the one-row, staged Settings editor.
+- [x] Phase 1: Add the one-row, staged Settings editor.
 - [ ] Phase 2: Add Header Popover long-press editing without unmounting results.
 - [ ] Phase 3: Synchronize product documentation, run gates, and collect owner UAT.
 
@@ -308,11 +308,11 @@ Give users a safe, staged WYSIWYG way to customize the complete Header Popover r
 
 ### Tasks
 
-- [ ] Add a reusable action-layout editor component that receives a committed layout or local draft, the registry projection, move callbacks, and a presentation mode; do not duplicate sorting or validation in Settings.
-- [ ] Add one `Header Popover controls` section to `ActivityMapSettingsTab`. Render a single inert day-mode WYSIWYG row with left actions, fixed date navigation, right actions, and a lower disabled drop area; do not render separate side lists.
-- [ ] Keep this section's draft separate from Settings controls that retain their existing immediate-save behavior. Add explicit `Save` and `Cancel`; discard the layout draft on tab hide/re-display.
-- [ ] On Save, dispatch one `update-settings` patch and wait for durable success. On failure, preserve the editor draft and show an actionable message; on Cancel, restore the committed layout without a write.
-- [ ] Support Pointer Events and the shared keyboard move contract with proper labels, insertion/constraint announcements, visible focus, and reduced-motion-safe affordances.
+- [x] Add a reusable action-layout editor component that receives a committed layout or local draft, the registry projection, move callbacks, and a presentation mode; do not duplicate sorting or validation in Settings.
+- [x] Add one `Header Popover controls` section to `ActivityMapSettingsTab`. Render a single inert day-mode WYSIWYG row with left actions, fixed date navigation, right actions, and a lower disabled drop area; do not render separate side lists.
+- [x] Keep this section's draft separate from Settings controls that retain their existing immediate-save behavior. Add explicit `Save` and `Cancel`; discard the layout draft on tab hide/re-display.
+- [x] On Save, dispatch one `update-settings` patch and wait for durable success. On failure, preserve the editor draft and show an actionable message; on Cancel, restore the committed layout without a write.
+- [x] Support Pointer Events and the shared keyboard move contract with proper labels, insertion/constraint announcements, visible focus, and reduced-motion-safe affordances.
 
 ### Files
 
@@ -325,11 +325,18 @@ Give users a safe, staged WYSIWYG way to customize the complete Header Popover r
 
 ### Acceptance Criteria
 
-- [ ] Settings renders one whole Popover-row preview with the fixed center navigation, not separate left/right management lists.
-- [ ] Dragging and keyboard operations update only a local draft, keep the center non-droppable, and make disabled actions recoverable.
-- [ ] Save persists exactly one normalized patch and makes a reopened Settings tab and Header Popover show it; Cancel/hide performs no layout write.
-- [ ] A save failure leaves the pre-existing runtime layout intact and lets the user retry or cancel the visible draft.
-- [ ] Focus, accessible action names, instructions, live updates, and reduced-motion presentation pass focused DOM/accessibility coverage.
+- [x] Settings renders one whole Popover-row preview with the fixed center navigation, not separate left/right management lists.
+- [x] Dragging and keyboard operations update only a local draft, keep the center non-droppable, and make disabled actions recoverable.
+- [x] Save persists exactly one normalized patch and makes a reopened Settings tab and Header Popover show it; Cancel/hide performs no layout write.
+- [x] A save failure leaves the pre-existing runtime layout intact and lets the user retry or cancel the visible draft.
+- [x] Focus, accessible action names, instructions, live updates, and reduced-motion presentation pass focused DOM/accessibility coverage.
+
+### Evidence — 2026-07-28
+
+- `npm run lint` passed.
+- `npm run check` passed.
+- `npm test -- --run` passed: 335 tests, 0 failures. This includes the settings-row DOM coverage for fixed navigation, pointer disable/restore, wrong-side rejection, and keyboard reordering; the repository/controller tests cover durable save and failure retention.
+- `git diff --check` passed.
 
 ## Phase 2: Add In-Popover Long-Press Editing
 

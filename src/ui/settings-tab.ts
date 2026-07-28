@@ -1,10 +1,22 @@
 import { PluginSettingTab, Setting, type App, type SettingDefinitionItem } from 'obsidian';
 
-import type { ActivityMapController } from './activity-map-controller';
+import {
+	normalizeHeaderPopoverActionLayout,
+	type HeaderPopoverActionLayoutItem,
+} from '../domain/header-popover-action-layout';
 import type { ActivityMapSettings } from '../domain/settings';
+import {
+	renderHeaderPopoverActionLayoutEditor,
+	type HeaderPopoverActionLayoutEditorHandle,
+} from './components/header-popover-action-layout-editor';
+import type { ActivityMapController } from './activity-map-controller';
 
 /** Settings controls persist through the controller before affecting runtime. */
 export class ActivityMapSettingsTab extends PluginSettingTab {
+	private actionLayoutEditor: HeaderPopoverActionLayoutEditorHandle | null = null;
+	private actionLayoutDraft: HeaderPopoverActionLayoutItem[] | null = null;
+	private actionLayoutSaving = false;
+
 	constructor(
 		app: App,
 		plugin: ConstructorParameters<typeof PluginSettingTab>[1],
@@ -20,6 +32,7 @@ export class ActivityMapSettingsTab extends PluginSettingTab {
 	}
 
 	display(): void {
+		this.destroyActionLayoutEditor();
 		this.containerEl.empty();
 		const settings = this.controller.getViewModel().settings;
 		new Setting(this.containerEl)
@@ -119,10 +132,16 @@ export class ActivityMapSettingsTab extends PluginSettingTab {
 					});
 				}),
 			);
+		this.renderHeaderPopoverActionLayout(settings);
 		this.containerEl.createEl('p', {
 			text: 'All activity data stays in this vault configuration directory. Activity map has no account, telemetry, or network upload.',
 			cls: 'setting-item-description',
 		});
+	}
+
+	override hide(): void {
+		this.destroyActionLayoutEditor();
+		super.hide();
 	}
 
 	private numberSetting(
@@ -148,4 +167,115 @@ export class ActivityMapSettingsTab extends PluginSettingTab {
 	private async save(patch: Partial<ActivityMapSettings>): Promise<void> {
 		await this.controller.dispatch({ kind: 'update-settings', patch });
 	}
+
+	private renderHeaderPopoverActionLayout(settings: ActivityMapSettings): void {
+		const section = this.containerEl.createDiv({
+			cls: 'activity-map-action-layout-settings-section',
+		});
+		new Setting(section).setName('Header popover controls').setHeading();
+		section.createEl('p', {
+			text: 'Drag controls in this row to change their order. Drop one below to disable it; the date navigation in the middle stays fixed.',
+			cls: 'setting-item-description',
+		});
+		this.actionLayoutDraft = normalizeHeaderPopoverActionLayout(
+			settings.headerPopoverActionLayout,
+		);
+		const editorHost = section.createDiv({ cls: 'activity-map-action-layout-settings-editor' });
+		this.actionLayoutEditor = renderHeaderPopoverActionLayoutEditor({
+			container: editorHost,
+			layout: this.actionLayoutDraft,
+			onChange: (layout) => {
+				this.actionLayoutDraft = layout;
+			},
+		});
+
+		const actions = section.createDiv({ cls: 'activity-map-action-layout-settings-actions' });
+		const status = section.createEl('p', {
+			cls: 'activity-map-action-layout-settings-status',
+			attr: { 'aria-live': 'polite', 'aria-atomic': 'true' },
+		});
+		const cancel = actions.createEl('button', { text: 'Cancel', attr: { type: 'button' } });
+		const save = actions.createEl('button', {
+			text: 'Save',
+			cls: 'mod-cta',
+			attr: { type: 'button' },
+		});
+		cancel.addEventListener('click', () => {
+			if (this.actionLayoutSaving) return;
+			this.resetActionLayoutDraft(status);
+		});
+		save.addEventListener('click', () => {
+			void this.saveActionLayout(save, cancel, status);
+		});
+	}
+
+	private async saveActionLayout(
+		save: HTMLButtonElement,
+		cancel: HTMLButtonElement,
+		status: HTMLElement,
+	): Promise<void> {
+		const draft = this.actionLayoutDraft;
+		if (!draft || this.actionLayoutSaving) return;
+		const committed = this.controller.getViewModel().settings.headerPopoverActionLayout;
+		if (sameActionLayout(draft, committed)) {
+			status.textContent = 'No header popover control changes to save.';
+			return;
+		}
+		this.actionLayoutSaving = true;
+		save.disabled = true;
+		cancel.disabled = true;
+		this.actionLayoutEditor?.setDisabled(true);
+		try {
+			await this.controller.dispatch({
+				kind: 'update-settings',
+				patch: { headerPopoverActionLayout: draft },
+			});
+			this.actionLayoutDraft = normalizeHeaderPopoverActionLayout(
+				this.controller.getViewModel().settings.headerPopoverActionLayout,
+			);
+			this.actionLayoutEditor?.setLayout(this.actionLayoutDraft);
+			status.textContent = 'Saved header popover controls.';
+		} catch (error) {
+			status.textContent = `Could not save Header Popover controls: ${messageForError(error)}. Retry or Cancel.`;
+		} finally {
+			this.actionLayoutSaving = false;
+			save.disabled = false;
+			cancel.disabled = false;
+			this.actionLayoutEditor?.setDisabled(false);
+		}
+	}
+
+	private resetActionLayoutDraft(status: HTMLElement): void {
+		this.actionLayoutDraft = normalizeHeaderPopoverActionLayout(
+			this.controller.getViewModel().settings.headerPopoverActionLayout,
+		);
+		this.actionLayoutEditor?.setLayout(this.actionLayoutDraft);
+		status.textContent = 'Discarded unsaved header popover control changes.';
+	}
+
+	private destroyActionLayoutEditor(): void {
+		this.actionLayoutEditor?.destroy();
+		this.actionLayoutEditor = null;
+		this.actionLayoutDraft = null;
+		this.actionLayoutSaving = false;
+	}
+}
+
+function sameActionLayout(
+	left: readonly HeaderPopoverActionLayoutItem[],
+	right: readonly HeaderPopoverActionLayoutItem[],
+): boolean {
+	return (
+		left.length === right.length &&
+		left.every(
+			(item, index) =>
+				item.id === right[index]?.id &&
+				item.order === right[index]?.order &&
+				item.enabled === right[index]?.enabled,
+		)
+	);
+}
+
+function messageForError(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
 }
