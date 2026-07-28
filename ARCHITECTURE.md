@@ -15,7 +15,7 @@ Authority links:
 
 ## Current Implementation
 
-The tracking, persistence, maintenance, query, controller, settings, and file-header/popover surfaces are implemented and covered by deterministic fixtures. Trusted editor input also produces content-free `typedChars` evidence and a fourth distribution metric. A ready Popover result can now open a local poster-export modal that freezes its query data, previews one theme-resolved Wide poster, and downloads its PNG rasterization at 2× source dimensions. Its volatile caption editor reports visual lines only while focused and warns when the three-line export bound is exceeded. Renderer layouts and encodings remain tested internal capabilities; the modal exposes no selector. The bundled PNG wordmark is embedded as a data URL in the SVG. Rebuild and deletion remain tested local data-service boundaries pending their later data-modal controls.
+The tracking, persistence, maintenance, query, controller, settings, and file-header/popover surfaces are implemented and covered by deterministic fixtures. Trusted editor input also produces content-free `typedChars` evidence and a fourth distribution metric. The Header Popover's six built-in actions now use a validated persisted layout: Settings owns an inert one-row draft editor, while `SummaryPopover` owns a transient long-press edit session that preserves the mounted result content. A ready Popover result can open a local poster-export modal that freezes its query data, previews one theme-resolved Wide poster, and downloads its PNG rasterization at 2× source dimensions. Its volatile caption editor reports visual lines only while focused and warns when the three-line export bound is exceeded. Renderer layouts and encodings remain tested internal capabilities; the modal exposes no selector. The bundled PNG wordmark is embedded as a data URL in the SVG. Rebuild and deletion remain tested local data-service boundaries pending their later data-modal controls.
 
 ```text
 src/
@@ -79,6 +79,7 @@ src/
 │
 ├── domain/                         # Pure types and invariants; no Obsidian imports.
 │   ├── activity.ts                 # Sessions, metrics, closures, recovery decisions.
+│   ├── header-popover-action-layout.ts # Registry, layout normalization, projection, move reducer.
 │   └── settings.ts                 # Validated plugin settings and durable UI preferences.
 │
 ├── platform/                       # Thin wrappers around time/window capabilities.
@@ -126,7 +127,7 @@ src/
 │   ├── poster-export-modal.ts     # Wide PNG modal and local download action.
 │   ├── summary-popover.ts          # Owner-document-aware non-modal interaction.
 │   ├── settings-tab.ts             # Validated save-before-apply settings controls.
-│   └── components/                 # Range, breadcrumb, donut, and detail renderers.
+│   └── components/                 # Range, action-layout, breadcrumb, donut, and detail renderers.
 │
 └── export/                         # Spec 07: deterministic standalone poster artifacts.
     ├── poster-exporter.ts          # Query snapshot -> escaped Portrait/Wide/Compact SVG.
@@ -321,7 +322,7 @@ DistributionQuery(metric, range, path, view, groupBy)
 
 This document owns presentation module boundaries and dependency direction. User-visible behavior belongs to the [PRD Header Popover section](docs/PRD.md#环形图浮层), while stable cross-version constraints belong to the [Interface and Export decision](specs/constitution/2026-07-21-activity-map-product-and-data.md#interface-and-export). Active Specs own implementation-local deltas and evidence. Pixel values, spacing, typography choices, and interaction copy do not belong here.
 
-Presentation surfaces consume immutable controller state and return typed intents. They never append evidence, rewrite summaries, or execute destructive storage mutations directly. `RangeControls` owns the transient query-dropdown state and its owner-document pointer listener; `SummaryPopover` destroys that handle before either re-rendering or closing so detached Popovers cannot retain listeners.
+Presentation surfaces consume immutable controller state and return typed intents. They never append evidence, rewrite summaries, or execute destructive storage mutations directly. `RangeControls` owns the transient query-dropdown state and its owner-document pointer listener; it receives the committed Header Popover layout only as a registry-projected order for existing action handlers. `SummaryPopover` destroys that handle before either re-rendering or closing so detached Popovers cannot retain listeners. It also owns the Popover-only layout draft, long-press timer, pointer capture, edit footer, and their disposal; `ActivityMapSettingsTab` owns the independent Settings draft and destroys it when the tab hides.
 
 ```text
 Query and tracking outputs
@@ -343,9 +344,29 @@ SummaryPopover ready distribution
   -> BrowserExportDestination       # One local Blob download.
 ```
 
+```text
+SettingsRepository.loadData()
+  -> normalizeSettings()
+       -> normalizeHeaderPopoverActionLayout()
+       -> ActivityMapSettings.headerPopoverActionLayout
+       -> ActivityMapController committed view model
+            -> RangeControls: enabled left / fixed day navigation / enabled right
+            -> Settings editor: inert local draft
+
+Settings editor or SummaryPopover edit session
+  -> shared pure move reducer
+  -> volatile draft
+  -> explicit Save only
+       -> ActivityMapController update-settings intent
+       -> SettingsRepository serialized save
+       -> normalized committed layout published to both surfaces
+```
+
 The Header Popover grouping preference crosses the settings port before becoming the default for a newly opened Popover. Grouping remains a query presentation axis: it changes item projection without changing scope or vault totals. Persistence failure rolls back the optimistic preference and invalidates its in-flight query.
 
-Header integration is capability-gated behind `HeaderActionManager` and is the only registered Activity Map interaction entry. The source contains no dockable Activity Map view or command registration. The trailing control group places poster export directly after pause/resume; it remains disabled without a ready query result. Opening it deep-copies the displayed distribution before later ticks or navigation can mutate controller state. The current modal exposes only the default Wide PNG flow and a bounded in-preview caption; its preview image and PNG rasterization derive from the same escaped, theme-resolved standalone SVG. Renderer variants remain below this UI boundary. A missing canvas/download capability reports a modal error without claiming success. Rebuild and destructive data controls remain owned by the data layer until the later data modal introduces their controller boundary.
+`headerPopoverActionLayout` is a separate local presentation preference. The domain registry fixes each of the six action IDs to its side of the selected-day navigation and owns the default order; persisted data can only declare a known item's enabled state and side-local order. The normalizer restores exactly one canonical item for every known action before it reaches the controller. `RangeControls` projects enabled actions around its unchanged day-navigation component, preserving each action's existing handler, DOM identity contract, and query/listbox behavior. The layout neither enters `DistributionQuery` nor changes chart, tracking, raw evidence, file identity, or the frozen poster-export snapshot.
+
+Header integration is capability-gated behind `HeaderActionManager` and is the only registered Activity Map interaction entry. The source contains no dockable Activity Map view or command registration. In normal mode, the committed layout renders the enabled registry actions around fixed selected-day navigation; `SummaryPopover` starts editing only after its 500 ms long-press threshold and consumes that source activation. Edit mode replaces its control interaction layer and appends a disabled-action recovery/footer row while retaining the chart, legend, breadcrumb, and state nodes. Cancel, Escape, close, structural control rerender, and an independently committed Settings layout discard the Popover draft; Save is the only controller write. A rejected save keeps that draft local and does not publish a different runtime row. The poster-export launcher is one registry action and remains disabled without a ready query result. Opening it deep-copies the displayed distribution before later ticks or navigation can mutate controller state. The current modal exposes only the default Wide PNG flow and a bounded in-preview caption; its preview image and PNG rasterization derive from the same escaped, theme-resolved standalone SVG. Renderer variants remain below this UI boundary. A missing canvas/download capability reports a modal error without claiming success. Rebuild and destructive data controls remain owned by the data layer until the later data modal introduces their controller boundary.
 
 File rows in the Header Popover register one `defaultMod` hover source and emit Obsidian's public `hover-link` event through `file-hover-preview.ts`. Page Preview owns the native preview lifecycle, so modifier hover never calls the file-opening path or changes the active tracking leaf. Because the native preview is mounted outside the Activity Map DOM, `SummaryPopover` treats the owning leaf's connected `hoverPopover.hoverEl` as a temporary interaction extension: it preserves the source row while the preview is open, excludes preview clicks from outside-click dismissal, and resumes delayed close after Obsidian removes the preview. Direct activation accepts only user-agent-issued primary clicks or the existing keyboard contract; synthetic DOM clicks cannot switch the foreground file. `SummaryPopover` carries a typed `{ filePath, openInNewTab }` request through `HeaderActionManager` to the composition root, which selects `false` or the public explicit `'tab'` pane type for `Workspace.openLinkText()`. `FileActivationController` owns the volatile chart-file policy in either grouping: a first unmodified desktop activation arms and locates a real file, while a second activation or `Cmd/Ctrl` opens it. `SummaryPopover` applies the resulting DOM effects and keeps direct legend-row opens separate. Every file open pins the Popover before the workspace transition. A pinned Popover retains its last fixed position and never re-reads a hidden or detached header anchor; `HeaderActionManager` owns it until normal dismissal or plugin teardown. Structural live-projection replacement preserves the Popover's semantic chart/legend hover target, while pinned result nodes skip their entrance animation to avoid a stationary-pointer flash. Path navigation and non-file activation continue through the shared distribution activation contract. List and donut highlight transitions remain presentation-only and are disabled by the reduced-motion media query.
 
@@ -363,6 +384,7 @@ Checkpoint uncertainty    -> degraded pause; never guess elapsed time
 Stale deletion plan       -> reject changed scope/path fingerprints before mutation
 Poster-export failure       -> keep the modal open with an explicit unavailable/error state
 Header-action failure     -> visible unavailable warning; no global fallback entry
+Header-layout save failure -> retain only the local draft with retry/cancel feedback; committed row stays active
 
 # No failure path enables telemetry, remote upload, note-content reads,
 # selected-text capture, or storage of actual typed strings.

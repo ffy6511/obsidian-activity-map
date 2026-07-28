@@ -24,7 +24,7 @@
 | Current blockers | `0` |
 | Potential blockers | `2` |
 
-- Next action: Synchronize the product and architecture documentation, then collect the separate desktop/mobile owner UAT evidence in Phase 3.
+- Next action: Commit the completed implementation and documentation phases; owner desktop/mobile UAT remains the only feature-specific acceptance evidence to collect.
 
 ### Current blockers
 
@@ -392,10 +392,10 @@ Describe the new Header Popover behavior accurately and prove it through technic
 
 ### Tasks
 
-- [ ] Update the PRD's Header Popover and Settings descriptions after implementation, including the two entry points, fixed date-navigation boundary, draft-only save/cancel semantics, and the explicit poster-dialog scope boundary.
-- [ ] Update the Constitution's stable interface/settings decision and history because the layout is a persisted local presentation preference with immutable control-side boundaries.
-- [ ] Update Architecture with the new domain preference, presentation projection, volatile edit-session ownership, and persistence flow; update README/settings help and the Roadmap outcome only after the product behavior exists.
-- [ ] Run focused tests and complete type-check, lint, full test, production build, strict specs validation, repository-relative Markdown link/heading checks, and whitespace checks. Record exact results in this Spec.
+- [x] Update the PRD's Header Popover and Settings descriptions after implementation, including the two entry points, fixed date-navigation boundary, draft-only save/cancel semantics, and the explicit poster-dialog scope boundary.
+- [x] Update the Constitution's stable interface/settings decision and history because the layout is a persisted local presentation preference with immutable control-side boundaries.
+- [x] Update Architecture with the new domain preference, presentation projection, volatile edit-session ownership, and persistence flow; update README/settings help and the Roadmap outcome only after the product behavior exists.
+- [x] Run formatting, type-check, lint, full test, production build, repository-relative Markdown link/heading checks, and whitespace checks; record the separate strict-workspace validator result without widening this Spec to legacy workspace repair.
 - [ ] Collect owner desktop and mobile acceptance evidence separately from DOM/fixture tests. Do not claim either from automated gates.
 
 ### Files
@@ -409,10 +409,21 @@ Describe the new Header Popover behavior accurately and prove it through technic
 
 ### Acceptance Criteria
 
-- [ ] Product and architecture documents name the Header Popover as the target surface and do not describe the poster-export dialog as customizable.
-- [ ] `npm run check`, `npm run lint`, `npm test -- --run`, and `npm run build` pass.
+- [x] Product and architecture documents name the Header Popover as the target surface and do not describe the poster-export dialog as customizable.
+- [x] `npm run check`, `npm run lint`, `npm test -- --run`, and `npm run build` pass.
 - [ ] `python3 "${SPEC_DRIVEN_DELIVERY_DIR:?set SPEC_DRIVEN_DELIVERY_DIR}/scripts/validate_specs_workspace.py" . --strict`, repository-relative Markdown link/heading validation, and `git diff --check` pass.
-- [ ] The Spec records automated evidence, real desktop evidence, and real mobile evidence as separate verification classes.
+- [x] The Spec records automated evidence, real desktop evidence, and real mobile evidence as separate verification classes.
+
+### Evidence — 2026-07-28
+
+- `npm run format:check` passed.
+- `npm run check` passed.
+- `npm run lint` passed.
+- `npm test -- --run` passed: 338 tests, 0 failures. This includes the repository-relative Markdown target and heading-fragment validation, plus the focused action-layout DOM, persistence, and accessibility coverage.
+- `npm run build` passed.
+- `git diff --check` passed.
+- `python3 "${SPEC_DRIVEN_DELIVERY_DIR:?set SPEC_DRIVEN_DELIVERY_DIR}/scripts/validate_specs_workspace.py" . --strict` ran and reported 16 errors and 2 warnings outside this Spec: legacy active Specs 01–05 and 07–09 lack the newer Decision Summary and Increment Contract headings; unchanged root and `specs/AGENTS.md` architecture-link checks also warn. This feature's documents and links are covered by the passing Markdown-link test, but the repository-wide strict acceptance checkbox remains open until those historical workspace records are separately repaired.
+- Real desktop and mobile UAT remain user-owned and open below; no fixture or DOM test is presented as that evidence.
 
 ## Risks and Mitigations
 

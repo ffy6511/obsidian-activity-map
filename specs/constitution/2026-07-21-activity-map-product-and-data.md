@@ -5,12 +5,12 @@
 | Field | Value |
 | --- | --- |
 | Decision date | 2026-07-21 |
-| Related specs | [Tracking runtime](../active/01-activity-tracking-runtime-plan.md), [Local data and query](../active/02-local-data-and-query-plan.md), [UI and v0.1 release](../active/03-activity-map-ui-and-v0-1-release-plan.md), [Header Popover split layout](../active/04-header-popover-split-layout-plan.md), [Header Popover file grouping](../active/05-header-popover-file-grouping-plan.md), [typedChars](../archive/06-typed-character-metric-plan.md), [poster export](../active/07-poster-export-plan.md) |
+| Related specs | [Tracking runtime](../active/01-activity-tracking-runtime-plan.md), [Local data and query](../active/02-local-data-and-query-plan.md), [UI and v0.1 release](../active/03-activity-map-ui-and-v0-1-release-plan.md), [Header Popover split layout](../active/04-header-popover-split-layout-plan.md), [Header Popover file grouping](../active/05-header-popover-file-grouping-plan.md), [typedChars](../archive/06-typed-character-metric-plan.md), [poster export](../active/07-poster-export-plan.md), [Header Popover action layout](../active/10-header-popover-action-layout-plan.md) |
 | Product requirements | [Activity Map PRD](../../docs/PRD.md) |
 
 ## Decision Summary
 
-Activity Map will be a local-first, cross-platform Obsidian plugin that records trustworthy foreground activity per file, preserves durable file identity and event-time paths, stores settings separately from sharded time-series data, and presents directory aggregates through a progressively disclosed UI. It also records a privacy-preserving `typedChars` count from eligible human text input and exports the current distribution as an editable, local poster. Desktop receives the complete experience; mobile remains a supported viewer and uses only capabilities verified on that platform.
+Activity Map will be a local-first, cross-platform Obsidian plugin that records trustworthy foreground activity per file, preserves durable file identity and event-time paths, stores settings separately from sharded time-series data, and presents directory aggregates through a progressively disclosed UI. It also records a privacy-preserving `typedChars` count from eligible human text input, keeps the Header Popover's six built-in action controls in a locally persisted side-constrained layout, and exports the current distribution as an editable, local poster. Desktop receives the complete experience; mobile remains a supported viewer and uses only capabilities verified on that platform.
 
 ## Background
 
@@ -20,7 +20,7 @@ These requirements affect every release. They belong in a stable decision record
 
 ## User Narrative
 
-A user works across several Obsidian windows and project folders. Activity Map attributes time only to the trackable file in the focused window. When the user walks away, the plugin closes the session at the last trusted interaction. On return, a short uncertain interval can be explicitly included; a long sleep interval stays excluded. The user opens the file-header donut, navigates from the vault root into a project, changes from today to a 30-day average, inspects the exact file rows, and pauses or resumes tracking from the popover. While composing text in an eligible foreground editor, only the number of committed grapheme clusters is recorded. From the top control group, the user opens a Wide poster preview, optionally types a bounded caption directly into the preview, and starts one local PNG download. The modal exposes no layout, format, filename, or destination control. All records and generated files remain local.
+A user works across several Obsidian windows and project folders. Activity Map attributes time only to the trackable file in the focused window. When the user walks away, the plugin closes the session at the last trusted interaction. On return, a short uncertain interval can be explicitly included; a long sleep interval stays excluded. The user opens the file-header donut, navigates from the vault root into a project, changes from today to a 30-day average, inspects the exact file rows, and pauses or resumes tracking from the popover. They can arrange or recoverably hide the Popover's existing controls in Settings, or long-press one in the Popover to make the same staged change while its chart remains visible; the date navigation remains fixed between its two action sides. While composing text in an eligible foreground editor, only the number of committed grapheme clusters is recorded. From the top control group, the user opens a Wide poster preview, optionally types a bounded caption directly into the preview, and starts one local PNG download. The modal exposes no layout, format, filename, or destination control. All records and generated files remain local.
 
 ## Final Decision
 
@@ -80,8 +80,10 @@ A user works across several Obsidian windows and project folders. Activity Map a
 - Provide a stable file-header chart entry as the only Activity Map interaction entry through public or capability-gated Obsidian APIs. Mobile interaction cannot depend on hover.
 - Keep presentation surfaces on the same immutable distribution/query semantics, stable file identity, and full-path activation contract. UI grouping may change projection only; it cannot change scope totals, vault totals, Deleted history, or raw evidence.
 - Persist the last successful Header Popover path/file grouping choice as a small validated setting. A persistence failure cannot silently establish a new default.
+- Persist the last successful layout of the six existing Header Popover actions as a separate small validated setting. The built-in registry owns each action's identity, handler, and side of the center date-navigation boundary; the preference can only set enabled state and order within that fixed side. Invalid or incomplete persisted data normalizes to one safe canonical item for every known action, and a failed save cannot change the committed row.
 - Project the current unclosed interval for live presentation only within the trusted idle boundary; presentation updates cannot rewrite persisted evidence.
-- The Popover control group contains an export action immediately to the right of pause/resume. It opens a dedicated modal rather than a nested menu or confirmation dialog.
+- The Header Popover action row has fixed left and right regions around the selected-day navigation. Its first-run layout keeps tracking, grouping, and poster export on the left, and Locate, metric, and date range on the right. Users may reorder actions only within their registry-owned region or recoverably disable them; previous day, selected date, and next day are never movable or disableable.
+- The poster-export launcher remains one Header Popover action. It opens a dedicated modal rather than a nested menu or confirmation dialog; layout customization never changes that modal's preview, caption, download, format, filename, or destination behavior.
 - The modal renders a large, complete `Wide` poster preview from the immutable current query/distribution snapshot. Its current user-facing action is one `PNG` download; layout, format, and filename controls are intentionally absent even though the renderer keeps its tested serialization variants. The optional caption starts empty, is edited in place at the bottom center, uses a system-serif stack, and is bounded to three exported lines.
 - Export produces one local automatic download from the selected snapshot. It does not capture the mounted Popover, current screen, or note content, and it does not show a second confirmation modal.
 - Use the packaged Activity Map wordmark in the poster. The current PNG wordmark may later be replaced by an SVG without changing the export contract.
@@ -107,6 +109,7 @@ A user works across several Obsidian windows and project folders. Activity Map a
 - Retention cleanup cannot destroy the only durable representation of a metric.
 - User notes and frontmatter remain untouched by tracking identity.
 - No network connection is required for tracking, queries, data control, or SVG export.
+- The Header Popover layout contains each known built-in action exactly once. Persisted data can never create a handler, cross the fixed date-navigation boundary, or remove the recovery path for a disabled action.
 
 ## Technical Boundaries
 
@@ -225,3 +228,4 @@ Rejected because keyboard interaction, accessible semantics, and standalone vect
 | 2026-07-23 | Excluded standalone Unicode whitespace graphemes from future `typedChars` capture. | Spaces, tabs, and line breaks do not represent input volume; retained numeric-only evidence cannot be backfilled safely. |
 | 2026-07-23 | Adopted an editable local poster export modal in the Header Popover, with Portrait/Wide/Compact layouts and SVG/PNG/JPEG output. | Export the current data snapshot as a complete shareable poster without screenshotting the application or adding a confirmation dialog. |
 | 2026-07-23 | Refined the visible export flow to one themed Wide PNG with a three-line system-serif caption; renderer variants remain internal capabilities. | Match the Popover's visual hierarchy while removing controls that distracted from the poster preview. |
+| 2026-07-28 | Made the Header Popover's six built-in action controls a local persisted, side-constrained layout preference. | Support reorder and recoverable disablement through Settings or direct Popover editing while keeping the selected-day navigation and poster-export dialog contract fixed. |
