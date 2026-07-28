@@ -30,6 +30,7 @@ Deliver a local-first Obsidian plugin that measures trustworthy file activity an
 - [Spec 05 — Header Popover file grouping](active/05-header-popover-file-grouping-plan.md)
 - [Spec 08 — Header Popover locate current file](active/08-header-popover-locate-current-file-plan.md)
 - [Spec 09 — Header Popover file activation](active/09-header-popover-file-activation-plan.md)
+- [Spec 10 — Header Popover action layout](active/10-header-popover-action-layout-plan.md)
 
 ### Key Deliverables
 
@@ -41,6 +42,7 @@ Deliver a local-first Obsidian plugin that measures trustworthy file activity an
 - [x] Header Popover grouping toggle switches the current path scope between hierarchical path slices and recursive file slices, persists the last successful choice, and does not change totals or activation identity.
 - [x] Present-file chart slices in either grouping locate their matching list row before opening, while file rows remain direct links and Cmd/Ctrl file activation explicitly opens a new tab.
 - [x] Tested local services generate standalone full-infographic and chart-only SVG artifacts; their header-modal controls are deferred.
+- [ ] Users can reorder or recoverably disable the six configurable actions in the actual Header Popover row while its fixed day navigation remains centered and unchanged.
 - [ ] Full desktop behavior and a mobile interaction path that does not depend on hover.
 
 ### Acceptance Criteria
@@ -51,6 +53,7 @@ Deliver a local-first Obsidian plugin that measures trustworthy file activity an
 - [ ] A real Obsidian desktop journey covers installation, tracking, idle recovery, pause/resume, and header-popover drill-down.
 - [ ] A real Obsidian mobile journey covers loading statistics, changing ranges, drill-down, and details without hover.
 - [x] Keyboard, focus, pin/unpin, stable-highlight layout, accessible-name, non-color encoding, theme, and reduced-motion checks pass across the header donut and popover.
+- [ ] Settings and Header Popover direct editing provide the same saved action layout, reject moves across the fixed center navigation, preserve the chart/list during editing, and discard unsaved changes on cancel or close.
 - [ ] Type checking, lint, automated tests, production build, specs validation, and independent Critic evaluation pass.
 - [x] README, PRD, Constitution, settings help, release notes, and installation instructions describe the verified behavior accurately.
 
